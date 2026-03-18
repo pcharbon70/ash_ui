@@ -1,0 +1,109 @@
+name: Specs Governance Validation
+
+on:
+  pull_request:
+    paths:
+      - 'specs/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'specs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-specs:
+    name: Validate Specs Governance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate specs governance
+        run: |
+          ./scripts/validate_specs_governance.sh
+
+      - name: Check for contract completeness
+        run: |
+          echo "Checking contract files..."
+          CONTRACTS=(
+            "specs/contracts/resource_contract.md"
+            "specs/contracts/screen_contract.md"
+            "specs/contracts/binding_contract.md"
+            "specs/contracts/compilation_contract.md"
+            "specs/contracts/rendering_contract.md"
+            "specs/contracts/authorization_contract.md"
+            "specs/contracts/observability_contract.md"
+          )
+
+          for contract in "${CONTRACTS[@]}"; do
+            if [ ! -f "$contract" ]; then
+              echo "::error file=$contract::Contract file missing: $contract"
+              exit 1
+            fi
+          done
+
+          echo "All required contracts present."
+
+      - name: Check for ADR-0001
+        run: |
+          if [ ! -f "specs/adr/ADR-0001-control-plane-authority.md" ]; then
+            echo "::error::ADR-0001 is missing"
+            exit 1
+          fi
+          echo "ADR-0001 present."
+
+      - name: Check conformance files
+        run: |
+          CONFORMANCE=(
+            "specs/conformance/spec_conformance_matrix.md"
+            "specs/conformance/scenario_catalog.md"
+          )
+
+          for file in "${CONFORMANCE[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::error file=$file::Conformance file missing: $file"
+              exit 1
+            fi
+          done
+
+          echo "All conformance files present."
+
+      - name: Verify REQ- format
+        run: |
+          # Check that contracts contain valid REQ- entries
+          for contract in specs/contracts/*.md; do
+            if ! grep -qE "REQ-[A-Z]+-[0-9]+" "$contract"; then
+              echo "::warning file=$contract::Contract may be missing REQ- entries"
+            fi
+          done
+
+      - name: Verify topology.md
+        run: |
+          if [ ! -f "specs/topology.md" ]; then
+            echo "::error::topology.md is missing"
+            exit 1
+          fi
+
+          if ! grep -q '```mermaid' "specs/topology.md"; then
+            echo "::warning file=specs/topology.md::topology.md should include Mermaid diagrams"
+          fi
+
+      - name: Check README files
+        run: |
+          README_DIRS=(
+            "specs"
+            "specs/resources"
+            "specs/compilation"
+            "specs/rendering"
+          )
+
+          for dir in "${README_DIRS[@]}"; do
+            if [ ! -f "$dir/README.md" ]; then
+              echo "::warning file=$dir/README.md::Missing README in $dir/"
+            fi
+          done

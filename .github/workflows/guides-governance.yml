@@ -1,0 +1,167 @@
+name: Guides Governance Validation
+
+on:
+  pull_request:
+    paths:
+      - 'guides/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'guides/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-guides:
+    name: Validate Guides Governance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate guides governance
+        run: |
+          ./scripts/validate_guides_governance.sh
+
+      - name: Check guide directory structure
+        run: |
+          echo "Checking guide directories..."
+          GUIDE_DIRS=(
+            "guides/user"
+            "guides/developer"
+            "guides/contracts"
+            "guides/conformance"
+            "guides/templates"
+          )
+
+          for dir in "${GUIDE_DIRS[@]}"; do
+            if [ ! -d "$dir" ]; then
+              echo "::error::Guide directory missing: $dir"
+              exit 1
+            fi
+          done
+
+          echo "All guide directories present."
+
+      - name: Check guide contracts
+        run: |
+          CONTRACTS=(
+            "guides/contracts/guide_contract.md"
+            "guides/contracts/guide_traceability_contract.md"
+          )
+
+          for file in "${CONTRACTS[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::error file=$file::Guide contract missing: $file"
+              exit 1
+            fi
+          done
+
+      - name: Check guide templates
+        run: |
+          TEMPLATES=(
+            "guides/templates/user-guide-template.md"
+            "guides/templates/developer-guide-template.md"
+          )
+
+          for file in "${TEMPLATES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::error file=$file::Guide template missing: $file"
+              exit 1
+            fi
+          done
+
+      - name: Validate user guides
+        run: |
+          UG_COUNT=0
+          for guide in guides/user/UG-*.md; do
+            if [ -f "$guide" ]; then
+              ((UG_COUNT++))
+              guide_name=$(basename "$guide")
+              echo "Validating $guide_name..."
+
+              # Check for required metadata
+              if ! grep -qE "^id: UG-" "$guide"; then
+                echo "::error file=$guide::Missing id field"
+                exit 1
+              fi
+
+              if ! grep -qE "^audience:" "$guide"; then
+                echo "::error file=$guide::Missing audience field"
+                exit 1
+              fi
+
+              if ! grep -qE "^status:" "$guide"; then
+                echo "::error file=$guide::Missing status field"
+                exit 1
+              fi
+
+              # Warn for traceability fields
+              if ! grep -qE "^related_reqs:" "$guide"; then
+                echo "::warning file=$guide::Should have related_reqs field"
+              fi
+
+              if ! grep -qE "^related_scns:" "$guide"; then
+                echo "::warning file=$guide::Should have related_scns field"
+              fi
+            fi
+          done
+
+          echo "Validated $UG_COUNT user guides."
+
+      - name: Validate developer guides
+        run: |
+          DG_COUNT=0
+          for guide in guides/developer/DG-*.md; do
+            if [ -f "$guide" ]; then
+              ((DG_COUNT++))
+              guide_name=$(basename "$guide")
+              echo "Validating $guide_name..."
+
+              if ! grep -qE "^id: DG-" "$guide"; then
+                echo "::error file=$guide::Missing id field"
+                exit 1
+              fi
+
+              if ! grep -qE "^audience:" "$guide"; then
+                echo "::error file=$guide::Missing audience field"
+                exit 1
+              fi
+            fi
+          done
+
+          echo "Validated $DG_COUNT developer guides."
+
+      - name: Check guide READMEs
+        run: |
+          READMES=(
+            "guides/README.md"
+            "guides/user/README.md"
+            "guides/developer/README.md"
+          )
+
+          for file in "${READMES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::warning file=$file::Guide README missing: $file"
+            fi
+          done
+
+      - name: Check guide conformance matrix
+        run: |
+          if [ ! -f "guides/conformance/guide_conformance_matrix.md" ]; then
+            echo "::error::Guide conformance matrix is missing"
+            exit 1
+          fi
+
+          # Check for initial guides
+          if ! grep -q "UG-0001" "guides/conformance/guide_conformance_matrix.md"; then
+            echo "::warning::Conformance matrix should include UG-0001"
+          fi
+
+          if ! grep -q "DG-0001" "guides/conformance/guide_conformance_matrix.md"; then
+            echo "::warning::Conformance matrix should include DG-0001"
+          fi
