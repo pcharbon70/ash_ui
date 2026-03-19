@@ -87,24 +87,24 @@ Back to index: [README](./README.md)
       [X] 5.2.4.3 Subtask - Invalidate cache on role change
       [X] 5.2.4.4 Subtask - Configure cache TTL
 
-  [ ] 5.3 Section - Policy DSL Extensions
+  [X] 5.3 Section - Policy DSL Extensions
     Create DSL extensions for common UI authorization patterns.
 
-    [ ] 5.3.1 Task - Create UI policy DSL
+    [X] 5.3.1 Task - Create UI policy DSL
     Add convenience functions for UI policies.
 
-      [ ] 5.3.1.1 Subtask - Implement `visible_if/2` policy helper
-      [ ] 5.3.1.2 Subtask - Implement `editable_if/2` policy helper
-      [ ] 5.3.1.3 Subtask - Implement `accessible_if/2` policy helper
-      [ ] 5.3.1.4 Subtask - Document policy DSL usage
+      [X] 5.3.1.1 Subtask - Implement `visible_if/2` policy helper
+      [X] 5.3.1.2 Subtask - Implement `editable_if/2` policy helper
+      [X] 5.3.1.3 Subtask - Implement `accessible_if/2` policy helper
+      [X] 5.3.1.4 Subtask - Document policy DSL usage
 
-    [ ] 5.3.2 Task - Create resource-level policies
+    [X] 5.3.2 Task - Create resource-level policies
     Add policies for accessing bound resources.
 
-      [ ] 5.3.2.1 Subtask - Implement `can_read_source/1` policy
-      [ ] 5.3.2.2 Subtask - Implement `can_write_source/1` policy
-      [ ] 5.3.2.3 Subtask - Implement `can_access_field/2` policy
-      [ ] 5.3.2.4 Subtask - Implement `can_execute_action/2` policy
+      [X] 5.3.2.1 Subtask - Implement `can_read_source/1` policy
+      [X] 5.3.2.2 Subtask - Implement `can_write_source/1` policy
+      [X] 5.3.2.3 Subtask - Implement `can_access_field/2` policy
+      [X] 5.3.2.4 Subtask - Implement `can_execute_action/2` policy
 
   [ ] 5.4 Section - Error Handling
     Implement user-friendly authorization errors.
