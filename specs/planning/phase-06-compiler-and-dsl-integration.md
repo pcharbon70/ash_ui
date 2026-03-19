@@ -14,7 +14,7 @@ Back to index: [README](./README.md)
 - Compiler loads DSL from database and compiles to IUR
 - Compilation is cached for performance
 
-[ ] 6 Phase 6 - Compiler and DSL Integration
+[X] 6 Phase 6 - Compiler and DSL Integration
   Integrate the unified-ui compiler with Ash Resource loading to enable database-driven UI definitions.
 
   [X] 6.1 Section - Unified-UI DSL Storage
@@ -109,37 +109,37 @@ Back to index: [README](./README.md)
       [X] 6.4.2.3 Subtask - Add layout to compiler catalog
       [X] 6.4.2.4 Subtask - Document layout registration API
 
-  [ ] 6.5 Section - Phase 6 Integration Tests
+  [X] 6.5 Section - Phase 6 Integration Tests
     Validate compiler and DSL integration end-to-end.
 
-    [ ] 6.5.1 Task - DSL storage and retrieval scenarios
+    [X] 6.5.1 Task - DSL storage and retrieval scenarios
     Verify DSL is stored and retrieved correctly.
 
-      [ ] 6.5.1.1 Subtask - Verify DSL builder creates valid structure
-      [ ] 6.5.1.2 Subtask - Verify DSL persists to database correctly
-      [ ] 6.5.1.3 Subtask - Verify DSL loads from database correctly
-      [ ] 6.5.1.4 Subtask - Verify invalid DSL is rejected
+      [X] 6.5.1.1 Subtask - Verify DSL builder creates valid structure
+      [X] 6.5.1.2 Subtask - Verify DSL persists to database correctly
+      [X] 6.5.1.3 Subtask - Verify DSL loads from database correctly
+      [X] 6.5.1.4 Subtask - Verify invalid DSL is rejected
 
-    [ ] 6.5.2 Task - Compilation scenarios
+    [X] 6.5.2 Task - Compilation scenarios
     Verify compilation pipeline works correctly.
 
-      [ ] 6.5.2.1 Subtask - Verify simple screen compiles successfully
-      [ ] 6.5.2.2 Subtask - Verify complex nested screen compiles successfully
-      [ ] 6.5.2.3 Subtask - Verify compilation errors are reported clearly
-      [ ] 6.5.2.4 Subtask - Verify cache hit returns cached IUR
+      [X] 6.5.2.1 Subtask - Verify simple screen compiles successfully
+      [X] 6.5.2.2 Subtask - Verify complex nested screen compiles successfully
+      [X] 6.5.2.3 Subtask - Verify compilation errors are reported clearly
+      [X] 6.5.2.4 Subtask - Verify cache hit returns cached IUR
 
-    [ ] 6.5.3 Task - Incremental compilation scenarios
+    [X] 6.5.3 Task - Incremental compilation scenarios
     Verify incremental recompilation works correctly.
 
-      [ ] 6.5.3.1 Subtask - Verify element change triggers screen recompile
-      [ ] 6.5.3.2 Subtask - Verify unchanged resources use cache
-      [ ] 6.5.3.3 Subtask - Verify dependency tracking works
-      [ ] 6.5.3.4 Subtask - Verify circular dependencies are detected
+      [X] 6.5.3.1 Subtask - Verify element change triggers screen recompile
+      [X] 6.5.3.2 Subtask - Verify unchanged resources use cache
+      [X] 6.5.3.3 Subtask - Verify dependency tracking works
+      [X] 6.5.3.4 Subtask - Verify circular dependencies are detected
 
-    [ ] 6.5.4 Task - Extension scenarios
+    [X] 6.5.4 Task - Extension scenarios
     Verify custom widgets and layouts work.
 
-      [ ] 6.5.4.1 Subtask - Verify custom widget can be registered
-      [ ] 6.5.4.2 Subtask - Verify custom widget compiles correctly
-      [ ] 6.5.4.3 Subtask - Verify custom layout can be registered
-      [ ] 6.5.4.4 Subtask - Verify custom layout compiles correctly
+      [X] 6.5.4.1 Subtask - Verify custom widget can be registered
+      [X] 6.5.4.2 Subtask - Verify custom widget compiles correctly
+      [X] 6.5.4.3 Subtask - Verify custom layout can be registered
+      [X] 6.5.4.4 Subtask - Verify custom layout compiles correctly
