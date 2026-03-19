@@ -6,6 +6,14 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
   to native desktop UI instructions. When the desktop_ui package is not
   available, this module provides stub implementations.
 
+  ## DesktopUI-Specific Features
+
+  This adapter supports:
+  - SDL2 window properties configuration
+  - Native menu bar generation
+  - Platform-specific features (Windows, macOS, Linux)
+  - Desktop event handling
+
   If DesktopUI.Renderer is available, delegates to it. Otherwise, provides
   fallback implementation using the IURAdapter.
   """
@@ -24,7 +32,9 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
     * `:window_width` - Window width in pixels (default: 1280)
     * `:window_height` - Window height in pixels (default: 720)
     * `:window_resizable` - Allow window resizing (default: true)
+    * `:window_title` - Window title (default: from IUR)
     * `:native_menu_bar` - Include native menu bar (default: true)
+    * `:platform` - Target platform (:auto, :windows, :macos, :linux)
 
   ## Returns
     * `{:ok, instructions}` - Desktop UI instruction map
@@ -72,6 +82,153 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
     end
   end
 
+  @doc """
+  Configures SDL2 window properties.
+
+  ## Parameters
+    * `canonical_iur` - Canonical IUR map
+    * `opts` - Options
+
+  ## Returns
+    * Window configuration map
+  """
+  @spec configure_window(map(), keyword()) :: map()
+  def configure_window(%{"type" => "screen"} = iur, opts \\ []) do
+    width = Keyword.get(opts, :window_width, 1280)
+    height = Keyword.get(opts, :window_height, 720)
+    resizable = Keyword.get(opts, :window_resizable, true)
+    title = Keyword.get(opts, :window_title, Map.get(iur, "name", "AshUI App"))
+    fullscreen = Keyword.get(opts, :fullscreen, false)
+    borderless = Keyword.get(opts, :borderless, false)
+
+    %{
+      width: width,
+      height: height,
+      resizable: resizable,
+      title: title,
+      fullscreen: fullscreen,
+      borderless: borderless,
+      position: Keyword.get(opts, :window_position, :center),
+      minimum_size: Keyword.get(opts, :minimum_size, nil),
+      maximum_size: Keyword.get(opts, :maximum_size, nil)
+    }
+  end
+
+  @doc """
+  Configures native menu bar.
+
+  ## Parameters
+    * `canonical_iur` - Canonical IUR map
+    * `opts` - Options
+
+  ## Returns
+    * Menu bar configuration
+  """
+  @spec configure_menu_bar(map(), keyword()) :: map()
+  def configure_menu_bar(%{"type" => "screen"} = iur, opts \\ []) do
+    enabled = Keyword.get(opts, :native_menu_bar, true)
+    custom_items = Keyword.get(opts, :menu_items, [])
+
+    default_items = if enabled do
+      [
+        %{
+          label: "File",
+          items: [
+            %{label: "New", action: "file_new", shortcut: "CmdOrCtrl+N"},
+            %{label: "Open", action: "file_open", shortcut: "CmdOrCtrl+O"},
+            :separator,
+            %{label: "Save", action: "file_save", shortcut: "CmdOrCtrl+S"},
+            %{label: "Save As", action: "file_save_as", shortcut: "CmdOrCtrl+Shift+S"},
+            :separator,
+            %{label: "Quit", action: "app_quit", shortcut: "CmdOrCtrl+Q"}
+          ]
+        },
+        %{
+          label: "Edit",
+          items: [
+            %{label: "Undo", action: "edit_undo", shortcut: "CmdOrCtrl+Z"},
+            %{label: "Redo", action: "edit_redo", shortcut: "CmdOrCtrl+Shift+Z"},
+            :separator,
+            %{label: "Cut", action: "edit_cut", shortcut: "CmdOrCtrl+X"},
+            %{label: "Copy", action: "edit_copy", shortcut: "CmdOrCtrl+C"},
+            %{label: "Paste", action: "edit_paste", shortcut: "CmdOrCtrl+V"},
+            :separator,
+            %{label: "Select All", action: "edit_select_all", shortcut: "CmdOrCtrl+A"}
+          ]
+        },
+        %{
+          label: "View",
+          items: [
+            %{label: "Reload", action: "view_reload", shortcut: "F5"},
+            %{label: "Toggle Fullscreen", action: "view_fullscreen", shortcut: "F11"},
+            :separator,
+            %{label: "Developer Tools", action: "view_devtools", shortcut: "CmdOrCtrl+Shift+I"}
+          ]
+        }
+      ]
+    else
+      []
+    end
+
+    %{
+      enabled: enabled,
+      items: default_items ++ custom_items
+    }
+  end
+
+  @doc """
+  Configures platform-specific features.
+
+  ## Parameters
+    * `canonical_iur` - Canonical IUR map
+    * `opts` - Options
+
+  ## Returns
+    * Platform configuration
+  """
+  @spec configure_platform(map(), keyword()) :: map()
+  def configure_platform(%{"type" => "screen"} = _iur, opts \\ []) do
+    platform = Keyword.get(opts, :platform, :auto)
+
+    %{
+      target: detect_platform(platform),
+      features: platform_features(platform),
+      native_integration: Keyword.get(opts, :native_integration, true)
+    }
+  end
+
+  @doc """
+  Configures desktop event handling.
+
+  ## Parameters
+    * `canonical_iur` - Canonical IUR map
+    * `opts` - Options
+
+  ## Returns
+    * Event handling configuration
+  """
+  @spec configure_events(map(), keyword()) :: map()
+  def configure_events(%{"type" => "screen"} = iur, opts \\ []) do
+    bindings = Map.get(iur, "bindings", [])
+
+    event_handlers =
+      bindings
+      |> Enum.filter(fn binding -> Map.get(binding, "type") == "event" end)
+      |> Enum.map(fn binding ->
+        %{
+          event: Map.get(binding, "target"),
+          action: get_in(binding, ["source", "action"]),
+          element_id: Map.get(binding, "element_id")
+        }
+      end)
+
+    %{
+      handlers: event_handlers,
+      enable_shortcuts: Keyword.get(opts, :enable_shortcuts, true),
+      enable_drag_drop: Keyword.get(opts, :enable_drag_drop, false)
+    }
+  end
+
   # Private Functions
 
   # Call actual DesktopUI.Renderer if available
@@ -95,26 +252,26 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
 
   # Generate desktop UI instructions from canonical IUR
   defp generate_instructions(%{"type" => "screen"} = iur, opts) do
-    window_width = Keyword.get(opts, :window_width, 1280)
-    window_height = Keyword.get(opts, :window_height, 720)
-    window_resizable = Keyword.get(opts, :window_resizable, true)
-    native_menu_bar = Keyword.get(opts, :native_menu_bar, true)
+    window = configure_window(iur, opts)
+    menu_bar = configure_menu_bar(iur, opts)
+    platform = configure_platform(iur, opts)
+    events = configure_events(iur, opts)
 
     %{
       "type" => "desktop_screen",
       "id" => iur["id"],
       "name" => iur["name"],
-      "window" => %{
-        "width" => window_width,
-        "height" => window_height,
-        "resizable" => window_resizable
-      },
-      "menu_bar" => %{
-        "enabled" => native_menu_bar,
-        "items" => generate_menu_items(iur)
-      },
+      "window" => window,
+      "menu_bar" => menu_bar,
+      "platform" => platform,
+      "events" => events,
       "content" => generate_content(iur["children"])
     }
+  end
+
+  defp generate_instructions(widget, _opts) do
+    # Handle non-screen widgets (row, text, button, etc.)
+    generate_widget(widget)
   end
 
   defp generate_menu_items(_iur) do
@@ -140,6 +297,7 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
       "type" => "hbox",
       "id" => widget["id"],
       "spacing" => Map.get(widget["props"] || %{}, "spacing", 8),
+      "align" => Map.get(widget["props"] || %{}, "align", :start),
       "children" => generate_content(widget["children"])
     }
   end
@@ -149,6 +307,7 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
       "type" => "vbox",
       "id" => widget["id"],
       "spacing" => Map.get(widget["props"] || %{}, "spacing", 8),
+      "align" => Map.get(widget["props"] || %{}, "align", :start),
       "children" => generate_content(widget["children"])
     }
   end
@@ -156,12 +315,14 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
   defp generate_widget(%{"type" => "text"} = widget) do
     content = Map.get(widget["props"] || %{}, "content", "")
     size = Map.get(widget["props"] || %{}, "size", 14)
+    weight = Map.get(widget["props"] || %{}, "weight", :normal)
 
     %{
       "type" => "label",
       "id" => widget["id"],
       "text" => content,
-      "font_size" => size
+      "font_size" => size,
+      "font_weight" => weight
     }
   end
 
@@ -173,7 +334,8 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
       "type" => "button",
       "id" => widget["id"],
       "label" => label,
-      "on_click" => on_click
+      "on_click" => on_click,
+      "variant" => Map.get(widget["props"] || %{}, "variant", :primary)
     }
   end
 
@@ -189,6 +351,28 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
     }
   end
 
+  defp generate_widget(%{"type" => "checkbox"} = widget) do
+    name = Map.get(widget["props"] || %{}, "name", "checkbox")
+
+    %{
+      "type" => "checkbox",
+      "id" => widget["id"],
+      "name" => name
+    }
+  end
+
+  defp generate_widget(%{"type" => "select"} = widget) do
+    name = Map.get(widget["props"] || %{}, "name", "select")
+    options = Map.get(widget["props"] || %{}, "options", [])
+
+    %{
+      "type" => "dropdown",
+      "id" => widget["id"],
+      "name" => name,
+      "options" => options
+    }
+  end
+
   defp generate_widget(widget) do
     %{
       "type" => "container",
@@ -196,5 +380,41 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
       "widget_type" => widget["type"],
       "children" => generate_content(widget["children"])
     }
+  end
+
+  # Platform detection
+  defp detect_platform(:auto), do: :os.type() |> elem(1) |> detect_platform_from_os()
+  defp detect_platform(platform) when is_atom(platform), do: platform
+
+  defp detect_platform_from_os(:darwin), do: :macos
+  defp detect_platform_from_os(:nt), do: :windows
+  defp detect_platform_from_os(:linux), do: :linux
+  defp detect_platform_from_os(_), do: :linux
+
+  defp platform_features(platform) do
+    case platform do
+      :macos ->
+        %{
+          touch_bar: true,
+          native_titlebar: true,
+          unified_toolbar: true
+        }
+
+      :windows ->
+        %{
+          window_controls_overlay: true,
+          mica_material: true,
+          snap_layouts: true
+        }
+
+      :linux ->
+        %{
+          app_menu: true,
+          native_decorations: true
+        }
+
+      _ ->
+        %{}
+    end
   end
 end
