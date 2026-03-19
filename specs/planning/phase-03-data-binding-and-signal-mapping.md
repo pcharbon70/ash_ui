@@ -72,24 +72,24 @@ Back to index: [README](./README.md)
       [X] 3.2.3.3 Subtask - Present conflict UI to user for resolution
       [X] 3.2.3.4 Subtask - Emit conflict telemetry events
 
-  [ ] 3.3 Section - List Bindings
+  [X] 3.3 Section - List Bindings
     Implement collection binding for `:list` type bindings.
 
-    [ ] 3.3.1 Task - Implement collection loading
+    [X] 3.3.1 Task - Implement collection loading
       Load and bind collections of resources to UI elements.
 
-      [ ] 3.3.1.1 Subtask - Resolve collection source path
-      [ ] 3.3.1.2 Subtask - Use `Ash.read/2` to load collection
-      [ ] 3.3.1.3 Subtask - Apply pagination and filtering
-      [ ] 3.3.1.4 Subtask - Handle empty collections
+      [X] 3.3.1.1 Subtask - Resolve collection source path
+      [X] 3.3.1.2 Subtask - Use `Ash.read/2` to load collection
+      [X] 3.3.1.3 Subtask - Apply pagination and filtering
+      [X] 3.3.1.4 Subtask - Handle empty collections
 
-    [ ] 3.3.2 Task - Implement collection reactivity
+    [X] 3.3.2 Task - Implement collection reactivity
       Update UI when collection data changes.
 
-      [ ] 3.3.2.1 Subtask - Subscribe to collection changes
-      [ ] 3.3.2.2 Subtask - Re-render list on collection modification
-      [ ] 3.3.2.3 Subtask - Handle insert, update, delete operations
-      [ ] 3.3.2.4 Subtask - Maintain scroll position during updates
+      [X] 3.3.2.1 Subtask - Subscribe to collection changes
+      [X] 3.3.2.2 Subtask - Re-render list on collection modification
+      [X] 3.3.2.3 Subtask - Handle insert, update, delete operations
+      [X] 3.3.2.4 Subtask - Maintain scroll position during updates
 
   [ ] 3.4 Section - Action Bindings
     Implement event-driven binding for `:action` type bindings.
