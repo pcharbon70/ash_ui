@@ -18,40 +18,40 @@ Back to index: [README](./README.md)
 [ ] 4 Phase 4 - Runtime and LiveView Integration
   Implement the LiveView integration layer that manages screen lifecycle, session state, and event handling.
 
-  [ ] 4.1 Section - LiveView Mount Integration
+  [X] 4.1 Section - LiveView Mount Integration
     Implement screen mounting through LiveView `mount/3` callback.
 
-    [ ] 4.1.1 Task - Implement mount_ui_screen helper
+    [X] 4.1.1 Task - Implement mount_ui_screen helper
       Create the helper function for mounting UI screens in LiveView.
 
-      [ ] 4.1.1.1 Subtask - Implement `AshUI.LiveView.mount_ui_screen/3`
-      [ ] 4.1.1.2 Subtask - Accept socket, screen identifier, and params
-      [ ] 4.1.1.3 Subtask - Load screen resource by name or ID
-      [ ] 4.1.1.4 Subtask - Return `{:ok, socket}` with screen state assigned
+      [X] 4.1.1.1 Subtask - Implement `AshUI.LiveView.mount_ui_screen/3`
+      [X] 4.1.1.2 Subtask - Accept socket, screen identifier, and params
+      [X] 4.1.1.3 Subtask - Load screen resource by name or ID
+      [X] 4.1.1.4 Subtask - Return `{:ok, socket}` with screen state assigned
 
-    [ ] 4.1.2 Task - Implement screen authorization on mount
+    [X] 4.1.2 Task - Implement screen authorization on mount
       Check Ash policies before allowing screen access.
 
-      [ ] 4.1.2.1 Subtask - Load current user from socket assigns
-      [ ] 4.1.2.2 Subtask - Check `:mount` action policy for screen resource
-      [ ] 4.1.2.3 Subtask - Redirect to login on authorization failure
-      [ ] 4.1.2.4 Subtask - Emit authorization failure telemetry
+      [X] 4.1.2.1 Subtask - Load current user from socket assigns
+      [X] 4.1.2.2 Subtask - Check `:mount` action policy for screen resource
+      [X] 4.1.2.3 Subtask - Redirect to login on authorization failure
+      [X] 4.1.2.4 Subtask - Emit authorization failure telemetry
 
-    [ ] 4.1.3 Task - Compile screen on mount
+    [X] 4.1.3 Task - Compile screen on mount
       Compile the screen resource to IUR on initial mount.
 
-      [ ] 4.1.3.1 Subtask - Call compiler with screen resource
-      [ ] 4.1.3.2 Subtask - Convert to canonical IUR
-      [ ] 4.1.3.3 Subtask - Store compiled IUR in socket assigns
-      [ ] 4.1.3.4 Subtask - Handle compilation errors gracefully
+      [X] 4.1.3.1 Subtask - Call compiler with screen resource
+      [X] 4.1.3.2 Subtask - Convert to canonical IUR
+      [X] 4.1.3.3 Subtask - Store compiled IUR in socket assigns
+      [X] 4.1.3.4 Subtask - Handle compilation errors gracefully
 
-    [ ] 4.1.4 Task - Evaluate bindings on mount
+    [X] 4.1.4 Task - Evaluate bindings on mount
       Resolve all data bindings for initial render.
 
-      [ ] 4.1.4.1 Subtask - Load all bindings for screen and elements
-      [ ] 4.1.4.2 Subtask - Evaluate bindings against current data
-      [ ] 4.1.4.3 Subtask - Store binding values in socket assigns
-      [ ] 4.1.4.4 Subtask - Handle binding evaluation errors
+      [X] 4.1.4.1 Subtask - Load all bindings for screen and elements
+      [X] 4.1.4.2 Subtask - Evaluate bindings against current data
+      [X] 4.1.4.3 Subtask - Store binding values in socket assigns
+      [X] 4.1.4.4 Subtask - Handle binding evaluation errors
 
   [ ] 4.2 Section - LiveView Update Integration
     Implement reactive updates through LiveView `handle_info/2` callback.
