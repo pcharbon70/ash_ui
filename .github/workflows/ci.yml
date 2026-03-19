@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - "specs/**"
+      - "guides/**"
+      - "lib/**"
+      - "apps/**/lib/**"
+      - "scripts/**"
+      - ".githooks/**"
+      - ".github/workflows/**"
+  push:
+    branches:
+      - main
+      - "codex/**"
+    paths:
+      - "specs/**"
+      - "guides/**"
+      - "lib/**"
+      - "apps/**/lib/**"
+      - "scripts/**"
+      - ".githooks/**"
+      - ".github/workflows/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  specs_governance:
+    name: Specs Governance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Validate specs governance
+        run: ./scripts/validate_specs_governance.sh
+
+      - name: Check stale planning path references
+        run: |
+          if rg -n "planning/modes" specs; then
+            echo "Found stale planning/modes references."
+            exit 1
+          fi
+
+  guides_governance:
+    name: Guides Governance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Validate guides governance
+        run: ./scripts/validate_guides_governance.sh
+
+  code_docs:
+    name: Code Docs Governance
+    runs-on: ubuntu-latest
+    env:
+      DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      DIFF_HEAD: ${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup BEAM
+        uses: erlef/setup-beam@v1
+        with:
+          version-type: strict
+          version-file: .tool-versions
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Install deps
+        run: mix deps.get
+
+      - name: Compile with warnings as errors
+        run: mix compile --warnings-as-errors
+
+      - name: Validate code docs
+        run: ./scripts/validate_code_docs.sh

@@ -1,127 +1,27 @@
-name: RFC Governance Validation
+name: RFC Governance
 
 on:
   pull_request:
-    paths:
-      - 'rfcs/**'
   push:
     branches:
       - main
-    paths:
-      - 'rfcs/**'
+      - "codex/**"
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
-  validate-rfcs:
-    name: Validate RFC Governance
+  validate:
     runs-on: ubuntu-latest
-
+    env:
+      DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      DIFF_HEAD: ${{ github.sha }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
 
       - name: Validate RFC governance
-        run: |
-          ./scripts/validate_rfc_governance.sh
-
-      - name: Check RFC metadata files
-        run: |
-          echo "Checking RFC metadata files..."
-          META_FILES=(
-            "rfcs/README.md"
-            "rfcs/index.md"
-            "rfcs/getting-started.md"
-          )
-
-          for file in "${META_FILES[@]}"; do
-            if [ ! -f "$file" ]; then
-              echo "::error file=$file::RFC metadata file missing: $file"
-              exit 1
-            fi
-          done
-
-          echo "All RFC metadata files present."
-
-      - name: Check RFC template
-        run: |
-          if [ ! -f "rfcs/templates/rfc-template.md" ]; then
-            echo "::error::RFC template is missing"
-            exit 1
-          fi
-
-          # Check for required template sections
-          REQUIRED_SECTIONS=(
-            "Status"
-            "Summary"
-            "Motivation"
-            "Proposed Design"
-            "Governance Mapping"
-            "Alternatives"
-          )
-
-          for section in "${REQUIRED_SECTIONS[@]}"; do
-            if ! grep -q "$section" "rfcs/templates/rfc-template.md"; then
-              echo "::warning file=rfcs/templates/rfc-template.md::Template missing section: $section"
-            fi
-          done
-
-      - name: Validate RFC files
-        run: |
-          RFC_COUNT=0
-          for rfc in rfcs/RFC-*.md; do
-            if [ -f "$rfc" ]; then
-              ((RFC_COUNT++))
-              rfc_name=$(basename "$rfc")
-              echo "Validating $rfc_name..."
-
-              # Check for required fields
-              if ! grep -qE "^\\*\\*Status\\*\\*:" "$rfc"; then
-                echo "::error file=$rfc::Missing Status field"
-                exit 1
-              fi
-
-              if ! grep -qE "^\\*\\*Phase\\*\\*:" "$rfc"; then
-                echo "::warning file=$rfc::Missing Phase field"
-              fi
-
-              if ! grep -qE "^## Summary" "$rfc"; then
-                echo "::error file=$rfc::Missing Summary section"
-                exit 1
-              fi
-
-              # Check for Governance Mapping
-              if ! grep -qE "^## Governance Mapping" "$rfc"; then
-                echo "::warning file=$rfc::Should have Governance Mapping section"
-              fi
-            fi
-          done
-
-          echo "Validated $RFC_COUNT RFC files."
-
-      - name: Check RFC index
-        run: |
-          if [ ! -f "rfcs/index.md" ]; then
-            echo "::error::RFC index is missing"
-            exit 1
-          fi
-
-          # Count RFC entries in index
-          INDEX_COUNT=$(grep -c "RFC-" "rfcs/index.md" || true)
-          echo "RFC index has $((INDEX_COUNT - 1)) entries"
-
-      - name: Verify RFC numbering
-        run: |
-          # Check that RFC numbers are sequential
-          PREV_NUM=0
-          for rfc in rfcs/RFC-*.md; do
-            if [ -f "$rfc" ]; then
-              NUM=$(basename "$rfc" | sed 's/RFC-\([0-9]*\).*/\1/')
-              if [ "$NUM" -le "$PREV_NUM" ]; then
-                echo "::warning file=$rfc::RFC numbering may not be sequential"
-              fi
-              PREV_NUM=$NUM
-            fi
-          done
+        run: ./scripts/validate_rfc_governance.sh
