@@ -90,24 +90,24 @@ Back to index: [README](./README.md)
       [X] 6.3.2.3 Subtask - Use cached IUR for unchanged resources
       [X] 6.3.2.4 Subtask - Batch recompilation for multiple changes
 
-  [ ] 6.4 Section - Compiler Extensions
+  [X] 6.4 Section - Compiler Extensions
     Support custom widget and layout extensions.
 
-    [ ] 6.4.1 Task - Implement custom widget registration
+    [X] 6.4.1 Task - Implement custom widget registration
     Allow registration of custom unified-ui widgets.
 
-      [ ] 6.4.1.1 Subtask - Implement `AshUI.Compiler.register_widget/2`
-      [ ] 6.4.1.2 Subtask - Validate widget against unified-ui spec
-      [ ] 6.4.1.3 Subtask - Add widget to compiler catalog
-      [ ] 6.4.1.4 Subtask - Document widget registration API
+      [X] 6.4.1.1 Subtask - Implement `AshUI.Compiler.register_widget/2`
+      [X] 6.4.1.2 Subtask - Validate widget against unified-ui spec
+      [X] 6.4.1.3 Subtask - Add widget to compiler catalog
+      [X] 6.4.1.4 Subtask - Document widget registration API
 
-    [ ] 6.4.2 Task - Implement custom layout registration
+    [X] 6.4.2 Task - Implement custom layout registration
     Allow registration of custom unified-ui layouts.
 
-      [ ] 6.4.2.1 Subtask - Implement `AshUI.Compiler.register_layout/2`
-      [ ] 6.4.2.2 Subtask - Validate layout against unified-ui spec
-      [ ] 6.4.2.3 Subtask - Add layout to compiler catalog
-      [ ] 6.4.2.4 Subtask - Document layout registration API
+      [X] 6.4.2.1 Subtask - Implement `AshUI.Compiler.register_layout/2`
+      [X] 6.4.2.2 Subtask - Validate layout against unified-ui spec
+      [X] 6.4.2.3 Subtask - Add layout to compiler catalog
+      [X] 6.4.2.4 Subtask - Document layout registration API
 
   [ ] 6.5 Section - Phase 6 Integration Tests
     Validate compiler and DSL integration end-to-end.
