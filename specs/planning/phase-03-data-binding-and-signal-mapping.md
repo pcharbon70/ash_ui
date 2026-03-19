@@ -15,7 +15,7 @@ Back to index: [README](./README.md)
 - Bidirectional bindings support read and write operations
 - Action bindings trigger Ash actions on UI events
 
-[ ] 3 Phase 3 - Data Binding and Signal Mapping
+[X] 3 Phase 3 - Data Binding and Signal Mapping
   Implement reactive data binding from Ash resources to UI elements through unified-ui signal format.
 
   [X] 3.1 Section - Binding Evaluation
@@ -129,37 +129,37 @@ Back to index: [README](./README.md)
       [X] 3.5.2.3 Subtask - Include required CloudEvents fields (id, source, type)
       [X] 3.5.2.4 Subtask - Add signal metadata for tracing
 
-  [ ] 3.6 Section - Phase 3 Integration Tests
+  [X] 3.6 Section - Phase 3 Integration Tests
     Validate binding evaluation and reactivity end-to-end.
 
-    [ ] 3.6.1 Task - Value binding integration scenarios
+    [X] 3.6.1 Task - Value binding integration scenarios
       Verify bidirectional value bindings work correctly.
 
-      [ ] 3.6.1.1 Subtask - Verify binding reads from Ash resource on mount
-      [ ] 3.6.1.2 Subtask - Verify binding updates on resource change
-      [ ] 3.6.1.3 Subtask - Verify user input writes back to Ash resource
-      [ ] 3.6.1.4 Subtask - Verify transformation rules apply correctly
+      [X] 3.6.1.1 Subtask - Verify binding reads from Ash resource on mount
+      [X] 3.6.1.2 Subtask - Verify binding updates on resource change
+      [X] 3.6.1.3 Subtask - Verify user input writes back to Ash resource
+      [X] 3.6.1.4 Subtask - Verify transformation rules apply correctly
 
-    [ ] 3.6.2 Task - List binding integration scenarios
+    [X] 3.6.2 Task - List binding integration scenarios
       Verify collection bindings work correctly.
 
-      [ ] 3.6.2.1 Subtask - Verify list loads and displays collection
-      [ ] 3.6.2.2 Subtask - Verify list updates on collection changes
-      [ ] 3.6.2.3 Subtask - Verify pagination and filtering work
-      [ ] 3.6.2.4 Subtask - Verify empty list state displays correctly
+      [X] 3.6.2.1 Subtask - Verify list loads and displays collection
+      [X] 3.6.2.2 Subtask - Verify list updates on collection changes
+      [X] 3.6.2.3 Subtask - Verify pagination and filtering work
+      [X] 3.6.2.4 Subtask - Verify empty list state displays correctly
 
-    [ ] 3.6.3 Task - Action binding integration scenarios
+    [X] 3.6.3 Task - Action binding integration scenarios
       Verify action bindings execute correctly.
 
-      [ ] 3.6.3.1 Subtask - Verify button click triggers Ash action
-      [ ] 3.6.3.2 Subtask - Verify action passes event data correctly
-      [ ] 3.6.3.3 Subtask - Verify authorization is checked
-      [ ] 3.6.3.4 Subtask - Verify action errors display to user
+      [X] 3.6.3.1 Subtask - Verify button click triggers Ash action
+      [X] 3.6.3.2 Subtask - Verify action passes event data correctly
+      [X] 3.6.3.3 Subtask - Verify authorization is checked
+      [X] 3.6.3.4 Subtask - Verify action errors display to user
 
-    [ ] 3.6.4 Task - Error handling integration scenarios
+    [X] 3.6.4 Task - Error handling integration scenarios
       Verify binding errors are handled gracefully.
 
-      [ ] 3.6.4.1 Subtask - Verify invalid source produces clear error
-      [ ] 3.6.4.2 Subtask - Verify unauthorized access is blocked
-      [ ] 3.6.4.3 Subtask - Verify transformation errors are surfaced
-      [ ] 3.6.4.4 Subtask - Verify action execution errors display feedback
+      [X] 3.6.4.1 Subtask - Verify invalid source produces clear error
+      [X] 3.6.4.2 Subtask - Verify unauthorized access is blocked
+      [X] 3.6.4.3 Subtask - Verify transformation errors are surfaced
+      [X] 3.6.4.4 Subtask - Verify action execution errors display feedback
