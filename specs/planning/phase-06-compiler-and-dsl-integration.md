@@ -17,32 +17,32 @@ Back to index: [README](./README.md)
 [ ] 6 Phase 6 - Compiler and DSL Integration
   Integrate the unified-ui compiler with Ash Resource loading to enable database-driven UI definitions.
 
-  [ ] 6.1 Section - Unified-UI DSL Storage
+  [X] 6.1 Section - Unified-UI DSL Storage
     Store unified-ui DSL definitions in Ash Resource attributes.
 
-    [ ] 6.1.1 Task - Define DSL storage format
+    [X] 6.1.1 Task - Define DSL storage format
     Create the format for storing unified-ui DSL in database.
 
-      [ ] 6.1.1.1 Subtask - Define `unified_dsl` map attribute structure
-      [ ] 6.1.1.2 Subtask - Store root element definition in DSL map
-      [ ] 6.1.1.3 Subtask - Store children array in DSL map
-      [ ] 6.1.1.4 Subtask - Store signals array in DSL map
+      [X] 6.1.1.1 Subtask - Define `unified_dsl` map attribute structure
+      [X] 6.1.1.2 Subtask - Store root element definition in DSL map
+      [X] 6.1.1.3 Subtask - Store children array in DSL map
+      [X] 6.1.1.4 Subtask - Store signals array in DSL map
 
-    [ ] 6.1.2 Task - Create DSL builder helpers
+    [X] 6.1.2 Task - Create DSL builder helpers
     Provide helper functions for building unified-ui DSL.
 
-      [ ] 6.1.2.1 Subtask - Implement `AshUI.DSL.root/2` macro
-      [ ] 6.1.2.2 Subtask - Implement `AshUI.DSL.row/1`, `column/1` layout macros
-      [ ] 6.1.2.3 Subtask - Implement `AshUI.DSL.text/1`, `button/1` widget macros
-      [ ] 6.1.2.4 Subtask - Implement `AshUI.DSL.signal/3` for bindings
+      [X] 6.1.2.1 Subtask - Implement `AshUI.DSL.root/2` macro
+      [X] 6.1.2.2 Subtask - Implement `AshUI.DSL.row/1`, `column/1` layout macros
+      [X] 6.1.2.3 Subtask - Implement `AshUI.DSL.text/1`, `button/1` widget macros
+      [X] 6.1.2.4 Subtask - Implement `AshUI.DSL.signal/3` for bindings
 
-    [ ] 6.1.3 Task - Validate DSL at write time
+    [X] 6.1.3 Task - Validate DSL at write time
     Ensure stored DSL is valid unified-ui format.
 
-      [ ] 6.1.3.1 Subtask - Validate DSL structure before database write
-      [ ] 6.1.3.2 Subtask - Check widget types against unified-ui catalog
-      [ ] 6.1.3.3 Subtask - Check signal references are valid
-      [ ] 6.1.3.4 Subtask - Return validation errors for invalid DSL
+      [X] 6.1.3.1 Subtask - Validate DSL structure before database write
+      [X] 6.1.3.2 Subtask - Check widget types against unified-ui catalog
+      [X] 6.1.3.3 Subtask - Check signal references are valid
+      [X] 6.1.3.4 Subtask - Return validation errors for invalid DSL
 
   [ ] 6.2 Section - Compiler Integration
     Integrate unified-ui compiler with Ash Resource loading.
