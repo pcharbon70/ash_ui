@@ -7,6 +7,7 @@ This index lists all RFCs for the Ash UI framework.
 | ID | Title | Status | Authors | Created | Target Phase |
 |---|---|---|---|---|---|
 | [RFC-0001](RFC-0001-ash-ui-governance-system.md) | Ash UI Governance System | Active | Governance Team | 2026-03-18 | 1 |
+| [RFC-0002](RFC-0002-ash-ui-unified-integration.md) | Ash UI as unified-ui Integration Layer | Draft | Ash UI Team | 2026-03-19 | 1 |
 
 ## RFC Status Legend
 
@@ -26,6 +27,7 @@ This index lists all RFCs for the Ash UI framework.
 
 ### Phase 1: Foundation
 - RFC-0001: Ash UI Governance System
+- RFC-0002: Ash UI as unified-ui Integration Layer
 
 ### Phase 2: Core Features
 - (No RFCs yet)
@@ -37,6 +39,9 @@ This index lists all RFCs for the Ash UI framework.
 
 ### Governance
 - RFC-0001: Ash UI Governance System
+
+### Architecture
+- RFC-0002: Ash UI as unified-ui Integration Layer
 
 ### Resources
 - (No RFCs yet)
@@ -52,7 +57,8 @@ This index lists all RFCs for the Ash UI framework.
 
 ## Recently Updated
 
-1. **RFC-0001** (2026-03-18) - Initial governance system
+1. **RFC-0002** (2026-03-19) - Ash UI as unified-ui Integration Layer
+2. **RFC-0001** (2026-03-18) - Initial governance system
 
 ## Submitting an RFC
 

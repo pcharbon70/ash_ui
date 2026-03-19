@@ -62,8 +62,15 @@ flowchart TB
     end
 
     subgraph Rendering["Rendering Control Plane"]
-        LiveRenderer["LiveView Renderer"]
-        WebRenderer["Static Renderer"]
+        Adapter["IUR Adapter"]
+        Registry["Renderer Registry"]
+    end
+
+    subgraph Unified["Unified Ecosystem"]
+        Canonical["Canonical IUR"]
+        LiveRenderer["LiveUI.Renderer"]
+        WebRenderer["WebUI.Renderer"]
+        DesktopRenderer["DesktopUI.Renderer"]
     end
 
     LiveView --> Session
@@ -76,9 +83,15 @@ flowchart TB
     Compiler --> IUR
     IUR --> Validator
     Validator --> Normalizer
+    Normalizer --> Adapter
+    Adapter --> Canonical
 
-    Normalizer --> LiveRenderer
-    Normalizer --> WebRenderer
+    Canonical --> LiveRenderer
+    Canonical --> WebRenderer
+    Canonical --> DesktopRenderer
+
+    LiveRenderer --> LiveView
+    WebRenderer --> Static
 
     Validator --> Element
     Validator --> Screen
@@ -95,12 +108,14 @@ flowchart TB
     classDef rendering fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef runtime fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
     classDef data fill:#eceff1,stroke:#37474f,stroke-width:2px
+    classDef unified fill:#e0f2f1,stroke:#00695c,stroke-width:2px
 
     class Element,Screen,Binding framework
     class Compiler,IUR,Validator,Normalizer compilation
-    class LiveRenderer,WebRenderer rendering
+    class Adapter,Registry rendering
     class Session,Event,Lifecycle runtime
     class Resources,DB data
+    class Canonical,LiveRenderer,WebRenderer,DesktopRenderer unified
 ```
 
 ## Control Planes
@@ -141,13 +156,16 @@ Ash UI is organized into five control planes, each with distinct authority and r
 
 **Module**: `AshUI.Rendering`
 
-**Authority**: Output generation for target platforms
+**Authority**: IUR adaptation and renderer delegation
 
 **Components**:
-- `AshUI.Renderer.LiveView` - LiveView rendering
-- `AshUI.Renderer.Static` - Static HTML rendering
-- `AshUI.Renderer.Registry` - Renderer registry
-- `AshUI.Renderer.Presenter` - Presentation logic
+- `AshUI.Rendering.IURAdapter` - Converts Ash IUR to canonical unified_iur format
+- `AshUI.Rendering.Registry` - Manages available renderer packages
+
+**External Renderer Packages** (unified ecosystem):
+- `live_ui` - LiveView rendering (https://github.com/your-org/unified/tree/main/packages/live_ui)
+- `web_ui` - Static HTML rendering (https://github.com/your-org/unified/tree/main/packages/web_ui)
+- `desktop_ui` - Desktop rendering (https://github.com/your-org/unified/tree/main/packages/desktop_ui)
 
 **Key Contract**: [rendering_contract.md](../../specs/contracts/rendering_contract.md)
 
@@ -202,7 +220,7 @@ flowchart LR
 
 ## Intermediate UI Representation (IUR)
 
-### IUR Schema
+### Ash UI IUR Schema (Internal)
 
 ```elixir
 %AshUI.Compilation.IUR{
@@ -217,12 +235,25 @@ flowchart LR
 }
 ```
 
+### Canonical IUR Schema (unified_iur package)
+
+```elixir
+%UnifiedIUR.Screen{
+  id: UUID.t(),
+  elements: [%UnifiedIUR.Element{}],
+  layout: UnifiedIUR.Layout.t(),
+  signals: [%UnifiedIUR.Signal{}],
+  metadata: map()
+}
+```
+
 ### IUR Properties
 
 - **Serializable** - Can be encoded to JSON/binary
 - **Immutable** - IUR instances are never modified
 - **Self-contained** - All information needed for rendering
 - **Versioned** - Schema version for compatibility
+- **Convertible** - Ash UI IUR converts to canonical unified_iur format
 
 ## Module Namespace
 
@@ -243,10 +274,8 @@ AshUI                                   # Application root
 │   ├── Normalizer
 │   └── Cache
 ├── Rendering                           # Rendering Control Plane
-│   ├── LiveView
-│   ├── Static
-│   ├── Registry
-│   └── Presenter
+│   ├── IURAdapter                      # Ash IUR → Canonical IUR
+│   └── Registry                        # Renderer package management
 ├── Runtime                             # Runtime Control Plane
 │   ├── Session
 │   ├── Event
@@ -256,6 +285,12 @@ AshUI                                   # Application root
     ├── Admission
     └── Loader
 ```
+
+**External Packages** (unified ecosystem):
+- `unified_iur` - Canonical IUR schema and types
+- `live_ui` - LiveView renderer
+- `web_ui` - Static HTML renderer
+- `desktop_ui` - Desktop renderer
 
 ## Extension Points
 
@@ -278,20 +313,35 @@ AshUI.Extension.Widget.register(:my_custom, MyApp.CustomElement)
 
 ### Custom Renderers
 
-Implement the renderer behaviour:
+Custom renderers are implemented via the unified ecosystem packages. To create a custom renderer:
+
+1. **For Ash UI integration**: Ensure your renderer accepts canonical unified_iur format
+2. **Implement renderer contract**: Follow the unified ecosystem renderer spec
+3. **Register with Ash UI**: Add to renderer registry
 
 ```elixir
-defmodule MyApp.CustomRenderer do
-  @behaviour AshUI.Renderer
+# Example: Using live_ui renderer
+defmodule MyAppWeb.MyLive do
+  use Phoenix.LiveView
 
-  def render(iur, opts) do
-    # Custom rendering logic
+  def mount(_params, _session, socket) do
+    # Compile Ash UI screen
+    {:ok, iur} = AshUI.Compilation.compile(:my_screen, %{})
+
+    # Convert to canonical IUR
+    {:ok, canonical_iur} = AshUI.Rendering.IURAdapter.to_canonical(iur)
+
+    # Render via live_ui
+    {:ok, heex} = LiveUI.Renderer.render(canonical_iur, [])
+
+    {:ok, assign(socket, :content, heex)}
   end
-
-  def can_render?(iur), do: true
-  def format, do: :custom
 end
 ```
+
+For creating custom renderer packages, see:
+- [Unified Ecosystem Architecture](https://github.com/your-org/unified/blob/main/.spec/specs/architecture.spec.md)
+- [Platform Runtimes Spec](https://github.com/your-org/unified/blob/main/.spec/specs/platform_runtimes.spec.md)
 
 ## Data Flow
 

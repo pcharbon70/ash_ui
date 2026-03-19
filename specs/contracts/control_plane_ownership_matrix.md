@@ -38,10 +38,16 @@ This document defines the ownership boundaries and authority delegation across a
 
 | Component | Module | Owner | Dependencies |
 |---|---|---|---|
-| LiveView Renderer | `AshUI.Renderer.LiveView` | Rendering | Phoenix.LiveView |
-| Static Renderer | `AshUI.Renderer.Static` | Rendering | Phoenix.Template |
-| Presenter Layer | `AshUI.Renderer.Presenter` | Rendering | IUR |
-| Renderer Registry | `AshUI.Renderer.Registry` | Rendering | - |
+| IUR Adapter | `AshUI.Rendering.IURAdapter` | Rendering | unified_iur |
+| Renderer Registry | `AshUI.Rendering.Registry` | Rendering | live_ui, web_ui, desktop_ui |
+
+**External Renderer Packages** (consumed as dependencies):
+
+| Package | Module | Owner | Dependencies |
+|---|---|---|---|
+| live_ui | `LiveUI.Renderer` | External | Phoenix.LiveView, unified_iur |
+| web_ui | `WebUI.Renderer` | External | Phoenix, Elm, unified_iur |
+| desktop_ui | `DesktopUI.Renderer` | External | SDL2, unified_iur |
 
 ### Runtime Control Plane
 
@@ -90,18 +96,20 @@ The Compilation Control Plane has exclusive authority over:
 
 **REQ-COMP-002**: Compiler must report all validation errors before IUR generation.
 
-### Rendering Authority (EXCLUSIVE)
+### Rendering Authority (DELEGATED)
 
-The Rendering Control Plane has exclusive authority over:
+The Rendering Control Plane delegates actual rendering to external unified renderer packages:
 
-- **Renderer Contracts**: Interface for all renderers
-- **Output Format**: Structure of rendered output
-- **Presentation Logic**: How data is formatted for display
-- **Renderer Selection**: How the appropriate renderer is chosen
+- **IUR Production**: Compiles Ash Resources to canonical `unified_iur` format
+- **Renderer Selection**: Application selects target renderer package (live_ui, web_ui, desktop_ui)
+- **Adapter Contract**: Defines interface for IUR conversion and renderer invocation
+- **Package Integration**: Manages dependencies on external renderer packages
 
-**REQ-RENDER-001**: All renderers must implement the Renderer contract.
+**REQ-RENDER-001**: Ash UI must produce valid canonical `unified_iur` for external renderers.
 
-**REQ-RENDER-002**: Renderers must produce valid output for all valid IUR.
+**REQ-RENDER-002**: External renderer packages must accept canonical IUR without Ash-specific dependencies.
+
+**Note**: LiveView, Static HTML, and Desktop renderers are owned by the unified ecosystem packages, not Ash UI. Ash UI consumes these packages as dependencies.
 
 ### Runtime Authority (EXCLUSIVE)
 

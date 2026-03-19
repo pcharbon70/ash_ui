@@ -43,9 +43,10 @@ flowchart TB
     end
 
     subgraph Rendering["Rendering Control Plane"]
-        LiveRenderer["live_ui Renderer"]
-        WebRenderer["web_ui Renderer"]
-        Presenter["Presenter Layer"]
+        LiveRenderer["live_ui Package<br/>(LiveView Renderer)"]
+        WebRenderer["web_ui Package<br/>(Static HTML Renderer)"]
+        DesktopRenderer["desktop_ui Package<br/>(Desktop Renderer)"]
+        ExternalRegistry["External Renderer Registry"]
     end
 
     subgraph Extension["Extension Control Plane"]
@@ -73,7 +74,9 @@ flowchart TB
     Validator --> UIScreen
     Validator --> UIBinding
 
-    Normalizer --> LiveRenderer
+    Normalizer -->|"Canonical IUR"| LiveRenderer
+    Normalizer -->|"Canonical IUR"| WebRenderer
+    Normalizer -->|"Canonical IUR"| DesktopRenderer
 
     AshAPI --> UIElement
     AshAPI --> UIScreen
@@ -85,10 +88,11 @@ flowchart TB
 
     AshResources --> Database
 
-    LiveRenderer --> Presenter
-    WebRenderer --> Presenter
+    LiveRenderer -->|"Native Widgets"| WidgetRegistry
+    WebRenderer -->|"Native Widgets"| WidgetRegistry
+    DesktopRenderer -->|"Native Widgets"| WidgetRegistry
 
-    Presenter --> WidgetRegistry
+    Normalizer -->|"IUR Format"| WidgetRegistry
 
     WidgetRegistry --> PluginAdmission
 
@@ -101,7 +105,7 @@ flowchart TB
 
     class UIElement,UIScreen,UIBinding,AshAPI framework
     class ResourceCompiler,IURGenerator,Validator,Normalizer compilation
-    class LiveRenderer,WebRenderer,Presenter rendering
+    class LiveRenderer,WebRenderer,DesktopRenderer,ExternalRegistry rendering
     class LVSession,EventHandler,LifecycleMgr runtime
     class WidgetRegistry,PluginAdmission extension
     class AshResources,Database data
@@ -194,18 +198,23 @@ flowchart TB
 
 **Owner**: `AshUI.Rendering`
 
-**Scope**: Output generation for target platforms
+**Scope**: Output generation for target platforms via external renderer packages
 
 **Components**:
-- live_ui Renderer - LiveView-compatible rendering
-- web_ui Renderer - Static HTML rendering
-- Presenter Layer - Final presentation logic
+- **live_ui** - External package providing LiveView-compatible rendering via `LiveUI.Renderer.render/2`
+- **web_ui** - External package providing static HTML rendering via `WebUI.Renderer.render/2`
+- **desktop_ui** - External package providing desktop rendering via `DesktopUI.Renderer.render/2`
+- **Renderer Registry** - Manages renderer package selection and adapter registration
 
 **Authority**:
-- Defines renderer contracts and interfaces
-- Controls presentation logic and formatting
-- Manages renderer selection and routing
-- Owns output format specifications
+- Compiles Ash Resources to canonical unified_iur format
+- Delegates rendering to external unified renderer packages
+- Manages renderer package selection and routing
+- Validates IUR compatibility with target renderers
+
+**External Dependencies**:
+- `unified_iur` - Canonical intermediate representation format
+- Renderer packages are consumed as dependencies, not owned by Ash UI
 
 ### Runtime Control Plane
 
@@ -251,15 +260,17 @@ sequenceDiagram
     participant EH as Event Handler
     participant RC as Resource Compiler
     participant IUR as IUR Generator
-    participant LR as live_ui Renderer
+    participant UI as unified_iur
+    participant LR as LiveUI.Renderer
     participant AR as Ash Resources
 
     B->>LV: WebSocket Connect
     LV->>LV: Mount Screen
     LV->>EH: Request Screen UI
     EH->>RC: Compile UI.Screen
-    RC->>IUR: Generate IUR
-    IUR->>LR: Render to LiveView
+    RC->>IUR: Generate Ash IUR
+    IUR->>UI: Convert to Canonical IUR
+    UI->>LR: LiveUI.Renderer.render(iur)
     LR->>LV: HEEx Template
     LV->>B: Initial HTML
 
@@ -269,7 +280,8 @@ sequenceDiagram
     AR-->>EH: Result
     EH->>RC: Recompute UI
     RC->>IUR: Generate Updated IUR
-    IUR->>LV: Updated HEEx
+    IUR->>UI: Convert to Canonical IUR
+    UI->>LV: Updated HEEx
     LV->>B: Patch Update
 ```
 
@@ -279,16 +291,19 @@ sequenceDiagram
 sequenceDiagram
     participant C as Client
     participant SC as Static Controller
+    participant EH as Event Handler
     participant RC as Resource Compiler
     participant IUR as IUR Generator
-    participant WR as web_ui Renderer
+    participant UI as unified_iur
+    participant WR as WebUI.Renderer
     participant AR as Ash Resources
 
     C->>SC: HTTP GET /screen
     SC->>EH: Build Screen Request
     EH->>RC: Compile UI.Screen
-    RC->>IUR: Generate IUR
-    IUR->>WR: Render to HTML
+    RC->>IUR: Generate Ash IUR
+    IUR->>UI: Convert to Canonical IUR
+    UI->>WR: WebUI.Renderer.render(iur)
     WR->>SC: Static HTML
     SC->>C: HTML Response
 ```
@@ -308,9 +323,8 @@ AshUI                               # Application root
 │   ├── Validator                   # Schema Validator
 │   └── Normalizer                  # Representation Normalizer
 ├── Rendering                       # Rendering Control Plane
-│   ├── LiveRenderer                # LiveView Renderer
-│   ├── WebRenderer                 # Static HTML Renderer
-│   └── Presenter                   # Presentation Logic
+│   ├── IURAdapter                  # Ash IUR → unified_iur adapter
+│   └── RendererRegistry            # External renderer package management
 ├── Runtime                         # Runtime Control Plane
 │   ├── Session                     # Session Management
 │   ├── EventHandler                # Event Processing
@@ -332,8 +346,10 @@ AshUI                               # Application root
 - Phoenix.Template (for HEEx)
 
 ### Rendering Dependencies
-- Phoenix.LiveView (LiveView mode)
-- Phoenix.Template (Static mode)
+- `unified_iur` - Canonical intermediate representation
+- `live_ui` - LiveView rendering (optional, application-provided)
+- `web_ui` - Static HTML rendering (optional, application-provided)
+- `desktop_ui` - Desktop rendering (optional, application-provided)
 
 ### Runtime Dependencies
 - Phoenix.LiveView

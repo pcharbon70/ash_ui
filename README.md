@@ -1,6 +1,6 @@
 # Ash UI
 
-A resource-driven UI framework for Elixir built on the Ash Framework, enabling dynamic UI generation from database resources through Phoenix LiveView and static web rendering.
+A resource-driven UI framework for Elixir built on the Ash Framework, enabling dynamic UI generation from database resources through the unified UI rendering ecosystem.
 
 ## Overview
 
@@ -8,7 +8,7 @@ Ash UI provides a declarative approach to building user interfaces by defining U
 
 - **Database-Driven UI** - Define screens and elements as resources
 - **Reactive Data Binding** - Connect UI directly to Ash resources
-- **Dual Rendering** - Output to LiveView (interactive) or static HTML
+- **Multi-Platform Rendering** - Output to LiveView, static HTML, or desktop via unified renderer packages
 - **Type Safety** - Leverage Ash's type system for UI components
 - **Authorization-First** - Built-in policy-based access control
 
@@ -24,22 +24,38 @@ flowchart LR
 
     subgraph AshUI["Ash UI Framework"]
         Compiler["Compiler"]
-        IUR["IUR"]
-        Renderer["Renderer"]
+        IUR["Ash IUR"]
+        Adapter["IUR Adapter"]
+    end
+
+    subgraph Unified["Unified Ecosystem"]
+        Canonical["Canonical IUR"]
+    end
+
+    subgraph Renderers["Renderer Packages"]
+        Live["live_ui"]
+        Web["web_ui"]
+        Desktop["desktop_ui"]
     end
 
     subgraph Output["User Interface"]
-        Live["LiveView"]
+        LV["LiveView"]
         HTML["Static HTML"]
+        Native["Desktop UI"]
     end
 
     Element --> Compiler
     Screen --> Compiler
     Binding --> Compiler
     Compiler --> IUR
-    IUR --> Renderer
-    Renderer --> Live
-    Renderer --> HTML
+    IUR --> Adapter
+    Adapter --> Canonical
+    Canonical --> Live
+    Canonical --> Web
+    Canonical --> Desktop
+    Live --> LV
+    Web --> HTML
+    Desktop --> Native
 ```
 
 ## Quick Start
@@ -52,6 +68,8 @@ Add to your `mix.exs`:
 def deps do
   [
     {:ash_ui, "~> 0.1"},
+    {:unified_iur, "~> 0.1"},  # Canonical IUR format
+    {:live_ui, "~> 0.1"},      # LiveView renderer (or web_ui, desktop_ui)
     {:ash, "~> 3.0"},
     {:phoenix_live_view, "~> 1.0"}
   ]
@@ -82,13 +100,14 @@ end
 ```elixir
 defmodule MyAppWeb.DashboardLive do
   use MyAppWeb, :live_view
-  use AshUI.LiveView
 
   def mount(params, _session, socket) do
     {:ok, mount_ui_screen(socket, :dashboard, params)}
   end
 end
 ```
+
+The `mount_ui_screen/3` helper handles compilation, IUR conversion, and rendering.
 
 ## Documentation
 
@@ -127,9 +146,9 @@ This project is in early development. The governance system and core architectur
 |---|---|
 | Governance System | ✅ Implemented |
 | Resource Definitions | 🚧 In Progress |
-| Compilation Pipeline | 🚧 Planned |
-| LiveView Rendering | 🚧 Planned |
-| Static Rendering | 🚧 Planned |
+| Compilation Pipeline | 🚧 In Progress |
+| IUR Adapter | 🚧 Planned |
+| Renderer Integration | 🚧 Planned (via unified packages) |
 
 ## Governance
 
@@ -148,10 +167,15 @@ See [RFC-0001](rfcs/RFC-0001-ash-ui-governance-system.md) for details on the gov
 | Control Plane | Scope | Module |
 |---|---|---|
 | Framework | Resource definitions, type system | `AshUI.Framework` |
-| Compilation | Resource → IUR pipeline | `AshUI.Compilation` |
-| Rendering | Output generation | `AshUI.Rendering` |
+| Compilation | Resource → canonical IUR pipeline | `AshUI.Compilation` |
+| Rendering | IUR adaptation, renderer delegation | `AshUI.Rendering` |
 | Runtime | Session lifecycle | `AshUI.Runtime` |
 | Extension | Widgets, plugins | `AshUI.Extension` |
+
+**External Renderer Packages** (unified ecosystem):
+- `live_ui` - Phoenix LiveView rendering
+- `web_ui` - Static HTML + Elm rendering
+- `desktop_ui` - Native desktop rendering
 
 See [Control Plane Ownership](specs/contracts/control_plane_ownership_matrix.md) for details.
 
@@ -171,6 +195,11 @@ We welcome contributions! Please:
 ## Related Projects
 
 - [Ash Framework](https://ash-hq.org/) - The declarative foundation
+- [Unified UI Ecosystem](https://github.com/your-org/unified) - Renderer packages:
+  - [unified_iur](https://github.com/your-org/unified/tree/main/packages/unified_iur) - Canonical IUR format
+  - [live_ui](https://github.com/your-org/unified/tree/main/packages/live_ui) - LiveView renderer
+  - [web_ui](https://github.com/your-org/unified/tree/main/packages/web_ui) - Static HTML renderer
+  - [desktop_ui](https://github.com/your-org/unified/tree/main/packages/desktop_ui) - Desktop renderer
 - [Phoenix](https://www.phoenixframework.org/) - The web framework
 - [Phoenix LiveView](https://hexdocs.pm/phoenix_live_view) - Real-time UI
 
