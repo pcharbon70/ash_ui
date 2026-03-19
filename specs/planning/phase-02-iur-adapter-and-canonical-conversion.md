@@ -108,24 +108,24 @@ Back to index: [README](./README.md)
     [X] 2.3.3.3 Subtask - Convert source path to unified signal reference
     [X] 2.3.3.4 Subtask - Handle nested paths and relationship traversal
 
-  [ ] 2.4 Section - Error Handling and Validation
+  [X] 2.4 Section - Error Handling and Validation
     Implement error handling for IUR conversion failures.
 
-    [ ] 2.4.1 Task - Define error types
+    [X] 2.4.1 Task - Define error types
       Create structured error types for conversion failures.
 
-    [ ] 2.4.1.1 Subtask - Implement `AshUI.Rendering.ConversionError` exception
-    [ ] 2.4.1.2 Subtask - Add error fields: `phase`, `element_id`, `reason`
-    [ ] 2.4.1.3 Subtask - Implement error formatting for user display
-    [ ] 2.4.1.4 Subtask - Add error telemetry with correlation IDs
+    [X] 2.4.1.1 Subtask - Implement `AshUI.Rendering.ConversionError` exception
+    [X] 2.4.1.2 Subtask - Add error fields: `phase`, `element_id`, `reason`
+    [X] 2.4.1.3 Subtask - Implement error formatting for user display
+    [X] 2.4.1.4 Subtask - Add error telemetry with correlation IDs
 
-    [ ] 2.4.2 Task - Implement validation checks
+    [X] 2.4.2 Task - Implement validation checks
       Add validation at each conversion stage.
 
-    [ ] 2.4.2.1 Subtask - Validate Ash IUR before canonical conversion
-    [ ] 2.4.2.2 Subtask - Validate canonical IUR structure after conversion
-    [ ] 2.4.2.3 Subtask - Collect all validation errors before returning
-    [ ] 2.4.2.4 Subtask - Provide detailed error location information
+    [X] 2.4.2.1 Subtask - Validate Ash IUR before canonical conversion
+    [X] 2.4.2.2 Subtask - Validate canonical IUR structure after conversion
+    [X] 2.4.2.3 Subtask - Collect all validation errors before returning
+    [X] 2.4.2.4 Subtask - Provide detailed error location information
 
   [ ] 2.5 Section - Phase 2 Integration Tests
     Validate IUR compilation and canonical conversion end-to-end.
