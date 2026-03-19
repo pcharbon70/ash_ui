@@ -124,6 +124,11 @@ defmodule AshUI.Rendering.Registry do
   # Server Callbacks
 
   @impl true
+  @doc """
+  GenServer callback to initialize the renderer registry.
+
+  Detects all available renderer packages and stores their information.
+  """
   def init(_opts) do
     state = %{
       renderers: detect_renderers(),
@@ -134,6 +139,15 @@ defmodule AshUI.Rendering.Registry do
   end
 
   @impl true
+  @doc """
+  GenServer callback for synchronous requests.
+
+  Supports:
+  - `:list_renderers` - Returns list of all registered renderers
+  - `{:get_renderer, type}` - Returns renderer module for given type
+  - `{:renderer_available?, type}` - Checks if renderer is available
+  - `:default_renderer` - Returns the default renderer
+  """
   def handle_call(:list_renderers, _from, state) do
     renderers =
       state.renderers

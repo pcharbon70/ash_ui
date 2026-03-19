@@ -1,0 +1,9 @@
+{application,ash_ui,
+             [{config_mtime,1773914518},
+              {optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,logger,ash,
+                             phoenix_live_view,igniter,jason]},
+              {description,"ash_ui"},
+              {modules,[]},
+              {registered,[]},
+              {vsn,"0.1.0"}]}.
