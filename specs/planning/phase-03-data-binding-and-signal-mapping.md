@@ -45,32 +45,32 @@ Back to index: [README](./README.md)
       [X] 3.1.3.3 Subtask - Apply `default` transformations when source is nil
       [X] 3.1.3.4 Subtask - Apply `validate` transformations and return errors
 
-  [ ] 3.2 Section - Bidirectional Value Bindings
+  [X] 3.2 Section - Bidirectional Value Bindings
     Implement two-way data binding for `:value` type bindings.
 
-    [ ] 3.2.1 Task - Implement read direction
+    [X] 3.2.1 Task - Implement read direction
       Flow data from Ash resources to UI elements.
 
-      [ ] 3.2.1.1 Subtask - Subscribe to Ash resource changes
-      [ ] 3.2.1.2 Subtask - Re-evaluate binding on resource change
-      [ ] 3.2.1.3 Subtask - Update LiveView assigns on value change
-      [ ] 3.2.1.4 Subtask - Handle loading and error states
+      [X] 3.2.1.1 Subtask - Subscribe to Ash resource changes
+      [X] 3.2.1.2 Subtask - Re-evaluate binding on resource change
+      [X] 3.2.1.3 Subtask - Update LiveView assigns on value change
+      [X] 3.2.1.4 Subtask - Handle loading and error states
 
-    [ ] 3.2.2 Task - Implement write direction
+    [X] 3.2.2 Task - Implement write direction
       Flow data from UI elements to Ash resources.
 
-      [ ] 3.2.2.1 Subtask - Capture user input events from LiveView
-      [ ] 3.2.2.2 Subtask - Validate input data before writing
-      [ ] 3.2.2.3 Subtask - Call `Ash.update/3` with new value
-      [ ] 3.2.2.4 Subtask - Handle update errors and display to user
+      [X] 3.2.2.1 Subtask - Capture user input events from LiveView
+      [X] 3.2.2.2 Subtask - Validate input data before writing
+      [X] 3.2.2.3 Subtask - Call `Ash.update/3` with new value
+      [X] 3.2.2.4 Subtask - Handle update errors and display to user
 
-    [ ] 3.2.3 Task - Implement conflict resolution
+    [X] 3.2.3 Task - Implement conflict resolution
       Handle concurrent updates to shared data.
 
-      [ ] 3.2.3.1 Subtask - Detect stale data with optimistic locking
-      [ ] 3.2.3.2 Subtask - Retry on conflict with backoff
-      [ ] 3.2.3.3 Subtask - Present conflict UI to user for resolution
-      [ ] 3.2.3.4 Subtask - Emit conflict telemetry events
+      [X] 3.2.3.1 Subtask - Detect stale data with optimistic locking
+      [X] 3.2.3.2 Subtask - Retry on conflict with backoff
+      [X] 3.2.3.3 Subtask - Present conflict UI to user for resolution
+      [X] 3.2.3.4 Subtask - Emit conflict telemetry events
 
   [ ] 3.3 Section - List Bindings
     Implement collection binding for `:list` type bindings.
