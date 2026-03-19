@@ -71,24 +71,24 @@ Back to index: [README](./README.md)
       [X] 6.2.3.3 Subtask - Invalidate cache on resource update
       [X] 6.2.3.4 Subtask - Configure cache size and TTL
 
-  [ ] 6.3 Section - Incremental Compilation
+  [X] 6.3 Section - Incremental Compilation
     Support efficient recompilation when resources change.
 
-    [ ] 6.3.1 Task - Track resource dependencies
+    [X] 6.3.1 Task - Track resource dependencies
     Track which resources depend on which.
 
-      [ ] 6.3.1.1 Subtask - Record element-to-screen dependencies
-      [ ] 6.3.1.2 Subtask - Record binding-to-element dependencies
-      [ ] 6.3.1.3 Subtask - Detect circular dependencies
-      [ ] 6.3.1.4 Subtask - Maintain dependency graph
+      [X] 6.3.1.1 Subtask - Record element-to-screen dependencies
+      [X] 6.3.1.2 Subtask - Record binding-to-element dependencies
+      [X] 6.3.1.3 Subtask - Detect circular dependencies
+      [X] 6.3.1.4 Subtask - Maintain dependency graph
 
-    [ ] 6.3.2 Task - Implement selective recompilation
+    [X] 6.3.2 Task - Implement selective recompilation
     Only recompile affected resources when things change.
 
-      [ ] 6.3.2.1 Subtask - On element change, recompile parent screen
-      [ ] 6.3.2.2 Subtask - On binding change, recompile affected elements
-      [ ] 6.3.2.3 Subtask - Use cached IUR for unchanged resources
-      [ ] 6.3.2.4 Subtask - Batch recompilation for multiple changes
+      [X] 6.3.2.1 Subtask - On element change, recompile parent screen
+      [X] 6.3.2.2 Subtask - On binding change, recompile affected elements
+      [X] 6.3.2.3 Subtask - Use cached IUR for unchanged resources
+      [X] 6.3.2.4 Subtask - Batch recompilation for multiple changes
 
   [ ] 6.4 Section - Compiler Extensions
     Support custom widget and layout extensions.
