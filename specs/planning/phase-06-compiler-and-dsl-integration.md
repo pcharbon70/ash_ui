@@ -44,32 +44,32 @@ Back to index: [README](./README.md)
       [X] 6.1.3.3 Subtask - Check signal references are valid
       [X] 6.1.3.4 Subtask - Return validation errors for invalid DSL
 
-  [ ] 6.2 Section - Compiler Integration
+  [X] 6.2 Section - Compiler Integration
     Integrate unified-ui compiler with Ash Resource loading.
 
-    [ ] 6.2.1 Task - Implement AshUI.Compiler
+    [X] 6.2.1 Task - Implement AshUI.Compiler
     Create the compiler that loads and compiles UI definitions.
 
-      [ ] 6.2.1.1 Subtask - Implement `AshUI.Compiler.compile_screen/2`
-      [ ] 6.2.1.2 Subtask - Load screen resource from database
-      [ ] 6.2.1.3 Subtask - Extract `unified_dsl` from resource
-      [ ] 6.2.1.4 Subtask - Pass DSL to unified-ui compiler
+      [X] 6.2.1.1 Subtask - Implement `AshUI.Compiler.compile_screen/2`
+      [X] 6.2.1.2 Subtask - Load screen resource from database
+      [X] 6.2.1.3 Subtask - Extract `unified_dsl` from resource
+      [X] 6.2.1.4 Subtask - Pass DSL to unified-ui compiler
 
-    [ ] 6.2.2 Task - Integrate unified-ui compiler
+    [X] 6.2.2 Task - Integrate unified-ui compiler
     Call unified-ui compiler to produce IUR.
 
-      [ ] 6.2.2.1 Subtask - Add `unified_ui` as dependency
-      [ ] 6.2.2.2 Subtask - Call `UnifiedUI.Compiler.compile/1`
-      [ ] 6.2.2.3 Subtask - Handle compilation errors from unified-ui
-      [ ] 6.2.2.4 Subtask - Return Ash IUR or error
+      [X] 6.2.2.1 Subtask - Add `unified_ui` as dependency
+      [X] 6.2.2.2 Subtask - Call `UnifiedUI.Compiler.compile/1`
+      [X] 6.2.2.3 Subtask - Handle compilation errors from unified-ui
+      [X] 6.2.2.4 Subtask - Return Ash IUR or error
 
-    [ ] 6.2.3 Task - Implement compilation caching
+    [X] 6.2.3 Task - Implement compilation caching
     Cache compiled IUR for performance.
 
-      [ ] 6.2.3.1 Subtask - Generate cache key from resource ID and version
-      [ ] 6.2.3.2 Subtask - Store compiled IUR in ETS cache
-      [ ] 6.2.3.3 Subtask - Invalidate cache on resource update
-      [ ] 6.2.3.4 Subtask - Configure cache size and TTL
+      [X] 6.2.3.1 Subtask - Generate cache key from resource ID and version
+      [X] 6.2.3.2 Subtask - Store compiled IUR in ETS cache
+      [X] 6.2.3.3 Subtask - Invalidate cache on resource update
+      [X] 6.2.3.4 Subtask - Configure cache size and TTL
 
   [ ] 6.3 Section - Incremental Compilation
     Support efficient recompilation when resources change.
