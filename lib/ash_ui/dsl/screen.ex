@@ -21,8 +21,7 @@ defmodule AshUI.DSL.Screen do
         metadata %{title: "Dashboard"}
       end
   """
-  @spec [ @keyword [ {:name, :type} ] ]
-        Ash.Dsl.Entity.entity?(...
+  @spec ui_screen(keyword()) :: keyword()
   def ui_screen(opts \\ []) do
     # DSL implementation for screen configuration
     # This will be expanded to use Spark DSL

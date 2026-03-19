@@ -229,7 +229,7 @@ defmodule AshUI.Compiler.Incremental do
     {element_to_bindings, binding_to_element} =
       Enum.reduce(elements, {%{}, %{}}, fn element, {e_to_b, b_to_e} ->
         bindings = get_element_bindings(element)
-        binding_ids = Enum.map(bindings, & & &1.id)
+        binding_ids = Enum.map(bindings, fn x -> x.id end)
 
         updated_e_to_b =
           if binding_ids == [] do

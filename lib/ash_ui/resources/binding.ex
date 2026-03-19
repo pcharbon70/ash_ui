@@ -27,22 +27,19 @@ defmodule AshUI.Resources.Binding do
   end
 
   actions do
-    defaults [:read, :create, :update, :destroy]
+    defaults [:create, :update, :destroy]
 
-    read :read do
+    read :read_with_filter do
       argument :filter, :map, default: %{}
       filter expr(active == true)
     end
-
-    action :evaluate do
-      argument :context, :map
-      run {AshUI.Binding.Actions, :evaluate}
-    end
   end
 
-  policies do
-    policy action(:read) do
-      authorize_if expr(active == true)
-    end
-  end
+  # Note: Policy DSL requires Ash.Policy.Authorizer extension
+  # This will be added when authorization policies are fully implemented
+  # policies do
+  #   policy action(:read) do
+  #     authorize_if expr(active == true)
+  #   end
+  # end
 end

@@ -142,13 +142,6 @@ defmodule AshUI.LiveView.Integration do
     _ -> false
   end
 
-  defp compile_screen(%Screen{} = screen) do
-    with {:ok, iur} <- Compiler.compile(screen),
-         {:ok, canonical_iur} <- IURAdapter.to_canonical(iur) do
-      {:ok, canonical_iur}
-    end
-  end
-
   defp build_evaluation_context(socket, user, params) do
     %{
       user_id: get_user_id(user),

@@ -17,11 +17,11 @@ defmodule AshUI.Signal.Struct do
 
   @type signal_type :: :bidirectional | :collection | :event
   @type signal_source :: %{
-          "type" => String.t(),
-          "resource" => String.t() | nil,
-          "field" => String.t() | nil,
-          "action" => String.t() | nil,
-          "relationship" => String.t() | nil
+          type: String.t(),
+          resource: String.t() | nil,
+          field: String.t() | nil,
+          action: String.t() | nil,
+          relationship: String.t() | nil
         }
 
   defstruct [

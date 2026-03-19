@@ -106,7 +106,7 @@ defmodule AshUI.LiveView.Lifecycle do
     socket
     |> Phoenix.LiveView.assign(:ash_ui_isolated, true)
     |> Phoenix.LiveView.assign(:ash_ui_session_key, session_id)
-    |> isolate_binding_state(socket)
+    |> isolate_binding_state()
   end
 
   @doc """

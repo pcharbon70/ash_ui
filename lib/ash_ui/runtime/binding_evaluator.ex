@@ -243,7 +243,7 @@ defmodule AshUI.Runtime.BindingEvaluator do
   ## Returns
     * Map of binding_id to result
   """
-  @spec evaluate_batch([Binding.t() | map()], context(), keyword()) :: %{String.t() => evaluation_result()}}
+  @spec evaluate_batch([Binding.t() | map()], context(), keyword()) :: %{String.t() => evaluation_result()}
   def evaluate_batch(bindings, context, opts \\ []) do
     Enum.reduce(bindings, %{}, fn binding, acc ->
       id = get_binding_id(binding)

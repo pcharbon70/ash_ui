@@ -29,9 +29,11 @@ defmodule AshUI.Resources.Element do
     defaults [:read, :create, :update, :destroy]
   end
 
-  policies do
-    policy action(:read) do
-      authorize_if expr(active == true)
-    end
-  end
+  # Note: Policy DSL requires Ash.Policy.Authorizer extension
+  # This will be added when authorization policies are fully implemented
+  # policies do
+  #   policy action(:read) do
+  #     authorize_if expr(active == true)
+  #   end
+  # end
 end
