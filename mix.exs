@@ -32,7 +32,9 @@ defmodule AshUI.MixProject do
       {:igniter, "~> 0.6", only: [:dev, :test]},
       {:jason, "~> 1.4"},
       {:postgrex, ">= 0.0.0"},
-      {:ecto_sql, "~> 3.10"}
+      {:ecto_sql, "~> 3.10"},
+      {:telemetry, "~> 1.0"},
+      {:uuid, "~> 1.1"}
     ]
   end
 

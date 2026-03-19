@@ -46,40 +46,40 @@ Back to index: [README](./README.md)
       [X] 2.1.3.3 Subtask - Validate binding references are resolvable
       [X] 2.1.3.4 Subtask - Return structured errors for invalid IUR
 
-  [ ] 2.2 Section - Canonical IUR Adapter
+  [X] 2.2 Section - Canonical IUR Adapter
     Implement conversion from Ash IUR to canonical unified_iur format.
 
-    [ ] 2.2.1 Task - Define adapter interface
+    [X] 2.2.1 Task - Define adapter interface
       Create the adapter contract for IUR conversion.
 
-      [ ] 2.2.1.1 Subtask - Implement `AshUI.Rendering.IURAdapter.to_canonical/1` function
-      [ ] 2.2.1.2 Subtask - Return `{:ok, UnifiedIUR.Screen.t()}` or `{:error, term()}`
-      [ ] 2.2.1.3 Subtask - Implement `compatible?/2` to check renderer compatibility
-      [ ] 2.2.1.4 Subtask - Add telemetry events for conversion success/failure
+      [X] 2.2.1.1 Subtask - Implement `AshUI.Rendering.IURAdapter.to_canonical/1` function
+      [X] 2.2.1.2 Subtask - Return `{:ok, UnifiedIUR.Screen.t()}` or `{:error, term()}`
+      [X] 2.2.1.3 Subtask - Implement `compatible?/2` to check renderer compatibility
+      [X] 2.2.1.4 Subtask - Add telemetry events for conversion success/failure
 
-    [ ] 2.2.2 Task - Implement element type mapping
+    [X] 2.2.2 Task - Implement element type mapping
       Map Ash UI element types to unified-ui widget types.
 
-      [ ] 2.2.2.1 Subtask - Create type mapping table (button, input, text, image, etc.)
-      [ ] 2.2.2.2 Subtask - Convert Ash element `type` to unified widget `type`
-      [ ] 2.2.2.3 Subtask - Handle unknown element types with error or fallback
-      [ ] 2.2.2.4 Subtask - Document supported element types
+      [X] 2.2.2.1 Subtask - Create type mapping table (button, input, text, image, etc.)
+      [X] 2.2.2.2 Subtask - Convert Ash element `type` to unified widget `type`
+      [X] 2.2.2.3 Subtask - Handle unknown element types with error or fallback
+      [X] 2.2.2.4 Subtask - Document supported element types
 
-    [ ] 2.2.3 Task - Implement props mapping
+    [X] 2.2.3 Task - Implement props mapping
       Map Ash element props to unified-ui widget attributes.
 
-      [ ] 2.2.3.1 Subtask - Convert Ash `props` map to unified widget attributes
-      [ ] 2.2.3.2 Subtask - Handle prop name conversions (e.g., `onClick` → `on_click`)
-      [ ] 2.2.3.3 Subtask - Filter out Ash-specific props from canonical IUR
-      [ ] 2.2.3.4 Subtask - Apply prop transformations for type compatibility
+      [X] 2.2.3.1 Subtask - Convert Ash `props` map to unified widget attributes
+      [X] 2.2.3.2 Subtask - Handle prop name conversions (e.g., `onClick` → `on_click`)
+      [X] 2.2.3.3 Subtask - Filter out Ash-specific props from canonical IUR
+      [X] 2.2.3.4 Subtask - Apply prop transformations for type compatibility
 
-    [ ] 2.2.4 Task - Implement layout mapping
+    [X] 2.2.4 Task - Implement layout mapping
       Convert Ash screen layout to unified-ui layout constructs.
 
-      [ ] 2.2.4.1 Subtask - Map Ash `layout` attribute to unified layout type
-      [ ] 2.2.4.2 Subtask - Convert children to unified container structure
-      [ ] 2.2.4.3 Subtask - Handle nested layouts and layering constructs
-      [ ] 2.2.4.4 Subtask - Preserve layout metadata in canonical IUR
+      [X] 2.2.4.1 Subtask - Map Ash `layout` attribute to unified layout type
+      [X] 2.2.4.2 Subtask - Convert children to unified container structure
+      [X] 2.2.4.3 Subtask - Handle nested layouts and layering constructs
+      [X] 2.2.4.4 Subtask - Preserve layout metadata in canonical IUR
 
   [ ] 2.3 Section - Signal Conversion
     Convert Ash UI bindings to unified-ui signal format.
