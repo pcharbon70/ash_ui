@@ -52,40 +52,40 @@ Back to index: [README](./README.md)
       [X] 5.1.4.3 Subtask - Implement `screen_owner` check
       [X] 5.1.4.4 Subtask - Implement `environment` check (dev/prod)
 
-  [ ] 5.2 Section - Runtime Authorization
+  [X] 5.2 Section - Runtime Authorization
     Implement policy checking at runtime.
 
-    [ ] 5.2.1 Task - Check policies on mount
+    [X] 5.2.1 Task - Check policies on mount
     Verify authorization when screen is mounted.
 
-      [ ] 5.2.1.1 Subtask - Extract user from LiveView session
-      [ ] 5.2.1.2 Subtask - Call `Ash.can?/3` for mount action
-      [ ] 5.2.1.3 Subtask - Redirect on authorization failure
-      [ ] 5.2.1.4 Subtask - Emit authorization attempt telemetry
+      [X] 5.2.1.1 Subtask - Extract user from LiveView session
+      [X] 5.2.1.2 Subtask - Call `Ash.can?/3` for mount action
+      [X] 5.2.1.3 Subtask - Redirect on authorization failure
+      [X] 5.2.1.4 Subtask - Emit authorization attempt telemetry
 
-    [ ] 5.2.2 Task - Check policies on actions
+    [X] 5.2.2 Task - Check policies on actions
     Verify authorization before executing actions.
 
-      [ ] 5.2.2.1 Subtask - Check policy before Ash action execution
-      [ ] 5.2.2.2 Subtask - Return user-friendly error on denial
-      [ ] 5.2.2.3 Subtask - Log authorization failures
-      [ ] 5.2.2.4 Subtask - Include policy details in error message
+      [X] 5.2.2.1 Subtask - Check policy before Ash action execution
+      [X] 5.2.2.2 Subtask - Return user-friendly error on denial
+      [X] 5.2.2.3 Subtask - Log authorization failures
+      [X] 5.2.2.4 Subtask - Include policy details in error message
 
-    [ ] 5.2.3 Task - Check data source access
+    [X] 5.2.3 Task - Check data source access
     Verify access to bound Ash resources.
 
-      [ ] 5.2.3.1 Subtask - Check `:read` policy on binding source resource
-      [ ] 5.2.3.2 Subtask - Check `:update` policy for write bindings
-      [ ] 5.2.3.3 Subtask - Handle unauthorized data access gracefully
-      [ ] 5.2.3.4 Subtask - Redact sensitive data when unauthorized
+      [X] 5.2.3.1 Subtask - Check `:read` policy on binding source resource
+      [X] 5.2.3.2 Subtask - Check `:update` policy for write bindings
+      [X] 5.2.3.3 Subtask - Handle unauthorized data access gracefully
+      [X] 5.2.3.4 Subtask - Redact sensitive data when unauthorized
 
-    [ ] 5.2.4 Task - Implement policy caching
+    [X] 5.2.4 Task - Implement policy caching
     Cache policy results for performance.
 
-      [ ] 5.2.4.1 Subtask - Cache policy checks per user/resource
-      [ ] 5.2.4.2 Subtask - Invalidate cache on resource change
-      [ ] 5.2.4.3 Subtask - Invalidate cache on role change
-      [ ] 5.2.4.4 Subtask - Configure cache TTL
+      [X] 5.2.4.1 Subtask - Cache policy checks per user/resource
+      [X] 5.2.4.2 Subtask - Invalidate cache on resource change
+      [X] 5.2.4.3 Subtask - Invalidate cache on role change
+      [X] 5.2.4.4 Subtask - Configure cache TTL
 
   [ ] 5.3 Section - Policy DSL Extensions
     Create DSL extensions for common UI authorization patterns.
