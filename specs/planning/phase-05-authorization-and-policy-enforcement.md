@@ -14,7 +14,7 @@ Back to index: [README](./README.md)
 - Unauthorized access returns user-friendly errors
 - Policy failures emit telemetry events
 
-[ ] 5 Phase 5 - Authorization and Policy Enforcement
+[X] 5 Phase 5 - Authorization and Policy Enforcement
   Implement Ash policy integration for UI resource access control and action authorization.
 
   [X] 5.1 Section - Policy Definitions
@@ -125,37 +125,37 @@ Back to index: [README](./README.md)
       [X] 5.4.2.3 Subtask - Show required permissions for authorized users
       [X] 5.4.2.4 Subtask - Support custom error pages per resource
 
-  [ ] 5.5 Section - Phase 5 Integration Tests
+  [X] 5.5 Section - Phase 5 Integration Tests
     Validate authorization and policy enforcement end-to-end.
 
-    [ ] 5.5.1 Task - Mount authorization scenarios
+    [X] 5.5.1 Task - Mount authorization scenarios
       Verify screen mount authorization works correctly.
 
-      [ ] 5.5.1.1 Subtask - Verify authorized user can mount screen
-      [ ] 5.5.1.2 Subtask - Verify unauthorized user is redirected
-      [ ] 5.5.1.3 Subtask - Verify unauthenticated user redirects to login
-      [ ] 5.5.1.4 Subtask - Verify policy changes affect access immediately
+      [X] 5.5.1.1 Subtask - Verify authorized user can mount screen
+      [X] 5.5.1.2 Subtask - Verify unauthorized user is redirected
+      [X] 5.5.1.3 Subtask - Verify unauthenticated user redirects to login
+      [X] 5.5.1.4 Subtask - Verify policy changes affect access immediately
 
-    [ ] 5.5.2 Task - Action authorization scenarios
+    [X] 5.5.2 Task - Action authorization scenarios
       Verify action authorization works correctly.
 
-      [ ] 5.5.2.1 Subtask - Verify authorized action executes successfully
-      [ ] 5.5.2.2 Subtask - Verify unauthorized action returns error
-      [ ] 5.5.2.3 Subtask - Verify action errors include policy details
-      [ ] 5.5.2.4 Subtask - Verify partial authorization (some fields allowed)
+      [X] 5.5.2.1 Subtask - Verify authorized action executes successfully
+      [X] 5.5.2.2 Subtask - Verify unauthorized action returns error
+      [X] 5.5.2.3 Subtask - Verify action errors include policy details
+      [X] 5.5.2.4 Subtask - Verify partial authorization (some fields allowed)
 
-    [ ] 5.5.3 Task - Data source authorization scenarios
+    [X] 5.5.3 Task - Data source authorization scenarios
       Verify binding data source authorization.
 
-      [ ] 5.5.3.1 Subtask - Verify authorized binding shows data
-      [ ] 5.5.3.2 Subtask - Verify unauthorized binding shows placeholder
-      [ ] 5.5.3.3 Subtask - Verify unauthorized binding doesn't leak data
-      [ ] 5.5.3.4 Subtask - Verify cross-resource authorization works
+      [X] 5.5.3.1 Subtask - Verify authorized binding shows data
+      [X] 5.5.3.2 Subtask - Verify unauthorized binding shows placeholder
+      [X] 5.5.3.3 Subtask - Verify unauthorized binding doesn't leak data
+      [X] 5.5.3.4 Subtask - Verify cross-resource authorization works
 
-    [ ] 5.5.4 Task - Policy caching scenarios
+    [X] 5.5.4 Task - Policy caching scenarios
       Verify policy caching behavior.
 
-      [ ] 5.5.4.1 Subtask - Verify repeated checks use cache
-      [ ] 5.5.4.2 Subtask - Verify cache invalidates on resource change
-      [ ] 5.5.4.3 Subtask - Verify cache invalidates on role change
-      [ ] 5.5.4.4 Subtask - Verify cache TTL is respected
+      [X] 5.5.4.1 Subtask - Verify repeated checks use cache
+      [X] 5.5.4.2 Subtask - Verify cache invalidates on resource change
+      [X] 5.5.4.3 Subtask - Verify cache invalidates on role change
+      [X] 5.5.4.4 Subtask - Verify cache TTL is respected

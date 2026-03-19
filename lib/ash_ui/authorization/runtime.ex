@@ -308,9 +308,8 @@ defmodule AshUI.Authorization.Runtime do
     :ok
   end
 
-  # Private functions
-
-  defp build_context(user, action, resource, params \\ %{}) do
+  @doc false
+  def build_context(user, action, resource, params \\ %{}) do
     %{
       user: user,
       user_id: get_user_id(user),
@@ -320,6 +319,30 @@ defmodule AshUI.Authorization.Runtime do
       timestamp: DateTime.utc_now()
     }
   end
+
+  @doc false
+  def build_cache_key(user, resource, action) do
+    user_id = get_user_id(user) || "anonymous"
+    resource_id = get_resource_id(resource)
+    "#{user_id}:#{resource_id}:#{action}"
+  end
+
+  @doc false
+  def emit_auth_telemetry(event, context) do
+    :telemetry.execute(
+      [:ash_ui, :auth, event],
+      %{timestamp: System.system_time(:microsecond)},
+      %{
+        user_id: context.user_id,
+        action: context.action,
+        resource_id: get_resource_id(context.resource)
+      }
+    )
+
+    :ok
+  end
+
+  # Private functions
 
   defp get_user_id(nil), do: nil
   defp get_user_id(%{id: id}), do: id
@@ -375,12 +398,6 @@ defmodule AshUI.Authorization.Runtime do
     :ok
   end
 
-  defp build_cache_key(user, resource, action) do
-    user_id = get_user_id(user) || "anonymous"
-    resource_id = get_resource_id(resource)
-    "#{user_id}:#{resource_id}:#{action}"
-  end
-
   defp get_resource_id(%{id: id}), do: id
   defp get_resource_id(_), do: "unknown"
 
@@ -390,19 +407,5 @@ defmodule AshUI.Authorization.Runtime do
       :invalid_params -> "Invalid parameters provided"
       _ -> "Action not allowed"
     end
-  end
-
-  defp emit_auth_telemetry(event, context) do
-    :telemetry.execute(
-      [:ash_ui, :auth, event],
-      %{timestamp: System.system_time(:microsecond)},
-      %{
-        user_id: context.user_id,
-        action: context.action,
-        resource_id: get_resource_id(context.resource)
-      }
-    )
-
-    :ok
   end
 end
