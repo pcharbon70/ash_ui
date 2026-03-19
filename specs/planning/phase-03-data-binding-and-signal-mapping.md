@@ -18,32 +18,32 @@ Back to index: [README](./README.md)
 [ ] 3 Phase 3 - Data Binding and Signal Mapping
   Implement reactive data binding from Ash resources to UI elements through unified-ui signal format.
 
-  [ ] 3.1 Section - Binding Evaluation
+  [X] 3.1 Section - Binding Evaluation
     Implement runtime evaluation of bindings against Ash resource data.
 
-    [ ] 3.1.1 Task - Implement binding evaluator
+    [X] 3.1.1 Task - Implement binding evaluator
       Create the evaluator that resolves bindings to actual values.
 
-      [ ] 3.1.1.1 Subtask - Implement `AshUI.Runtime.BindingEvaluator.evaluate/3`
-      [ ] 3.1.1.2 Subtask - Accept binding, context (user_id, params), and socket assigns
-      [ ] 3.1.1.3 Subtask - Return `{:ok, value}` or `{:error, reason}`
-      [ ] 3.1.1.4 Subtask - Cache evaluated values for performance
+      [X] 3.1.1.1 Subtask - Implement `AshUI.Runtime.BindingEvaluator.evaluate/3`
+      [X] 3.1.1.2 Subtask - Accept binding, context (user_id, params), and socket assigns
+      [X] 3.1.1.3 Subtask - Return `{:ok, value}` or `{:error, reason}`
+      [X] 3.1.1.4 Subtask - Cache evaluated values for performance
 
-    [ ] 3.1.2 Task - Implement source path resolution
+    [X] 3.1.2 Task - Implement source path resolution
       Resolve binding source paths to Ash resource attributes.
 
-      [ ] 3.1.2.1 Subtask - Parse source path (Domain.Resource.Attribute)
-      [ ] 3.1.2.2 Subtask - Load resource using `Ash.get/3` with proper authorization
-      [ ] 3.1.2.3 Subtask - Extract attribute value from loaded resource
-      [ ] 3.1.2.4 Subtask - Handle relationship traversal (e.g., `user.profile.name`)
+      [X] 3.1.2.1 Subtask - Parse source path (Domain.Resource.Attribute)
+      [X] 3.1.2.2 Subtask - Load resource using `Ash.get/3` with proper authorization
+      [X] 3.1.2.3 Subtask - Extract attribute value from loaded resource
+      [X] 3.1.2.4 Subtask - Handle relationship traversal (e.g., `user.profile.name`)
 
-    [ ] 3.1.3 Task - Implement transformation application
+    [X] 3.1.3 Task - Implement transformation application
       Apply transformation rules to resolved values.
 
-      [ ] 3.1.3.1 Subtask - Apply `format` transformations (e.g., date formatting)
-      [ ] 3.1.3.2 Subtask - Apply `compute` transformations (e.g., calculated fields)
-      [ ] 3.1.3.3 Subtask - Apply `default` transformations when source is nil
-      [ ] 3.1.3.4 Subtask - Apply `validate` transformations and return errors
+      [X] 3.1.3.1 Subtask - Apply `format` transformations (e.g., date formatting)
+      [X] 3.1.3.2 Subtask - Apply `compute` transformations (e.g., calculated fields)
+      [X] 3.1.3.3 Subtask - Apply `default` transformations when source is nil
+      [X] 3.1.3.4 Subtask - Apply `validate` transformations and return errors
 
   [ ] 3.2 Section - Bidirectional Value Bindings
     Implement two-way data binding for `:value` type bindings.
