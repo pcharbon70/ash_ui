@@ -19,32 +19,32 @@ Back to index: [README](./README.md)
 [ ] 2 Phase 2 - IUR Adapter and Canonical Conversion
   Implement the conversion layer from Ash Resources through Ash IUR to canonical unified_iur format for renderer consumption.
 
-  [ ] 2.1 Section - Ash IUR Compilation
+  [X] 2.1 Section - Ash IUR Compilation
     Implement compilation from Ash Resources to Ash-internal IUR format.
 
-    [ ] 2.1.1 Task - Define Ash IUR data structures
+    [X] 2.1.1 Task - Define Ash IUR data structures
       Create the internal IUR representation used during compilation.
 
-      [ ] 2.1.1.1 Subtask - Implement `AshUI.Compilation.IUR` struct with `id`, `type`, `name` fields
-      [ ] 2.1.1.2 Subtask - Add `attributes` (map), `children` (list), `bindings` (list) fields
-      [ ] 2.1.1.3 Subtask - Add `metadata` (map) and `version` (string) fields
-      [ ] 2.1.1.4 Subtask - Implement `@enforce_keys` for required fields
+      [X] 2.1.1.1 Subtask - Implement `AshUI.Compilation.IUR` struct with `id`, `type`, `name` fields
+      [X] 2.1.1.2 Subtask - Add `attributes` (map), `children` (list), `bindings` (list) fields
+      [X] 2.1.1.3 Subtask - Add `metadata` (map) and `version` (string) fields
+      [X] 2.1.1.4 Subtask - Implement `@enforce_keys` for required fields
 
-    [ ] 2.1.2 Task - Implement Resource to IUR compiler
+    [X] 2.1.2 Task - Implement Resource to IUR compiler
       Create the compiler that converts Ash Resources to IUR structures.
 
-      [ ] 2.1.2.1 Subtask - Implement `AshUI.Compiler.compile/2` for screen resources
-      [ ] 2.1.2.2 Subtask - Convert screen attributes to IUR root element
-      [ ] 2.1.2.3 Subtask - Load and convert associated elements as IUR children
-      [ ] 2.1.2.4 Subtask - Load and convert associated bindings as IUR bindings
+      [X] 2.1.2.1 Subtask - Implement `AshUI.Compiler.compile/2` for screen resources
+      [X] 2.1.2.2 Subtask - Convert screen attributes to IUR root element
+      [X] 2.1.2.3 Subtask - Load and convert associated elements as IUR children
+      [X] 2.1.2.4 Subtask - Load and convert associated bindings as IUR bindings
 
-    [ ] 2.1.3 Task - Implement IUR validation
+    [X] 2.1.3 Task - Implement IUR validation
       Ensure compiled IUR structures are valid before conversion.
 
-      [ ] 2.1.3.1 Subtask - Validate IUR has required fields and correct types
-      [ ] 2.1.3.2 Subtask - Validate children references exist
-      [ ] 2.1.3.3 Subtask - Validate binding references are resolvable
-      [ ] 2.1.3.4 Subtask - Return structured errors for invalid IUR
+      [X] 2.1.3.1 Subtask - Validate IUR has required fields and correct types
+      [X] 2.1.3.2 Subtask - Validate children references exist
+      [X] 2.1.3.3 Subtask - Validate binding references are resolvable
+      [X] 2.1.3.4 Subtask - Return structured errors for invalid IUR
 
   [ ] 2.2 Section - Canonical IUR Adapter
     Implement conversion from Ash IUR to canonical unified_iur format.
