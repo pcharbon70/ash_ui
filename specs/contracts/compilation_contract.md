@@ -1,10 +1,10 @@
 # Compilation Contract (REQ-COMP-*)
 
-This contract defines the normative requirements for Resource → IUR compilation in the Ash UI framework.
+This contract defines the normative requirements for Resource → IUR → canonical IUR compilation in the Ash UI framework.
 
 ## Purpose
 
-Defines the requirements for compiling Ash UI resources (UI.Element, UI.Screen, UI.Binding) into the Intermediate UI Representation (IUR), which serves as the canonical format for rendering.
+Defines the requirements for compiling Ash UI resources (UI.Element, UI.Screen, UI.Binding) into the Intermediate UI Representation (IUR), and then converting to canonical `unified_iur` format for consumption by external renderer packages.
 
 ## Control Plane
 
@@ -14,6 +14,7 @@ Defines the requirements for compiling Ash UI resources (UI.Element, UI.Screen, 
 
 - REQ-RES-*: Source resource definitions
 - REQ-FRAMEWORK-*: Framework contracts
+- **unified_iur** - Canonical intermediate representation format (external package)
 
 ## Requirements
 
@@ -54,9 +55,9 @@ Resource schemas MUST be validated before IUR generation.
 
 ### REQ-COMP-003: IUR Schema
 
-The Intermediate UI Representation MUST have a defined schema.
+The Intermediate UI Representation MUST have a defined schema compatible with canonical `unified_iur`.
 
-**IUR Structure**:
+**IUR Structure** (Ash UI internal):
 ```elixir
 %AshUI.Compilation.IUR{
   id: UUID.t(),
@@ -69,10 +70,21 @@ The Intermediate UI Representation MUST have a defined schema.
 }
 ```
 
+**Canonical IUR Structure** (unified_iur package):
+```elixir
+%UnifiedIUR.Screen{
+  id: UUID.t(),
+  elements: [%UnifiedIUR.Element{}],
+  layout: UnifiedIUR.Layout.t(),
+  signals: [%UnifiedIUR.Signal{}],
+  metadata: map()
+}
+```
+
 **Acceptance Criteria**:
-- AC-001: IUR has a version identifier
+- AC-001: Ash UI IUR is convertible to canonical unified_iur
 - AC-002: IUR is serializable (to JSON/binary)
-- AC-003: IUR contains all required information for rendering
+- AC-003: IUR contains all required information for canonical conversion
 - AC-004: IUR is independent of source resource format
 
 ### REQ-COMP-004: Resource Resolution

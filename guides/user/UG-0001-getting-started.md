@@ -16,7 +16,7 @@ diagram_required: true
 
 ## Overview
 
-This guide introduces Ash UI, a resource-driven UI framework for Elixir built on the Ash Framework. Ash UI enables dynamic UI generation from database resources through Phoenix LiveView and static web rendering.
+This guide introduces Ash UI, a resource-driven UI framework for Elixir built on the Ash Framework. Ash UI enables dynamic UI generation from database resources through the unified UI rendering ecosystem.
 
 ## What is Ash UI?
 
@@ -24,7 +24,8 @@ Ash UI is a framework that:
 
 - **Defines UI as Resources** - UI components are Ash resources stored in your database
 - **Compiles to IUR** - Resources are compiled to an Intermediate UI Representation
-- **Renders Anywhere** - Output to LiveView, static HTML, or future formats
+- **Converts to Canonical IUR** - IUR is converted to canonical unified_iur format
+- **Renders via Unified Packages** - Output to LiveView, static HTML, or desktop via external renderer packages
 - **Binds Data Reactively** - Connect UI elements directly to Ash resources
 
 ## Architecture Overview
@@ -37,28 +38,48 @@ flowchart LR
 
     subgraph AshUI["Ash UI Framework"]
         Compiler["Resource Compiler"]
-        IUR["Intermediate UI\nRepresentation"]
-        Renderer["Renderer"]
+        IUR["Ash IUR"]
+        Adapter["IUR Adapter"]
+    end
+
+    subgraph Unified["Unified Ecosystem"]
+        Canonical["Canonical IUR"]
+    end
+
+    subgraph Renderers["Renderer Packages"]
+        Live["LiveUI.Renderer"]
+        Web["WebUI.Renderer"]
+        Desktop["DesktopUI.Renderer"]
     end
 
     subgraph Output["User Interface"]
-        Live["Phoenix LiveView"]
-        Static["Static HTML"]
+        LV["LiveView"]
+        HTML["Static HTML"]
+        Native["Desktop UI"]
     end
 
     Resource --> Compiler
     Compiler --> IUR
-    IUR --> Renderer
-    Renderer --> Live
-    Renderer --> Static
+    IUR --> Adapter
+    Adapter --> Canonical
+    Canonical --> Live
+    Canonical --> Web
+    Canonical --> Desktop
+    Live --> LV
+    Web --> HTML
+    Desktop --> Native
 
     classDef input fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef aui fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef unified fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    classDef renderer fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef output fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
 
     class Resource input
-    class Compiler,IUR,Renderer aui
-    class Live,Static output
+    class Compiler,IUR,Adapter aui
+    class Canonical unified
+    class Live,Web,Desktop renderer
+    class LV,HTML,Native output
 ```
 
 ## Prerequisites
@@ -72,13 +93,17 @@ Before using Ash UI, you should have:
 
 ## Installation
 
-Add Ash UI to your dependencies:
+Add Ash UI and dependencies to your `mix.exs`:
 
 ```elixir
 # mix.exs
 defp deps do
   [
     {:ash_ui, "~> 0.1"},
+    {:unified_iur, "~> 0.1"},  # Canonical IUR format
+    {:live_ui, "~> 0.1"},      # LiveView renderer (choose one)
+    # {:web_ui, "~> 0.1"}      # Static HTML renderer (alternative)
+    # {:desktop_ui, "~> 0.1"}  # Desktop renderer (alternative)
     {:ash, "~> 3.0"},
     {:phoenix_live_view, "~> 1.0"}
   ]
@@ -163,13 +188,14 @@ end
 ```elixir
 defmodule MyAppWeb.DashboardLive do
   use MyAppWeb, :live_view
-  use AshUI.LiveView
 
-  def mount(params, session, socket) do
+  def mount(params, _session, socket) do
     {:ok, mount_ui_screen(socket, :dashboard, params)}
   end
 end
 ```
+
+The `mount_ui_screen/3` helper handles compilation, IUR conversion, and rendering via your configured renderer package (e.g., `live_ui`).
 
 ## Core Concepts
 
