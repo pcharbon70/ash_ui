@@ -106,24 +106,24 @@ Back to index: [README](./README.md)
       [X] 5.3.2.3 Subtask - Implement `can_access_field/2` policy
       [X] 5.3.2.4 Subtask - Implement `can_execute_action/2` policy
 
-  [ ] 5.4 Section - Error Handling
+  [X] 5.4 Section - Error Handling
     Implement user-friendly authorization errors.
 
-    [ ] 5.4.1 Task - Define error types
+    [X] 5.4.1 Task - Define error types
     Create structured error types for authorization failures.
 
-      [ ] 5.4.1.1 Subtask - Implement `AshUI.AuthorizationError` exception
-      [ ] 5.4.1.2 Subtask - Add fields: `resource`, `action`, `policy`, `reason`
-      [ ] 5.4.1.3 Subtask - Implement error formatting for display
-      [ ] 5.4.1.4 Subtask - Add error translation support
+      [X] 5.4.1.1 Subtask - Implement `AshUI.AuthorizationError` exception
+      [X] 5.4.1.2 Subtask - Add fields: `resource`, `action`, `policy`, `reason`
+      [X] 5.4.1.3 Subtask - Implement error formatting for display
+      [X] 5.4.1.4 Subtask - Add error translation support
 
-    [ ] 5.4.2 Task - Display authorization errors
+    [X] 5.4.2 Task - Display authorization errors
     Present authorization errors to users.
 
-      [ ] 5.4.2.1 Subtask - Show clear "access denied" message
-      [ ] 5.4.2.2 Subtask - Suggest login link for unauthenticated users
-      [ ] 5.4.2.3 Subtask - Show required permissions for authorized users
-      [ ] 5.4.2.4 Subtask - Support custom error pages per resource
+      [X] 5.4.2.1 Subtask - Show clear "access denied" message
+      [X] 5.4.2.2 Subtask - Suggest login link for unauthenticated users
+      [X] 5.4.2.3 Subtask - Show required permissions for authorized users
+      [X] 5.4.2.4 Subtask - Support custom error pages per resource
 
   [ ] 5.5 Section - Phase 5 Integration Tests
     Validate authorization and policy enforcement end-to-end.
