@@ -91,24 +91,24 @@ Back to index: [README](./README.md)
       [X] 3.3.2.3 Subtask - Handle insert, update, delete operations
       [X] 3.3.2.4 Subtask - Maintain scroll position during updates
 
-  [ ] 3.4 Section - Action Bindings
+  [X] 3.4 Section - Action Bindings
     Implement event-driven binding for `:action` type bindings.
 
-    [ ] 3.4.1 Task - Implement action execution
+    [X] 3.4.1 Task - Implement action execution
       Execute Ash actions in response to UI events.
 
-      [ ] 3.4.1.1 Subtask - Parse action source (Domain.Resource.action_name)
-      [ ] 3.4.1.2 Subtask - Call `Ash.action/3` with event data
-      [ ] 3.4.1.3 Subtask - Check authorization before execution
-      [ ] 3.4.1.4 Subtask - Return action result to UI
+      [X] 3.4.1.1 Subtask - Parse action source (Domain.Resource.action_name)
+      [X] 3.4.1.2 Subtask - Call `Ash.action/3` with event data
+      [X] 3.4.1.3 Subtask - Check authorization before execution
+      [X] 3.4.1.4 Subtask - Return action result to UI
 
-    [ ] 3.4.2 Task - Implement action event wiring
+    [X] 3.4.2 Task - Implement action event wiring
       Connect UI events to action bindings.
 
-      [ ] 3.4.2.1 Subtask - Generate event handler from binding definition
-      [ ] 3.4.2.2 Subtask - Wire handler to LiveView `handle_event/3`
-      [ ] 3.4.2.3 Subtask - Pass event data to action parameters
-      [ ] 3.4.2.4 Subtask - Handle action errors and display feedback
+      [X] 3.4.2.1 Subtask - Generate event handler from binding definition
+      [X] 3.4.2.2 Subtask - Wire handler to LiveView `handle_event/3`
+      [X] 3.4.2.3 Subtask - Pass event data to action parameters
+      [X] 3.4.2.4 Subtask - Handle action errors and display feedback
 
   [ ] 3.5 Section - Signal Format Conversion
     Convert Ash bindings to unified-ui signal format.
