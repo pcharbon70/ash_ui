@@ -81,32 +81,32 @@ Back to index: [README](./README.md)
       [X] 2.2.4.3 Subtask - Handle nested layouts and layering constructs
       [X] 2.2.4.4 Subtask - Preserve layout metadata in canonical IUR
 
-  [ ] 2.3 Section - Signal Conversion
+  [X] 2.3 Section - Signal Conversion
     Convert Ash UI bindings to unified-ui signal format.
 
-    [ ] 2.3.1 Task - Define signal mapping
+    [X] 2.3.1 Task - Define signal mapping
       Create the mapping from Ash bindings to unified signals.
 
-    [ ] 2.3.1.1 Subtask - Implement `AshUI.Signal.to_canonical/1` function
-    [ ] 2.3.1.2 Subtask - Convert binding source to unified signal source format
-    [ ] 2.3.1.3 Subtask - Convert binding target to unified signal target format
-    [ ] 2.3.1.4 Subtask - Map binding type to unified signal type
+    [X] 2.3.1.1 Subtask - Implement `AshUI.Signal.to_canonical/1` function
+    [X] 2.3.1.2 Subtask - Convert binding source to unified signal source format
+    [X] 2.3.1.3 Subtask - Convert binding target to unified signal target format
+    [X] 2.3.1.4 Subtask - Map binding type to unified signal type
 
-    [ ] 2.3.2 Task - Implement binding type conversion
+    [X] 2.3.2 Task - Implement binding type conversion
       Map Ash binding types to unified signal types.
 
-    [ ] 2.3.2.1 Subtask - Convert `:value` binding to bidirectional signal
-    [ ] 2.3.2.2 Subtask - Convert `:list` binding to collection signal
-    [ ] 2.3.2.3 Subtask - Convert `:action` binding to event signal
-    [ ] 2.3.2.4 Subtask - Handle transformation rules in signal definition
+    [X] 2.3.2.1 Subtask - Convert `:value` binding to bidirectional signal
+    [X] 2.3.2.2 Subtask - Convert `:list` binding to collection signal
+    [X] 2.3.2.3 Subtask - Convert `:action` binding to event signal
+    [X] 2.3.2.4 Subtask - Handle transformation rules in signal definition
 
-    [ ] 2.3.3 Task - Implement signal source resolution
+    [X] 2.3.3 Task - Implement signal source resolution
       Resolve Ash resource paths in binding sources.
 
-    [ ] 2.3.3.1 Subtask - Parse binding source path (Domain.Resource.Attribute)
-    [ ] 2.3.3.2 Subtask - Validate source exists in Ash resource definitions
-    [ ] 2.3.3.3 Subtask - Convert source path to unified signal reference
-    [ ] 2.3.3.4 Subtask - Handle nested paths and relationship traversal
+    [X] 2.3.3.1 Subtask - Parse binding source path (Domain.Resource.Attribute)
+    [X] 2.3.3.2 Subtask - Validate source exists in Ash resource definitions
+    [X] 2.3.3.3 Subtask - Convert source path to unified signal reference
+    [X] 2.3.3.4 Subtask - Handle nested paths and relationship traversal
 
   [ ] 2.4 Section - Error Handling and Validation
     Implement error handling for IUR conversion failures.
