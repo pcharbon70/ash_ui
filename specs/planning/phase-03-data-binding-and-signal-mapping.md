@@ -110,24 +110,24 @@ Back to index: [README](./README.md)
       [X] 3.4.2.3 Subtask - Pass event data to action parameters
       [X] 3.4.2.4 Subtask - Handle action errors and display feedback
 
-  [ ] 3.5 Section - Signal Format Conversion
+  [X] 3.5 Section - Signal Format Conversion
     Convert Ash bindings to unified-ui signal format.
 
-    [ ] 3.5.1 Task - Define signal structure
+    [X] 3.5.1 Task - Define signal structure
       Create the signal structure matching unified-ui spec.
 
-      [ ] 3.5.1.1 Subtask - Implement `AshUI.Signal` struct with `id`, `source`, `target` fields
-      [ ] 3.5.1.2 Subtask - Add `type`, `transform`, `metadata` fields
-      [ ] 3.5.1.3 Subtask - Implement signal creation helpers
-      [ ] 3.5.1.4 Subtask - Add signal validation
+      [X] 3.5.1.1 Subtask - Implement `AshUI.Signal` struct with `id`, `source`, `target` fields
+      [X] 3.5.1.2 Subtask - Add `type`, `transform`, `metadata` fields
+      [X] 3.5.1.3 Subtask - Implement signal creation helpers
+      [X] 3.5.1.4 Subtask - Add signal validation
 
     [ ] 3.5.2 Task - Convert to Jido.Signal format
     Ensure signals are compatible with unified signal transport.
 
-      [ ] 3.5.2.1 Subtask - Wrap Ash signals in Jido.Signal structure
-      [ ] 3.5.2.2 Subtask - Use CloudEvents-compatible event format
-      [ ] 3.5.2.3 Subtask - Include required CloudEvents fields (id, source, type)
-      [ ] 3.5.2.4 Subtask - Add signal metadata for tracing
+      [X] 3.5.2.1 Subtask - Wrap Ash signals in Jido.Signal structure
+      [X] 3.5.2.2 Subtask - Use CloudEvents-compatible event format
+      [X] 3.5.2.3 Subtask - Include required CloudEvents fields (id, source, type)
+      [X] 3.5.2.4 Subtask - Add signal metadata for tracing
 
   [ ] 3.6 Section - Phase 3 Integration Tests
     Validate binding evaluation and reactivity end-to-end.
