@@ -8,9 +8,9 @@ defmodule AshUI.LiveView.UpdateIntegration do
 
   require Logger
 
-  alias AshUI.Resources.Binding
   alias AshUI.Runtime.BindingEvaluator
   alias AshUI.LiveView.Integration
+  alias AshUI.Resources.Screen
 
   @type subscription :: %{
           id: String.t(),
@@ -51,7 +51,7 @@ defmodule AshUI.LiveView.UpdateIntegration do
 
     case subscribe_to_resource(resource, subscription) do
       :ok ->
-        socket = track_subscription(socket, subscription)
+        track_subscription(socket, subscription)
         {:ok, subscription}
 
       {:error, reason} ->
@@ -70,7 +70,7 @@ defmodule AshUI.LiveView.UpdateIntegration do
   def unsubscribe(socket, subscription) do
     case unsubscribe_from_resource(subscription) do
       :ok ->
-        socket = remove_subscription(socket, subscription)
+        remove_subscription(socket, subscription)
         :ok
 
       {:error, reason} ->
@@ -91,7 +91,6 @@ defmodule AshUI.LiveView.UpdateIntegration do
   """
   @spec handle_resource_change(map(), Phoenix.LiveView.Socket.t()) :: update_result()
   def handle_resource_change(notification, socket) do
-    screen = socket.assigns[:ash_ui_screen]
     bindings = socket.assigns[:ash_ui_bindings] || %{}
 
     with {:ok, affected_bindings} <- find_affected_bindings(notification, bindings),
@@ -192,13 +191,19 @@ defmodule AshUI.LiveView.UpdateIntegration do
     user = socket.assigns[:ash_ui_user]
     params = socket.assigns[:ash_ui_params] || %{}
 
-    case Integration.evaluate_bindings(screen, socket, user, params) do
-      {:ok, bindings} ->
-        socket = Phoenix.Component.assign(socket, :ash_ui_bindings, bindings)
-        {:noreply, socket}
+    case screen do
+      %Screen{} ->
+        case refresh_screen_bindings(screen, socket, user, params) do
+          {:ok, bindings} ->
+            socket = Phoenix.Component.assign(socket, :ash_ui_bindings, bindings)
+            {:noreply, socket}
 
-      {:error, reason} ->
-        Logger.error("Failed to refresh bindings: #{inspect(reason)}")
+          {:error, reason} ->
+            Logger.error("Failed to refresh bindings: #{inspect(reason)}")
+            {:noreply, socket}
+        end
+
+      _ ->
         {:noreply, socket}
     end
   end
@@ -231,7 +236,7 @@ defmodule AshUI.LiveView.UpdateIntegration do
     "#{inspect(resource)}_#{:erlang.phash2(filter)}"
   end
 
-  defp subscribe_to_resource(resource, subscription) do
+  defp subscribe_to_resource(_resource, _subscription) do
     # Subscribe to Ash.Notifier
     # In production, would call Ash.Notifier.subscribe/2
     try do
@@ -242,7 +247,7 @@ defmodule AshUI.LiveView.UpdateIntegration do
     end
   end
 
-  defp unsubscribe_from_resource(subscription) do
+  defp unsubscribe_from_resource(_subscription) do
     # Unsubscribe from Ash.Notifier
     # In production, would call Ash.Notifier.unsubscribe/1
     try do
@@ -272,7 +277,7 @@ defmodule AshUI.LiveView.UpdateIntegration do
   defp get_notification_resource(%{resource: resource}), do: resource
   defp get_notification_resource(_), do: nil
 
-  defp find_affected_bindings(notification, bindings) do
+  defp find_affected_bindings(_notification, bindings) do
     # Find bindings that reference the changed resource
     affected =
       Enum.filter(bindings, fn {_id, _value} ->
@@ -325,8 +330,18 @@ defmodule AshUI.LiveView.UpdateIntegration do
   end
 
   defp get_binding_by_id(binding_id, socket) do
-    # In production, would load binding from Ash
-    {:ok, %{id: binding_id}}
+    bindings = socket.assigns[:ash_ui_bindings] || %{}
+
+    case Map.get(bindings, binding_id) do
+      nil ->
+        :error
+
+      binding when is_map(binding) ->
+        {:ok, Map.put_new(binding, :id, binding_id)}
+
+      _other ->
+        :error
+    end
   end
 
   defp update_socket_assigns(socket, updated_values) do
@@ -366,5 +381,13 @@ defmodule AshUI.LiveView.UpdateIntegration do
     end)
 
     :ok
+  end
+
+  defp refresh_screen_bindings(screen, socket, user, params) do
+    try do
+      Integration.evaluate_bindings(screen, socket, user, params)
+    rescue
+      error -> {:error, error}
+    end
   end
 end

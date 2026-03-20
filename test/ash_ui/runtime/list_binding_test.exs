@@ -17,8 +17,8 @@ defmodule AshUI.Runtime.ListBindingTest do
       %{binding: binding, context: context}
     end
 
-    test "loads collection with pagination" do
-      assert {:ok, result} = ListBinding.load_collection(@binding, @context, page: 1, page_size: 20)
+    test "loads collection with pagination", %{binding: binding, context: context} do
+      assert {:ok, result} = ListBinding.load_collection(binding, context, page: 1, page_size: 20)
 
       assert is_list(result.items)
       assert result.total > 0
@@ -26,8 +26,8 @@ defmodule AshUI.Runtime.ListBindingTest do
       assert result.page_size == 20
     end
 
-    test "handles empty collections" do
-      assert {:ok, result} = ListBinding.load_collection(@binding, @context, page: 999, page_size: 20)
+    test "handles empty collections", %{binding: binding, context: context} do
+      assert {:ok, result} = ListBinding.load_collection(binding, context, page: 999, page_size: 20)
 
       assert result.items == []
       assert result.has_next == false
@@ -52,30 +52,33 @@ defmodule AshUI.Runtime.ListBindingTest do
       %{binding: binding, context: context, socket: socket}
     end
 
-    test "handles insert changes" do
+    test "handles insert changes", %{binding: binding, context: context, socket: socket} do
       change_data = %{"id" => "comment-123", "content" => "New comment"}
 
       assert {:ok, updated_socket, should_update} =
-               ListBinding.handle_collection_change(@binding, :insert, change_data, @socket, @context)
+               ListBinding.handle_collection_change(binding, :insert, change_data, socket, context)
 
+      assert updated_socket.assigns != %{}
       assert should_update == true
     end
 
-    test "handles update changes" do
+    test "handles update changes", %{binding: binding, context: context, socket: socket} do
       change_data = %{"id" => "comment-123", "content" => "Updated"}
 
       assert {:ok, updated_socket, should_update} =
-               ListBinding.handle_collection_change(@binding, :update, change_data, @socket, @context)
+               ListBinding.handle_collection_change(binding, :update, change_data, socket, context)
 
+      assert updated_socket.assigns != %{}
       assert should_update == true
     end
 
-    test "handles delete changes" do
+    test "handles delete changes", %{binding: binding, context: context, socket: socket} do
       change_data = %{"id" => "comment-123"}
 
       assert {:ok, updated_socket, should_update} =
-               ListBinding.handle_collection_change(@binding, :delete, change_data, @socket, @context)
+               ListBinding.handle_collection_change(binding, :delete, change_data, socket, context)
 
+      assert updated_socket.assigns != %{}
       assert should_update == true
     end
   end

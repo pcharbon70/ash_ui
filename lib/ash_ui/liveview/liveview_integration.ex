@@ -9,7 +9,6 @@ defmodule AshUI.LiveView.Integration do
   require Logger
 
   alias AshUI.Compiler
-  alias AshUI.Domain
   alias AshUI.Authorization.ScreenPolicy
   alias AshUI.Resources.Screen
   alias AshUI.Resources.Binding
@@ -123,7 +122,7 @@ defmodule AshUI.LiveView.Integration do
     end
   end
 
-  defp load_screen(screen_id, user, params) do
+  defp load_screen(screen_id, user, _params) do
     case load_screen_by_identifier(screen_id, user) do
       {:ok, screen} -> {:ok, screen}
       {:error, :invalid_primary_key} -> {:error, :not_found}
@@ -131,13 +130,13 @@ defmodule AshUI.LiveView.Integration do
     end
   end
 
-  defp load_screen_by_identifier(screen_id, user) when is_atom(screen_id) do
+  defp load_screen_by_identifier(screen_id, _user) when is_atom(screen_id) do
     load_screen_by_name(Atom.to_string(screen_id))
   end
 
   defp load_screen_by_identifier(screen_id, user) do
     case load_screen_by_primary_key(screen_id, user) do
-      {:ok, screen} = result ->
+      {:ok, _screen} = result ->
         result
 
       {:error, _reason} when is_binary(screen_id) ->
@@ -159,7 +158,7 @@ defmodule AshUI.LiveView.Integration do
   end
 
   defp load_screen_by_name(name) do
-    case Domain.read_one(Screen, filter: [name: name]) do
+    case AshUI.Data.read_one(Screen, filter: [name: name], authorize?: false) do
       {:ok, %Screen{} = screen} -> {:ok, screen}
       {:ok, nil} -> {:error, :not_found}
       {:error, reason} -> {:error, reason}
@@ -234,7 +233,7 @@ defmodule AshUI.LiveView.Integration do
       end
   """
   @spec redirect_to_login(Phoenix.LiveView.Socket.t(), term()) :: {:error, term()}
-  def redirect_to_login(socket, _error) do
+  def redirect_to_login(_socket, _error) do
     # In production, would use Phoenix.LiveView.redirect/3
     # This is a placeholder for the redirect logic
     {:error, :unauthorized}

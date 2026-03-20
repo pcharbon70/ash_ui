@@ -187,6 +187,7 @@ defmodule AshUI.Authorization.Policies do
     Application.get_env(:ash_ui, :env, :dev)
   end
 
-  defp can_access_resource?(nil, _action), do: false
-  defp can_access_resource?(_resource, _action), do: true
+  defp can_access_resource?(nil, _action), do: true
+  defp can_access_resource?(resource, _action) when is_binary(resource), do: true
+  defp can_access_resource?(_resource, _action), do: false
 end

@@ -82,7 +82,7 @@ For a simple screen, the lowest-friction path is to create a `Screen` record wit
 
 ```elixir
 alias AshUI.DSL.Builder
-alias AshUI.Domain
+alias AshUI.Data, as: Domain
 alias AshUI.Resources.Screen
 
 dashboard_dsl =
@@ -163,7 +163,7 @@ alias AshUI.Rendering.LiveUIAdapter
 Bindings are separate records. They connect a UI target such as `"value"` or `"submit"` to a source map that identifies a resource field or action.
 
 ```elixir
-alias AshUI.Domain
+alias AshUI.Data, as: Domain
 alias AshUI.Resources.Binding
 alias AshUI.Resources.Element
 

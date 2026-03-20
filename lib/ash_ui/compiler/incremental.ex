@@ -7,8 +7,11 @@ defmodule AshUI.Compiler.Incremental do
   """
 
   require Logger
+  import Ecto.Query
 
   alias AshUI.Compiler
+  alias AshUI.Domain
+  alias AshUI.Repo
   alias AshUI.Resources.Screen
   alias AshUI.Resources.Element
   alias AshUI.Resources.Binding
@@ -40,7 +43,10 @@ defmodule AshUI.Compiler.Incremental do
     with {:ok, elements} <- load_screen_elements(screen),
          graph <- build_element_dependencies(graph, screen, elements),
          graph <- build_binding_dependencies(graph, elements) do
-      detect_circular_dependencies(graph)
+      case detect_circular_dependencies(graph) do
+        :ok -> {:ok, graph}
+        {:error, cycles} -> {:error, cycles}
+      end
     end
   end
 
@@ -200,17 +206,20 @@ defmodule AshUI.Compiler.Incremental do
     actor = Keyword.get(opts, :actor)
     tenant = Keyword.get(opts, :tenant)
 
-    case Ash.get(Screen, screen_id, actor: actor, tenant: tenant) do
+    case Ash.get(Screen, screen_id, actor: actor, tenant: tenant, domain: Domain) do
       {:ok, screen} -> {:ok, screen}
       {:error, reason} -> {:error, {:screen_not_found, reason}}
     end
   end
 
   defp load_screen_elements(%Screen{id: screen_id}) do
-    case Ash.read(Element, filter: [screen_id: screen_id], sort: [position: :asc]) do
-      {:ok, elements} -> {:ok, elements}
-      {:error, _} -> {:ok, []}
-    end
+    elements =
+      Element
+      |> where([element], element.screen_id == ^screen_id)
+      |> order_by([element], asc: element.position)
+      |> Repo.all()
+
+    {:ok, elements}
   end
 
   defp build_element_dependencies(graph, screen, elements) do
@@ -250,10 +259,9 @@ defmodule AshUI.Compiler.Incremental do
   end
 
   defp get_element_bindings(%Element{id: element_id}) do
-    case Ash.read(Binding, filter: [element_id: element_id]) do
-      {:ok, bindings} -> bindings
-      {:error, _} -> []
-    end
+    Binding
+    |> where([binding], binding.element_id == ^element_id)
+    |> Repo.all()
   end
 
   defp find_cycles(graph) do

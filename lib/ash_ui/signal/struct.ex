@@ -55,7 +55,7 @@ defmodule AshUI.Signal.Struct do
   """
   @spec new(keyword()) :: t()
   def new(opts \\ []) do
-    id = Keyword.get(opts, :id, generate_id())
+    id = Keyword.get(opts, :id) || generate_id()
     source = Keyword.get(opts, :source, %{})
     target = Keyword.get(opts, :target, "")
     type = Keyword.get(opts, :type, :bidirectional)
@@ -102,7 +102,7 @@ defmodule AshUI.Signal.Struct do
   """
   @spec collection(String.t(), String.t(), keyword()) :: t()
   def collection(source_path, target, opts \\ []) do
-    source = parse_source_path(source_path)
+    source = parse_collection_source_path(source_path)
 
     new(
       id: Keyword.get(opts, :id),
@@ -195,14 +195,31 @@ defmodule AshUI.Signal.Struct do
 
       parts ->
         # Handle nested relationships
-        case parse_relationship_path(parts) do
-          {:ok, source} -> source
-          :error -> %{"type" => "path", "path" => path}
-        end
+        {:ok, source} = parse_relationship_path(parts)
+        source
     end
   end
 
   defp parse_source_path(source) when is_map(source), do: normalize_source(source)
+
+  defp parse_collection_source_path(path) when is_binary(path) do
+    case String.split(path, ".", trim: true) do
+      [resource] ->
+        %{"type" => "resource", "resource" => resource}
+
+      [resource, relationship] ->
+        %{"type" => "relationship", "resource" => resource, "relationship" => relationship}
+
+      [resource | relationship_parts] ->
+        %{
+          "type" => "relationship",
+          "resource" => resource,
+          "relationship" => Enum.join(relationship_parts, ".")
+        }
+    end
+  end
+
+  defp parse_collection_source_path(source) when is_map(source), do: normalize_source(source)
 
   defp parse_relationship_path([resource | relationship_parts]) do
     {
@@ -216,6 +233,8 @@ defmodule AshUI.Signal.Struct do
   end
 
   # Normalize source map to ensure required fields
+  defp normalize_source(source) when is_map(source) and map_size(source) == 0, do: %{}
+
   defp normalize_source(source) when is_map(source) do
     Map.put_new(source, "type", "custom")
   end

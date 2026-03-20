@@ -65,7 +65,7 @@ defmodule AshUI.Rendering.LiveUIAdapter do
   """
   @spec available?() :: boolean()
   def available? do
-    Code.ensure_loaded?(LiveUI.Renderer)
+    Code.ensure_loaded?(live_ui_renderer_module())
   end
 
   @doc """
@@ -123,7 +123,7 @@ defmodule AshUI.Rendering.LiveUIAdapter do
     * Hook configuration list
   """
   @spec configure_hooks(map(), keyword()) :: [map()]
-  def configure_hooks(%{"type" => "screen"} = iur, opts \\ []) do
+  def configure_hooks(%{"type" => "screen"} = _iur, opts \\ []) do
     custom_hooks = Keyword.get(opts, :hooks, [])
     optimize_patches = Keyword.get(opts, :optimize_patches, true)
 
@@ -204,10 +204,16 @@ defmodule AshUI.Rendering.LiveUIAdapter do
 
   # Private Functions
 
+  defp live_ui_renderer_module do
+    Module.concat(LiveUI, Renderer)
+  end
+
   # Call actual LiveUI.Renderer if available
   defp call_live_ui_renderer(canonical_iur, opts) do
+    renderer_module = live_ui_renderer_module()
+
     try do
-      case LiveUI.Renderer.render(canonical_iur, opts) do
+      case apply(renderer_module, :render, [canonical_iur, opts]) do
         {:ok, heex} -> {:ok, heex}
         {:error, reason} -> {:error, {:live_ui_error, reason}}
         other -> {:error, {:unexpected_response, other}}

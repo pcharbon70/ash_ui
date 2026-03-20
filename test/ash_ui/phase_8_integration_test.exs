@@ -4,7 +4,7 @@ defmodule AshUI.Phase8IntegrationTest do
   alias AshUI.Authorization.Runtime
   alias AshUI.Compiler
   alias AshUI.DSL.Builder
-  alias AshUI.Domain
+  alias AshUI.Data, as: Domain
   alias AshUI.LiveView.EventHandler
   alias AshUI.LiveView.Integration
   alias AshUI.Rendering.DesktopUIAdapter

@@ -62,7 +62,7 @@ defmodule AshUI.LiveView.ErrorHandlerTest do
       socket = build_socket(ash_ui_user: build_user())
       binding = %{id: "binding-1"}
 
-      assert {:error, _reason} =
+      assert {:error, _reason, socket} =
                ErrorHandler.handle_binding_error(binding, :not_found, socket)
 
       # Error should be stored in binding errors
@@ -73,7 +73,8 @@ defmodule AshUI.LiveView.ErrorHandlerTest do
       socket = build_socket()
       binding = %{id: "binding-1"}
 
-      assert {:error, :not_found} = ErrorHandler.handle_binding_error(binding, :not_found, socket)
+      assert {:error, :not_found, _socket} =
+               ErrorHandler.handle_binding_error(binding, :not_found, socket)
     end
   end
 
@@ -288,7 +289,7 @@ defmodule AshUI.LiveView.ErrorHandlerTest do
       :atomics.put(attempts, 1, 0)
 
       operation = fn ->
-        count = :atomics.increment_get(attempts, 1)
+        count = :atomics.add_get(attempts, 1, 1)
         if count < 3, do: {:error, :retry}, else: {:ok, :success}
       end
 

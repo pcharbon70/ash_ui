@@ -9,7 +9,7 @@ defmodule AshUI.Resources.ElementTest do
   describe "Element CRUD operations" do
     setup do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "element_test_screen",
             unified_dsl: %{"type" => "screen"},
@@ -28,7 +28,7 @@ defmodule AshUI.Resources.ElementTest do
         position: 1
       }
 
-      assert {:ok, element} = AshUI.Domain.create(Element, attrs: attrs)
+      assert {:ok, element} = AshUI.Data.create(Element, attrs: attrs)
       assert element.type == :text
       assert element.props == %{"content" => "Hello World"}
       assert element.screen_id == screen.id
@@ -43,8 +43,8 @@ defmodule AshUI.Resources.ElementTest do
         position: 1
       }
 
-      {:ok, element} = AshUI.Domain.create(Element, attrs: attrs)
-      {:ok, updated} = AshUI.Domain.update(element, attrs: %{props: %{"content" => "Updated"}})
+      {:ok, element} = AshUI.Data.create(Element, attrs: attrs)
+      {:ok, updated} = AshUI.Data.update(element, attrs: %{props: %{"content" => "Updated"}})
 
       assert updated.props == %{"content" => "Updated"}
     end
@@ -57,10 +57,10 @@ defmodule AshUI.Resources.ElementTest do
         position: 1
       }
 
-      {:ok, element} = AshUI.Domain.create(Element, attrs: attrs)
-      assert :ok = AshUI.Domain.destroy(element)
+      {:ok, element} = AshUI.Data.create(Element, attrs: attrs)
+      assert :ok = AshUI.Data.destroy(element)
 
-      assert [] = AshUI.Domain.read!(Element, filter: [id: element.id])
+      assert [] = AshUI.Data.read!(Element, filter: [id: element.id])
     end
   end
 
@@ -76,7 +76,7 @@ defmodule AshUI.Resources.ElementTest do
         }
 
         # Type should be accepted (validation happens at DSL level)
-        assert {:ok, _element} = AshUI.Domain.create(Element, attrs: attrs)
+        assert {:ok, _element} = AshUI.Data.create(Element, attrs: attrs)
       end)
     end
   end
@@ -84,7 +84,7 @@ defmodule AshUI.Resources.ElementTest do
   describe "Screen association" do
     test "loads elements through screen relationship" do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "association_test_screen",
             unified_dsl: %{"type" => "screen"},
@@ -101,12 +101,12 @@ defmodule AshUI.Resources.ElementTest do
           position: i
         }
 
-        AshUI.Domain.create(Element, attrs: attrs)
+        AshUI.Data.create(Element, attrs: attrs)
       end)
 
       # Load screen with elements
       screen_with_elements =
-        AshUI.Domain.read_one!(Screen,
+        AshUI.Data.read_one!(Screen,
           filter: [id: screen.id],
           load: [:elements]
         )

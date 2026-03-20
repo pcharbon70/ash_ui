@@ -9,7 +9,7 @@ defmodule AshUI.DataCase do
   using do
     quote do
       alias AshUI.Repo
-      alias AshUI.Domain
+      alias AshUI.Data, as: Domain
 
       import Ecto.Query
       import AshUI.DataCase

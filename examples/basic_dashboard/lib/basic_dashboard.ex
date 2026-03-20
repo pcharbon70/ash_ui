@@ -4,7 +4,7 @@ defmodule BasicDashboard do
   """
 
   alias AshUI.DSL.Builder
-  alias AshUI.Domain
+  alias AshUI.Data, as: Domain
   alias AshUI.Resources.Binding
   alias AshUI.Resources.Element
   alias AshUI.Resources.Screen

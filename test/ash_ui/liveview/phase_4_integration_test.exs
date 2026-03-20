@@ -1,7 +1,6 @@
 defmodule AshUI.LiveView.Phase4IntegrationTest do
   use ExUnit.Case, async: false
 
-  alias AshUI.LiveView.Integration
   alias AshUI.LiveView.UpdateIntegration
   alias AshUI.LiveView.EventHandler
   alias AshUI.LiveView.Lifecycle
@@ -28,9 +27,8 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
 
       # Mount should succeed with valid user
       # Note: In actual implementation, would need to mock Ash.get
-      socket = socket
-      {:ok, socket} = Lifecycle.init_session(socket, :dashboard)
-      assert socket.assigns[:ash_ui_session].screen_id == :dashboard
+      {:ok, mounted_socket} = Lifecycle.init_session(socket, :dashboard)
+      assert mounted_socket.assigns[:ash_ui_session].screen_id == :dashboard
     end
 
     test "screen redirects on unauthorized access" do
@@ -68,9 +66,8 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
         )
 
       # Compilation errors should not crash the LiveView
-      assert {:error, socket} = ErrorHandler.handle_compilation_error(:syntax_error, socket)
-      assert socket.assigns[:ash_ui_error] != nil
-      assert socket.assigns[:ash_ui_error].type == :compilation
+      assert {:error, errored_socket} = ErrorHandler.handle_compilation_error(:syntax_error, socket)
+      assert errored_socket.assigns[:ash_ui_error].type == :compilation
     end
   end
 
@@ -87,8 +84,8 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
       params = %{"action_id" => "action1", "data" => %{"name" => "Test"}}
 
       # Action events should be handled
-      assert {:reply, reply, socket} = EventHandler.handle_action_event(params, socket)
-      assert reply != nil
+      assert {:reply, reply, _updated_socket} = EventHandler.handle_action_event(params, socket)
+      assert is_map(reply)
     end
 
     test "input changes update Ash resources" do
@@ -101,7 +98,7 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
       params = %{"target" => "input-1", "value" => "new value"}
 
       # Value changes should be handled
-      assert {:noreply, socket} = EventHandler.handle_value_change(params, socket)
+      assert {:noreply, _updated_socket} = EventHandler.handle_value_change(params, socket)
     end
 
     test "action errors display feedback" do
@@ -114,9 +111,9 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
       params = %{"action_id" => "nonexistent", "data" => %{}}
 
       # Missing actions should return error
-      assert {:reply, reply, socket} = EventHandler.handle_action_event(params, socket)
+      assert {:reply, reply, updated_socket} = EventHandler.handle_action_event(params, socket)
       assert reply[:status] == :error
-      assert socket.assigns[:flash][:error] != nil
+      assert is_binary(updated_socket.assigns[:flash][:error])
     end
 
     test "event handlers receive correct parameters" do
@@ -145,7 +142,8 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
       }
 
       # Resource changes should trigger updates
-      assert {:noreply, socket} = UpdateIntegration.handle_resource_change(notification, socket)
+      assert {:noreply, _updated_socket} =
+               UpdateIntegration.handle_resource_change(notification, socket)
     end
 
     test "multiple sessions don't interfere" do
@@ -171,7 +169,7 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
       socket = build_socket()
 
       # Batch updates should apply all changes at once
-      assert {:noreply, socket} =
+      assert {:noreply, updated_socket} =
                UpdateIntegration.batch_updates(socket, fn socket ->
                  socket
                  |> Phoenix.Component.assign(:value1, 1)
@@ -179,9 +177,9 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
                  |> Phoenix.Component.assign(:value3, 3)
                end)
 
-      assert socket.assigns[:value1] == 1
-      assert socket.assigns[:value2] == 2
-      assert socket.assigns[:value3] == 3
+      assert updated_socket.assigns[:value1] == 1
+      assert updated_socket.assigns[:value2] == 2
+      assert updated_socket.assigns[:value3] == 3
     end
 
     test "subscriptions clean up on unmount" do
@@ -191,7 +189,7 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
         |> elem(1)
 
       # Subscribe to some resources
-      {:ok, sub} = UpdateIntegration.subscribe(socket, User.Profile)
+      {:ok, _subscription} = UpdateIntegration.subscribe(socket, User.Profile)
 
       # Cleanup should remove subscriptions
       assert :ok = UpdateIntegration.cleanup_subscriptions(socket)
@@ -202,7 +200,7 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
     test "full screen lifecycle" do
       # 1. Initialize session
       {:ok, socket} = Lifecycle.init_session(build_socket(), :dashboard)
-      assert socket.assigns[:ash_ui_session_id] != nil
+      assert is_binary(socket.assigns[:ash_ui_session_id])
 
       # 2. Ensure isolation
       socket = Lifecycle.ensure_isolation(socket)
@@ -214,11 +212,12 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
 
       # 4. Register lifecycle hook
       socket = Lifecycle.register_hook(socket, :on_update, fn socket -> socket end)
-      assert socket.assigns[:ash_ui_lifecycle_hooks][:on_update] != nil
+      assert [hook] = socket.assigns[:ash_ui_lifecycle_hooks][:on_update]
+      assert is_function(hook, 1)
 
       # 5. Execute hooks
       socket = Lifecycle.execute_hooks(socket, :on_update)
-      assert socket != nil
+      assert match?(%Phoenix.LiveView.Socket{}, socket)
 
       # 6. Cleanup
       assert :ok = Lifecycle.cleanup_session(socket)
@@ -256,14 +255,15 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
         )
 
       # 1. User changes value
-      {:noreply, socket} = EventHandler.handle_value_change(%{"target" => "input-1", "value" => "changed"}, socket)
+      {:noreply, socket} =
+        EventHandler.handle_value_change(%{"target" => "input-1", "value" => "changed"}, socket)
 
       # 2. Resource change notification
       notification = %{type: :updated, resource: User.Profile, timestamp: DateTime.utc_now()}
       {:noreply, socket} = UpdateIntegration.handle_resource_change(notification, socket)
 
       # Socket should be updated
-      assert socket != nil
+      assert match?(%Phoenix.LiveView.Socket{}, socket)
     end
   end
 

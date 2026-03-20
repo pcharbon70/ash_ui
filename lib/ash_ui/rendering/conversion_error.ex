@@ -48,6 +48,12 @@ defmodule AshUI.Rendering.ConversionError do
     base <> ": #{format_reason(error.reason)}"
   end
 
+  @impl true
+  @doc """
+  Returns the exception message for logging and user-facing surfaces.
+  """
+  def message(%__MODULE__{} = error), do: format_message(error)
+
   defp format_reason(reason) when is_binary(reason), do: reason
   defp format_reason(reason) when is_atom(reason), do: Atom.to_string(reason)
   defp format_reason(reason), do: inspect(reason)

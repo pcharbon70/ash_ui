@@ -50,12 +50,12 @@ defmodule AshUI.Rendering.Selector do
       not Keyword.get(opts, :ignore_headers, false) ->
         case get_renderer_from_header(conn_or_map) do
           {:ok, renderer} -> get_renderer_with_validation(renderer)
-          _error -> select_from_context(conn_or_map, opts)
+          _error -> select_from_context(conn_or_map)
         end
 
       # Auto-detect from context
       true ->
-        select_from_context(conn_or_map, opts)
+        select_from_context(conn_or_map)
     end
   end
 
@@ -160,7 +160,7 @@ defmodule AshUI.Rendering.Selector do
 
   # Private Functions
 
-  defp select_from_context(conn_or_map, opts) do
+  defp select_from_context(conn_or_map) do
     cond do
       liveview_request?(conn_or_map) ->
         get_renderer_with_validation(:liveview)
@@ -202,7 +202,7 @@ defmodule AshUI.Rendering.Selector do
     end
   end
 
-  defp has_header?(conn_or_map, header_name, values \\ []) do
+  defp has_header?(conn_or_map, header_name, values) do
     header_value = get_request_header(conn_or_map, header_name)
 
     if is_binary(header_value) do
@@ -218,7 +218,7 @@ defmodule AshUI.Rendering.Selector do
     end
   end
 
-  defp has_param?(conn_or_map, param_name, values \\ []) do
+  defp has_param?(conn_or_map, param_name, values) do
     param_value = get_request_param(conn_or_map, param_name)
 
     if param_value do
@@ -243,8 +243,8 @@ defmodule AshUI.Rendering.Selector do
     conn
     |> Plug.Conn.get_req_header(header_name)
     |> case do
-      "" -> nil
-      val -> val
+      [value | _] -> value
+      [] -> nil
     end
   end
 

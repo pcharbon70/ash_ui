@@ -25,7 +25,7 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
       socket = build_socket()
 
       assert {:ok, subscription} = UpdateIntegration.subscribe(socket, User.Profile)
-      assert subscription.id != nil
+      assert is_binary(subscription.id)
       assert subscription.resource == User.Profile
     end
 
@@ -79,7 +79,8 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
         timestamp: DateTime.utc_now()
       }
 
-      assert {:noreply, socket} = UpdateIntegration.handle_resource_change(notification, socket)
+      assert {:noreply, _updated_socket} =
+               UpdateIntegration.handle_resource_change(notification, socket)
     end
 
     test "handles multiple binding changes" do
@@ -100,7 +101,8 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
         timestamp: DateTime.utc_now()
       }
 
-      assert {:noreply, socket} = UpdateIntegration.handle_resource_change(notification, socket)
+      assert {:noreply, _updated_socket} =
+               UpdateIntegration.handle_resource_change(notification, socket)
     end
 
     test "handles created notifications" do
@@ -117,7 +119,8 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
         timestamp: DateTime.utc_now()
       }
 
-      assert {:noreply, socket} = UpdateIntegration.handle_resource_change(notification, socket)
+      assert {:noreply, _updated_socket} =
+               UpdateIntegration.handle_resource_change(notification, socket)
     end
 
     test "handles destroyed notifications" do
@@ -134,7 +137,8 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
         timestamp: DateTime.utc_now()
       }
 
-      assert {:noreply, socket} = UpdateIntegration.handle_resource_change(notification, socket)
+      assert {:noreply, _updated_socket} =
+               UpdateIntegration.handle_resource_change(notification, socket)
     end
   end
 
@@ -142,28 +146,29 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
     test "routes created notifications" do
       socket = build_socket(ash_ui_screen: build_screen(), ash_ui_user: build_user())
 
-      assert {:noreply, socket} =
+      assert {:noreply, _updated_socket} =
                UpdateIntegration.handle_notification({:created, %User.Profile{}}, socket)
     end
 
     test "routes updated notifications" do
       socket = build_socket(ash_ui_screen: build_screen(), ash_ui_user: build_user())
 
-      assert {:noreply, socket} =
+      assert {:noreply, _updated_socket} =
                UpdateIntegration.handle_notification({:updated, %User.Profile{}}, socket)
     end
 
     test "routes destroyed notifications" do
       socket = build_socket(ash_ui_screen: build_screen(), ash_ui_user: build_user())
 
-      assert {:noreply, socket} =
+      assert {:noreply, _updated_socket} =
                UpdateIntegration.handle_notification({:destroyed, %User.Profile{}}, socket)
     end
 
     test "handles unknown notification types gracefully" do
       socket = build_socket()
 
-      assert {:noreply, socket} = UpdateIntegration.handle_notification({:unknown, :data}, socket)
+      assert {:noreply, _updated_socket} =
+               UpdateIntegration.handle_notification({:unknown, :data}, socket)
     end
   end
 
@@ -171,15 +176,15 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
     test "applies multiple updates in batch" do
       socket = build_socket()
 
-      assert {:noreply, socket} =
+      assert {:noreply, updated_socket} =
                UpdateIntegration.batch_updates(socket, fn socket ->
                  socket
                  |> Phoenix.Component.assign(:value1, 1)
                  |> Phoenix.Component.assign(:value2, 2)
                end)
 
-      assert socket.assigns[:value1] == 1
-      assert socket.assigns[:value2] == 2
+      assert updated_socket.assigns[:value1] == 1
+      assert updated_socket.assigns[:value2] == 2
     end
 
     test "sets batch mode flag during updates" do
@@ -201,7 +206,7 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
           ash_ui_params: %{}
         )
 
-      assert {:noreply, socket} = UpdateIntegration.refresh_bindings(socket)
+      assert {:noreply, _updated_socket} = UpdateIntegration.refresh_bindings(socket)
     end
   end
 
