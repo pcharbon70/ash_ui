@@ -1,0 +1,18 @@
+{
+  "title": "Ash UI Authorization Failures",
+  "version": 1,
+  "panels": [
+    {
+      "title": "Authorization Failures",
+      "event_name": "ash_ui.authorization.auth_fail",
+      "measurement": "count",
+      "aggregation": "sum"
+    },
+    {
+      "title": "Screen Auth Failures",
+      "event_name": "ash_ui.screen.auth_failure",
+      "measurement": "count",
+      "aggregation": "sum"
+    }
+  ]
+}

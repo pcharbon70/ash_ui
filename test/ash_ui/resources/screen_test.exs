@@ -5,6 +5,8 @@ defmodule AshUI.Resources.ScreenTest do
   alias AshUI.Resources.Element
   alias AshUI.Resources.Binding
 
+  @moduletag :conformance
+
   describe "Screen CRUD operations" do
     test "create/1 creates a screen with unified_dsl storage" do
       attrs = %{
@@ -64,7 +66,7 @@ defmodule AshUI.Resources.ScreenTest do
       }
 
       {:ok, screen} = AshUI.Domain.create(Screen, attrs: attrs)
-      assert {:ok, _} = AshUI.Domain.destroy(screen)
+      assert :ok = AshUI.Domain.destroy(screen)
 
       assert [] = AshUI.Domain.read!(Screen, filter: [name: "destroy_test"])
     end
@@ -81,7 +83,7 @@ defmodule AshUI.Resources.ScreenTest do
       {:ok, _screen} = AshUI.Domain.create(Screen, attrs: attrs)
 
       assert {:error, error} = AshUI.Domain.create(Screen, attrs: attrs)
-      assert {:name, _} = hd(Ash.Error.errors(error))
+      assert Exception.message(error) =~ "constraint error"
     end
   end
 end

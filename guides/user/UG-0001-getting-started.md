@@ -6,266 +6,226 @@ title: Getting Started with Ash UI
 audience: Application Developers
 status: Active
 owners: Ash UI Team
-last_reviewed: 2026-03-18
-next_review: 2026-09-18
-related_reqs: [REQ-RES-001, REQ-SCREEN-001]
-related_scns: [SCN-001, SCN-004]
-related_guides: []
+last_reviewed: 2026-03-20
+next_review: 2026-09-20
+related_reqs: [REQ-RES-001, REQ-SCREEN-001, REQ-COMP-001, REQ-RENDER-001]
+related_scns: [SCN-004, SCN-021, SCN-041, SCN-061]
+related_guides: [UG-0002, UG-0003, UG-0004, DG-0001]
 diagram_required: true
 ---
 
 ## Overview
 
-This guide introduces Ash UI, a resource-driven UI framework for Elixir built on the Ash Framework. Ash UI enables dynamic UI generation from database resources through the unified UI rendering ecosystem.
-
-## What is Ash UI?
-
-Ash UI is a framework that:
-
-- **Defines UI as Resources** - UI components are Ash resources stored in your database
-- **Compiles to IUR** - Resources are compiled to an Intermediate UI Representation
-- **Converts to Canonical IUR** - IUR is converted to canonical unified_iur format
-- **Renders via Unified Packages** - Output to LiveView, static HTML, or desktop via external renderer packages
-- **Binds Data Reactively** - Connect UI elements directly to Ash resources
-
-## Architecture Overview
-
-```mermaid
-flowchart LR
-    subgraph Input["Your Application"]
-        Resource["Ash Resources"]
-    end
-
-    subgraph AshUI["Ash UI Framework"]
-        Compiler["Resource Compiler"]
-        IUR["Ash IUR"]
-        Adapter["IUR Adapter"]
-    end
-
-    subgraph Unified["Unified Ecosystem"]
-        Canonical["Canonical IUR"]
-    end
-
-    subgraph Renderers["Renderer Packages"]
-        Live["LiveUI.Renderer"]
-        Web["WebUI.Renderer"]
-        Desktop["DesktopUI.Renderer"]
-    end
-
-    subgraph Output["User Interface"]
-        LV["LiveView"]
-        HTML["Static HTML"]
-        Native["Desktop UI"]
-    end
-
-    Resource --> Compiler
-    Compiler --> IUR
-    IUR --> Adapter
-    Adapter --> Canonical
-    Canonical --> Live
-    Canonical --> Web
-    Canonical --> Desktop
-    Live --> LV
-    Web --> HTML
-    Desktop --> Native
-
-    classDef input fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef aui fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef unified fill:#e0f2f1,stroke:#00695c,stroke-width:2px
-    classDef renderer fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef output fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
-
-    class Resource input
-    class Compiler,IUR,Adapter aui
-    class Canonical unified
-    class Live,Web,Desktop renderer
-    class LV,HTML,Native output
-```
+This guide shows the shortest realistic path to getting Ash UI running in an application today. The current system centers on three Ash resources, a stored `unified_dsl` screen definition, a compiler that produces Ash UI IUR, and adapters that convert that IUR into canonical renderer input.
 
 ## Prerequisites
 
-Before using Ash UI, you should have:
+Before reading this guide, you should:
 
-- **Elixir 1.15+** installed
-- **Phoenix 2.0+** application
-- **Ash Framework 3.0+** installed
-- Basic knowledge of Ash resources
+- Be comfortable with Elixir and Mix
+- Have a Phoenix application with LiveView enabled
+- Understand basic Ash resource and domain concepts
+- Have read your app's database and repo setup docs
 
-## Installation
+## How Ash UI Flows
 
-Add Ash UI and dependencies to your `mix.exs`:
+The most important thing to understand is that Ash UI stores screen definitions as Ash data, then compiles and adapts them at runtime.
+
+```mermaid
+flowchart LR
+    Screen["AshUI.Resources.Screen"]
+    DSL["stored unified_dsl"]
+    Compiler["AshUI.Compiler"]
+    IUR["Ash UI IUR"]
+    Canonical["canonical IUR"]
+    Runtime["AshUI.LiveView.Integration"]
+
+    Screen --> DSL
+    DSL --> Compiler
+    Compiler --> IUR
+    IUR --> Canonical
+    Canonical --> Runtime
+```
+
+## Install Dependencies
+
+Add Ash UI and the runtime dependencies it uses today:
 
 ```elixir
 # mix.exs
 defp deps do
   [
-    {:ash_ui, "~> 0.1"},
-    {:unified_iur, "~> 0.1"},  # Canonical IUR format
-    {:live_ui, "~> 0.1"},      # LiveView renderer (choose one)
-    # {:web_ui, "~> 0.1"}      # Static HTML renderer (alternative)
-    # {:desktop_ui, "~> 0.1"}  # Desktop renderer (alternative)
+    {:ash_ui, "~> 0.1.0"},
     {:ash, "~> 3.0"},
-    {:phoenix_live_view, "~> 1.0"}
+    {:ash_postgres, "~> 2.0"},
+    {:phoenix_live_view, "~> 1.0"},
+    {:telemetry, "~> 1.0"}
   ]
 end
 ```
 
-Install and configure:
+Fetch dependencies:
 
 ```bash
 mix deps.get
 ```
 
-## Your First Screen
+## Create a First Screen
 
-### Step 1: Define a Screen Resource
+Ash UI ships the core resources for you:
 
-Create a screen resource using the Ash DSL:
+- `AshUI.Resources.Screen`
+- `AshUI.Resources.Element`
+- `AshUI.Resources.Binding`
 
-```elixir
-defmodule MyApp.UI.Dashboard do
-  use Ash.Resource,
-    domain: MyApp.UI,
-    data_layer: AshPostgres.DataLayer
-
-  ui_screen do
-    layout :dashboard
-    route "/dashboard"
-  end
-
-  actions do
-    defaults [:read, :create, :update, :destroy]
-
-    action :mount do
-      argument :user_id, :uuid
-      run {AshUI.Screen.Actions, :mount_screen}
-    end
-  end
-end
-```
-
-### Step 2: Define UI Elements
-
-Add elements to your screen:
+For a simple screen, the lowest-friction path is to create a `Screen` record with a `unified_dsl` map built by `AshUI.DSL.Builder`.
 
 ```elixir
-defmodule MyApp.UI.Elements.WelcomeText do
-  use Ash.Resource,
-    domain: MyApp.UI,
-    data_layer: AshPostgres.DataLayer
+alias AshUI.DSL.Builder
+alias AshUI.Domain
+alias AshUI.Resources.Screen
 
-  ui_element do
-    type :text
-    props %{
-      content: "Welcome to Ash UI!",
-      size: :large
+dashboard_dsl =
+  Builder.column(
+    spacing: 16,
+    children: [
+      Builder.text("Team dashboard", size: 24, weight: :bold),
+      Builder.text("Everything below is compiled from stored Ash data."),
+      Builder.button("Refresh", on_click: "refresh-dashboard")
+    ]
+  )
+  |> Builder.to_store()
+
+{:ok, screen} =
+  Domain.create(Screen,
+    attrs: %{
+      name: "dashboard",
+      route: "/dashboard",
+      layout: :column,
+      unified_dsl: dashboard_dsl,
+      metadata: %{"title" => "Dashboard"}
     }
-  end
-end
+  )
 ```
 
-### Step 3: Create Data Bindings
+## Mount the Screen in LiveView
 
-Connect elements to your data:
-
-```elixir
-defmodule MyApp.UI.Bindings.UserName do
-  use Ash.Resource,
-    domain: MyApp.UI,
-    data_layer: AshPostgres.DataLayer
-
-  attributes do
-    uuid_primary_key :id
-    attribute :source, :string, default: "MyApp.Accounts.User.name"
-    attribute :target, :string, default: "element.value"
-    attribute :binding_type, :atom, default: :value
-  end
-end
-```
-
-### Step 4: Mount in LiveView
+`AshUI.LiveView.Integration.mount_ui_screen/3` loads the screen, authorizes it, compiles it, evaluates its bindings, and assigns the result onto the socket.
 
 ```elixir
 defmodule MyAppWeb.DashboardLive do
   use MyAppWeb, :live_view
 
-  def mount(params, _session, socket) do
-    {:ok, mount_ui_screen(socket, :dashboard, params)}
+  alias AshUI.LiveView.Integration
+
+  def mount(_params, _session, socket) do
+    socket = assign(socket, :current_user, %{id: "admin-1", role: :admin, active: true})
+
+    case Integration.mount_ui_screen(socket, :dashboard, %{}) do
+      {:ok, socket} -> {:ok, socket}
+      {:error, reason} -> {:ok, assign(socket, :ash_ui_error, reason)}
+    end
   end
 end
 ```
 
-The `mount_ui_screen/3` helper handles compilation, IUR conversion, and rendering via your configured renderer package (e.g., `live_ui`).
+After mount, these assigns are available:
 
-## Core Concepts
+- `:ash_ui_screen`
+- `:ash_ui_iur`
+- `:ash_ui_bindings`
+- `:ash_ui_user`
+- `:ash_ui_loaded_at`
 
-### UI.Element
+## Inspect or Render the Result
 
-The atomic unit of UI - a single component like a button, input, or text.
+Today Ash UI reliably gives you canonical screen data and fallback renderer adapters. A practical first step is to inspect the assigned IUR while wiring your UI.
 
 ```elixir
-ui_element do
-  type :button
-  props %{
-    label: "Click Me",
-    variant: :primary
-  }
+~H"""
+<section>
+  <h1>{@ash_ui_screen.name}</h1>
+  <pre><%= inspect(@ash_ui_iur, pretty: true) %></pre>
+</section>
+"""
+```
+
+If you want fallback HEEx or HTML output, you can render the compiled structure directly:
+
+```elixir
+alias AshUI.Rendering.LiveUIAdapter
+
+{:ok, heex} = LiveUIAdapter.render(@ash_ui_iur)
+```
+
+## Add Reactive Bindings
+
+Bindings are separate records. They connect a UI target such as `"value"` or `"submit"` to a source map that identifies a resource field or action.
+
+```elixir
+alias AshUI.Domain
+alias AshUI.Resources.Binding
+alias AshUI.Resources.Element
+
+{:ok, input} =
+  Domain.create(Element,
+    attrs: %{
+      screen_id: screen.id,
+      type: :textinput,
+      props: %{"label" => "Display name"},
+      position: 0
+    }
+  )
+
+{:ok, _binding} =
+  Domain.create(Binding,
+    attrs: %{
+      screen_id: screen.id,
+      element_id: input.id,
+      binding_type: :value,
+      target: "value",
+      source: %{"resource" => "User", "field" => "name", "id" => "user-1"},
+      transform: [%{"function" => "trim"}]
+    }
+  )
+```
+
+## Handle LiveView Events
+
+Ash UI includes helper modules for value changes and action dispatch:
+
+```elixir
+def handle_event("ash_ui_change", params, socket) do
+  AshUI.LiveView.EventHandler.handle_value_change(params, socket)
+end
+
+def handle_event("ash_ui_action", params, socket) do
+  AshUI.LiveView.EventHandler.handle_action_event(params, socket)
 end
 ```
 
-### UI.Screen
+## Common First Checks
 
-A composable container representing a page or view.
+### Screen fails to mount
 
-```elixir
-ui_screen do
-  layout :default
-  route "/my-screen"
-end
-```
+Confirm the socket includes `:current_user`, the user is active, and the screen exists under the requested name or ID.
 
-### UI.Binding
+### Bindings stay empty
 
-Connects UI elements to Ash resources.
+Check that:
 
-```elixir
-# Binds element value to user name
-source: "MyApp.Accounts.User.name"
-target: "element.value"
-binding_type: :value
-```
+- The binding belongs to the same `screen_id`
+- `binding_type` is one of `:value`, `:list`, or `:action`
+- `source` is a map with at least `"resource"` plus `"field"` or `"action"`
 
-## Common UI Element Types
+### Rendering looks incomplete
 
-| Type | Description | Example Props |
-|---|---|---|
-| `:text` | Static text | content, format |
-| `:button` | Clickable button | label, variant, disabled |
-| `:input` | Text input | placeholder, type, value |
-| `:image` | Image display | src, alt, width, height |
-
-## Next Steps
-
-- **[UG-0002: Resources](UG-0002-resources.md)** - Deep dive into UI resources
-- **[UG-0003: Data Binding](UG-0003-data-binding.md)** - Reactive data binding
-- **[DG-0001: Architecture](../developer/DG-0001-architecture-overview.md)** - Framework internals
-
-## Troubleshooting
-
-### Screen doesn't mount
-
-Ensure your screen has a `:mount` action and the route is defined in your Phoenix router.
-
-### Elements don't appear
-
-Check that elements have the correct `type` and are associated with the screen.
-
-### Binding not working
-
-Verify the `source` path points to a valid Ash resource attribute.
+That is expected if external renderer packages are not installed. Ash UI currently falls back to adapter-provided output until `live_ui`, `web_ui`, or `desktop_ui` are available.
 
 ## See Also
 
-- [Ash Framework Documentation](https://hexdocs.pm/ash)
-- [Phoenix LiveView Guide](https://hexdocs.pm/phoenix_live_view)
-- [Specifications](../../specs/) - Technical specifications
+- [UG-0002: Working with Resources](./UG-0002-resources.md)
+- [UG-0003: Data Binding](./UG-0003-data-binding.md)
+- [UG-0004: Authorization](./UG-0004-authorization.md)
+- [DG-0001: Architecture Overview](../developer/DG-0001-architecture-overview.md)
+- [README](/Users/Pascal/code/ash/ash_ui/README.md)

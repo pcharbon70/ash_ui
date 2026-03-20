@@ -5,6 +5,8 @@ defmodule AshUI.RelationshipIntegrationTest do
   alias AshUI.Resources.Element
   alias AshUI.Resources.Binding
 
+  @moduletag :conformance
+
   setup do
     # Create a screen with multiple elements and bindings
     {:ok, screen} =
@@ -74,7 +76,7 @@ defmodule AshUI.RelationshipIntegrationTest do
       screen_with_elements =
         AshUI.Domain.read_one!(Screen,
           filter: [id: screen.id],
-          load: [elements: [sort: [position: :asc]]]
+          load: [elements: Ash.Query.sort(Element, position: :asc)]
         )
 
       positions = Enum.map(screen_with_elements.elements, & &1.position)
@@ -165,7 +167,7 @@ defmodule AshUI.RelationshipIntegrationTest do
       # Each element should have 2 bindings
       total_bindings =
         screen_with_all.elements
-        |> Enum.map(&length/1)
+        |> Enum.map(&(length(&1.bindings)))
         |> Enum.sum()
 
       assert total_bindings == 6

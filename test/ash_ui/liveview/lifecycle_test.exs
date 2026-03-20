@@ -61,11 +61,11 @@ defmodule AshUI.LiveView.LifecycleTest do
   describe "execute_hooks/2" do
     test "executes registered hooks in order" do
       hook1 = fn socket ->
-        Phoenix.LiveView.assign(socket, :hook1_executed, true)
+        Phoenix.Component.assign(socket, :hook1_executed, true)
       end
 
       hook2 = fn socket ->
-        Phoenix.LiveView.assign(socket, :hook2_executed, true)
+        Phoenix.Component.assign(socket, :hook2_executed, true)
       end
 
       socket =
@@ -80,7 +80,7 @@ defmodule AshUI.LiveView.LifecycleTest do
 
     test "handles hook errors gracefully" do
       error_hook = fn _socket -> raise "Hook error" end
-      success_hook = fn socket -> Phoenix.LiveView.assign(socket, :still_ran, true) end
+      success_hook = fn socket -> Phoenix.Component.assign(socket, :still_ran, true) end
 
       socket =
         build_socket()
@@ -164,7 +164,7 @@ defmodule AshUI.LiveView.LifecycleTest do
         |> Lifecycle.init_session(:dashboard)
         |> elem(1)
         |> Lifecycle.register_hook(:on_unmount, fn socket ->
-          Phoenix.LiveView.assign(socket, :cleanup_called, true)
+          Phoenix.Component.assign(socket, :cleanup_called, true)
         end)
 
       assert :ok = Lifecycle.cleanup_session(socket)
@@ -174,7 +174,7 @@ defmodule AshUI.LiveView.LifecycleTest do
       socket =
         build_socket()
         |> Lifecycle.register_hook(:on_unmount, fn socket ->
-          Phoenix.LiveView.assign(socket, :unmounted, true)
+          Phoenix.Component.assign(socket, :unmounted, true)
         end)
 
       # Note: cleanup returns :ok, not the socket
@@ -253,7 +253,7 @@ defmodule AshUI.LiveView.LifecycleTest do
       socket =
         build_socket()
         |> Lifecycle.register_hook(:on_error, fn socket ->
-          Phoenix.LiveView.assign(socket, :error_handled, true)
+          Phoenix.Component.assign(socket, :error_handled, true)
         end)
 
       exception = RuntimeError.exception("Test error")
@@ -304,7 +304,7 @@ defmodule AshUI.LiveView.LifecycleTest do
     test "merges callbacks from module" do
       defmodule TestLifecycleCallbacks do
         def on_lifecycle(:init, socket) do
-          Phoenix.LiveView.assign(socket, :module_callback_ran, true)
+          Phoenix.Component.assign(socket, :module_callback_ran, true)
         end
 
         def on_lifecycle(_, socket), do: socket
@@ -335,7 +335,7 @@ defmodule AshUI.LiveView.LifecycleTest do
       socket =
         build_socket()
         |> Lifecycle.register_hook(:on_update, fn socket ->
-          Phoenix.LiveView.assign(socket, :updated, true)
+          Phoenix.Component.assign(socket, :updated, true)
         end)
 
       socket = Lifecycle.on_session_change(socket, %{})

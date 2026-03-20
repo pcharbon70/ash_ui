@@ -20,6 +20,7 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
 
   alias AshUI.Rendering.IURAdapter
   alias AshUI.Compilation.IUR
+  alias AshUI.Telemetry
 
   @doc """
   Renders a canonical IUR to desktop UI instructions.
@@ -42,11 +43,18 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
   """
   @spec render(map(), keyword()) :: {:ok, map()} | {:error, term()}
   def render(canonical_iur, opts \\ []) when is_map(canonical_iur) do
-    if Code.ensure_loaded?(DesktopUI.Renderer) do
-      call_desktop_ui_renderer(canonical_iur, opts)
-    else
-      render_fallback(canonical_iur, opts)
-    end
+    started_at = System.monotonic_time()
+    metadata = render_metadata(canonical_iur, :desktop_ui)
+    Telemetry.emit(:render, :start, %{count: 1}, metadata)
+
+    result =
+      if Code.ensure_loaded?(DesktopUI.Renderer) do
+        call_desktop_ui_renderer(canonical_iur, opts)
+      else
+        render_fallback(canonical_iur, opts)
+      end
+
+    emit_render_telemetry(result, started_at, metadata)
   end
 
   @doc """
@@ -129,46 +137,47 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
     enabled = Keyword.get(opts, :native_menu_bar, true)
     custom_items = Keyword.get(opts, :menu_items, [])
 
-    default_items = if enabled do
-      [
-        %{
-          label: "File",
-          items: [
-            %{label: "New", action: "file_new", shortcut: "CmdOrCtrl+N"},
-            %{label: "Open", action: "file_open", shortcut: "CmdOrCtrl+O"},
-            :separator,
-            %{label: "Save", action: "file_save", shortcut: "CmdOrCtrl+S"},
-            %{label: "Save As", action: "file_save_as", shortcut: "CmdOrCtrl+Shift+S"},
-            :separator,
-            %{label: "Quit", action: "app_quit", shortcut: "CmdOrCtrl+Q"}
-          ]
-        },
-        %{
-          label: "Edit",
-          items: [
-            %{label: "Undo", action: "edit_undo", shortcut: "CmdOrCtrl+Z"},
-            %{label: "Redo", action: "edit_redo", shortcut: "CmdOrCtrl+Shift+Z"},
-            :separator,
-            %{label: "Cut", action: "edit_cut", shortcut: "CmdOrCtrl+X"},
-            %{label: "Copy", action: "edit_copy", shortcut: "CmdOrCtrl+C"},
-            %{label: "Paste", action: "edit_paste", shortcut: "CmdOrCtrl+V"},
-            :separator,
-            %{label: "Select All", action: "edit_select_all", shortcut: "CmdOrCtrl+A"}
-          ]
-        },
-        %{
-          label: "View",
-          items: [
-            %{label: "Reload", action: "view_reload", shortcut: "F5"},
-            %{label: "Toggle Fullscreen", action: "view_fullscreen", shortcut: "F11"},
-            :separator,
-            %{label: "Developer Tools", action: "view_devtools", shortcut: "CmdOrCtrl+Shift+I"}
-          ]
-        }
-      ]
-    else
-      []
-    end
+    default_items =
+      if enabled do
+        [
+          %{
+            label: "File",
+            items: [
+              %{label: "New", action: "file_new", shortcut: "CmdOrCtrl+N"},
+              %{label: "Open", action: "file_open", shortcut: "CmdOrCtrl+O"},
+              :separator,
+              %{label: "Save", action: "file_save", shortcut: "CmdOrCtrl+S"},
+              %{label: "Save As", action: "file_save_as", shortcut: "CmdOrCtrl+Shift+S"},
+              :separator,
+              %{label: "Quit", action: "app_quit", shortcut: "CmdOrCtrl+Q"}
+            ]
+          },
+          %{
+            label: "Edit",
+            items: [
+              %{label: "Undo", action: "edit_undo", shortcut: "CmdOrCtrl+Z"},
+              %{label: "Redo", action: "edit_redo", shortcut: "CmdOrCtrl+Shift+Z"},
+              :separator,
+              %{label: "Cut", action: "edit_cut", shortcut: "CmdOrCtrl+X"},
+              %{label: "Copy", action: "edit_copy", shortcut: "CmdOrCtrl+C"},
+              %{label: "Paste", action: "edit_paste", shortcut: "CmdOrCtrl+V"},
+              :separator,
+              %{label: "Select All", action: "edit_select_all", shortcut: "CmdOrCtrl+A"}
+            ]
+          },
+          %{
+            label: "View",
+            items: [
+              %{label: "Reload", action: "view_reload", shortcut: "F5"},
+              %{label: "Toggle Fullscreen", action: "view_fullscreen", shortcut: "F11"},
+              :separator,
+              %{label: "Developer Tools", action: "view_devtools", shortcut: "CmdOrCtrl+Shift+I"}
+            ]
+          }
+        ]
+      else
+        []
+      end
 
     %{
       enabled: enabled,
@@ -276,18 +285,25 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
 
   defp generate_menu_items(_iur) do
     [
-      %{"label" => "File", "items" => [
-        %{"label" => "Quit", "action" => "quit"}
-      ]},
-      %{"label" => "Edit", "items" => [
-        %{"label" => "Undo", "action" => "undo"},
-        %{"label" => "Redo", "action" => "redo"}
-      ]}
+      %{
+        "label" => "File",
+        "items" => [
+          %{"label" => "Quit", "action" => "quit"}
+        ]
+      },
+      %{
+        "label" => "Edit",
+        "items" => [
+          %{"label" => "Undo", "action" => "undo"},
+          %{"label" => "Redo", "action" => "redo"}
+        ]
+      }
     ]
   end
 
   defp generate_content(nil), do: []
   defp generate_content([]), do: []
+
   defp generate_content(children) when is_list(children) do
     Enum.map(children, &generate_widget/1)
   end
@@ -416,5 +432,35 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
       _ ->
         %{}
     end
+  end
+
+  defp emit_render_telemetry(result, started_at, metadata) do
+    duration = System.monotonic_time() - started_at
+
+    case result do
+      {:ok, _rendered} = success ->
+        Telemetry.emit(
+          :render,
+          :complete,
+          %{count: 1, duration: duration},
+          Map.put(metadata, :status, :ok)
+        )
+
+        success
+
+      {:error, reason} = error ->
+        error_metadata = Map.merge(metadata, %{status: :error, error: inspect(reason)})
+        Telemetry.emit(:render, :error, %{count: 1, duration: duration}, error_metadata)
+        error
+    end
+  end
+
+  defp render_metadata(canonical_iur, renderer) do
+    %{
+      renderer: renderer,
+      resource_id: Map.get(canonical_iur, "id"),
+      resource_type: :screen,
+      screen_id: Map.get(canonical_iur, "id")
+    }
   end
 end

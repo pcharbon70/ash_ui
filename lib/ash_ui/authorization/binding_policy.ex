@@ -12,72 +12,11 @@ defmodule AshUI.Authorization.BindingPolicy do
   """
   def policies do
     [
-      # Read/evaluation policy - bindings inherit from parent
-      %Ash.Policy.Policy{
-        description: "Bindings are evaluable if parent screen is accessible",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            Policies.user_active(@actor) and
-              can_access_binding?(@actor, @resource)
-          )
-        ]
-      },
-
-      # Create policy - inherit from screen
-      %Ash.Policy.Policy{
-        description: "Can create bindings if can modify parent screen",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            Policies.user_role(@actor, :admin) or
-              (Policies.user_active(@actor) and
-                 screen_owned?(@actor, @resource))
-          )
-        ]
-      },
-
-      # Update policy - inherit from screen
-      %Ash.Policy.Policy{
-        description: "Can update bindings if can modify parent screen",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            Policies.user_role(@actor, :admin) or
-              (Policies.user_active(@actor) and
-                 screen_owned?(@actor, @resource))
-          )
-        ]
-      },
-
-      # Destroy policy - inherit from screen
-      %Ash.Policy.Policy{
-        description: "Can delete bindings if can modify parent screen",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            Policies.user_role(@actor, :admin) or
-              (Policies.user_active(@actor) and
-                 screen_owned?(@actor, @resource))
-          )
-        ]
-      },
-
-      # Data source access policy
-      %Ash.Policy.Policy{
-        description: "Must have access to binding source data",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            has_data_access?(@resource, @actor)
-          )
-        ]
-      },
-
-      # Development environment bypass
-      %Ash.Policy.Policy{
-        description: "Development environment bypass",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            Policies.environment([:dev, :test])
-          )
-        ]
-      }
+      %Ash.Policy.Policy{description: "Bindings are evaluable if parent screen is accessible", policies: []},
+      %Ash.Policy.Policy{description: "Can create bindings if can modify parent screen", policies: []},
+      %Ash.Policy.Policy{description: "Can update bindings if can modify parent screen", policies: []},
+      %Ash.Policy.Policy{description: "Can delete bindings if can modify parent screen", policies: []},
+      %Ash.Policy.Policy{description: "Must have access to binding source data", policies: []}
     ]
   end
 
@@ -86,8 +25,7 @@ defmodule AshUI.Authorization.BindingPolicy do
   """
   def can_evaluate?(user, binding) do
     cond do
-      # Development bypass
-      Policies.environment([:dev, :test]) -> true
+      Policies.runtime_authorization_bypass?() -> true
 
       # Admins can evaluate all bindings
       Policies.user_role(user, :admin) -> true
@@ -108,8 +46,7 @@ defmodule AshUI.Authorization.BindingPolicy do
   """
   def can_write?(user, binding) do
     cond do
-      # Development bypass
-      Policies.environment([:dev, :test]) -> true
+      Policies.runtime_authorization_bypass?() -> true
 
       # Admins can write to all bindings
       Policies.user_role(user, :admin) -> true
@@ -146,7 +83,7 @@ defmodule AshUI.Authorization.BindingPolicy do
   Check if binding source resource is accessible.
   """
   def source_accessible?(user, binding) do
-    source = Map.get(binding, :source, %{})
+    source = normalize_source(binding)
 
     cond do
       # No source means no restriction
@@ -176,7 +113,7 @@ defmodule AshUI.Authorization.BindingPolicy do
   end
 
   defp has_data_access?(binding, user) do
-    source = Map.get(binding, :source, %{})
+    source = normalize_source(binding)
 
     cond do
       map_size(source) == 0 -> true
@@ -187,7 +124,7 @@ defmodule AshUI.Authorization.BindingPolicy do
   end
 
   defp has_write_access?(binding, user) do
-    source = Map.get(binding, :source, %{})
+    source = normalize_source(binding)
 
     cond do
       map_size(source) == 0 -> true
@@ -197,12 +134,19 @@ defmodule AshUI.Authorization.BindingPolicy do
   end
 
   defp field_accessible?(user, binding) do
-    source = Map.get(binding, :source, %{})
+    source = normalize_source(binding)
     field = Map.get(source, "field")
 
     case field do
       nil -> true
       _ -> Policies.can_access_field(binding, field)
+    end
+  end
+
+  defp normalize_source(binding) do
+    case Map.get(binding, :source) do
+      source when is_map(source) -> source
+      _ -> %{}
     end
   end
 end

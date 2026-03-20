@@ -46,11 +46,11 @@ defmodule AshUI.Runtime.ActionBinding do
   @spec execute_action(Binding.t() | map(), map(), context(), keyword()) ::
           {:ok, action_result()} | {:error, term()}
   def execute_action(binding, event_data, context, opts \\ []) do
-    source = binding.source || %{}
+    source = Map.get(binding, :source) || Map.get(binding, "source") || %{}
     resource = Map.get(source, "resource")
     action_name = Map.get(source, "action")
 
-    with {:ok, _} <- check_authorization(binding, context),
+    with {:ok, :authorized} <- check_authorization(binding, context),
          {:ok, params} <- prepare_params(binding, event_data, context),
          {:ok, result} <- call_ash_action(resource, action_name, params, context, opts) do
       {:ok,
@@ -132,14 +132,14 @@ defmodule AshUI.Runtime.ActionBinding do
 
   # Check authorization before executing action
   defp check_authorization(binding, context) do
-    resource = get_in(binding, [:source, "resource"])
-    action = get_in(binding, [:source, "action"])
+    _resource = get_in(binding, [:source, "resource"])
+    _action = get_in(binding, [:source, "action"])
     user_id = Map.get(context, :user_id)
 
     # In production, this would call Ash.can?/3
     # For now, allow if user_id is present
     if user_id do
-      :ok
+      {:ok, :authorized}
     else
       {:error, :unauthorized}
     end
@@ -203,14 +203,18 @@ defmodule AshUI.Runtime.ActionBinding do
   # Handle successful action
   defp handle_action_success(socket, binding, result) do
     target = binding.target || Map.get(binding, "target")
+    ash_ui = Map.get(socket.assigns, :ash_ui, %{})
+    actions = Map.get(ash_ui, :actions, %{})
+    action_state = Map.get(actions, target, %{})
+
+    updated_actions =
+      actions
+      |> Map.put(target, Map.put(action_state, "result", result))
+      |> Map.update!(target, &Map.put(&1, "error", nil))
 
     # Store result in assigns
     updated_socket =
-      put_in(socket.assigns, [:ash_ui, :actions, target, "result"], result)
-
-    # Clear any previous errors
-    updated_socket =
-      put_in(updated_socket.assigns, [:ash_ui, :actions, target, "error"], nil)
+      %{socket | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :actions, updated_actions))}
 
     # Show success message if configured
     updated_socket =
@@ -226,14 +230,18 @@ defmodule AshUI.Runtime.ActionBinding do
   # Handle action error
   defp handle_action_error(socket, binding) do
     target = binding.target || Map.get(binding, "target")
+    ash_ui = Map.get(socket.assigns, :ash_ui, %{})
+    actions = Map.get(ash_ui, :actions, %{})
+    action_state = Map.get(actions, target, %{})
+    updated_actions = Map.put(actions, target, Map.put(action_state, "error", "Action failed"))
 
     # Store error in assigns
     updated_socket =
-      put_in(socket.assigns, [:ash_ui, :actions, target, "error"], "Action failed")
+      %{socket | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :actions, updated_actions))}
 
     # Show error message
     error_message = get_in(binding, [:metadata, "error_message"]) || "Action failed"
-    updated_socket = put_flash(socket, :error, error_message)
+    updated_socket = put_flash(updated_socket, :error, error_message)
 
     {:noreply, updated_socket}
   end

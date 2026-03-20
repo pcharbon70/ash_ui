@@ -230,22 +230,33 @@ defmodule AshUI.LiveView.EventHandler do
 
   defp find_binding_by_target(target, socket) do
     bindings = socket.assigns[:ash_ui_bindings] || %{}
-    screen = socket.assigns[:ash_ui_screen]
 
-    # Find binding by target
-    case Enum.find(bindings, fn {_id, _value} ->
-      # In production, would check if binding target matches
-      true
+    case Enum.find(bindings, fn {_id, binding} ->
+      Map.get(binding, :target) == target or Map.get(binding, "target") == target
     end) do
-      {id, _value} -> {:ok, %{id: id, target: target}}
+      {id, binding} ->
+        binding =
+          binding
+          |> Map.put_new(:id, id)
+          |> Map.put_new(:target, target)
+
+        {:ok, binding}
+
       nil -> {:error, :binding_not_found}
     end
   end
 
   defp find_action_binding(action_id, socket) do
     bindings = socket.assigns[:ash_ui_bindings] || %{}
+    atom_action_id = safe_to_existing_atom(action_id)
 
-    case Map.get(bindings, action_id) do
+    case Map.get(bindings, action_id) ||
+           (atom_action_id && Map.get(bindings, atom_action_id)) ||
+           Enum.find_value(bindings, fn {_key, binding} ->
+             if Map.get(binding, :id) == action_id or Map.get(binding, "id") == action_id do
+               binding
+             end
+           end) do
       nil -> {:error, :binding_not_found}
       binding -> {:ok, binding}
     end
@@ -270,8 +281,8 @@ defmodule AshUI.LiveView.EventHandler do
 
   defp write_value(binding, value, socket, context) do
     case BidirectionalBinding.write_binding(binding, value, socket, context) do
-      {:ok, socket} -> {:ok, socket}
-      {:error, reason} -> {:error, reason}
+      {:ok, updated_socket, _result} -> {:ok, updated_socket}
+      {:error, reason, _error_socket} -> {:error, reason}
     end
   end
 
@@ -295,9 +306,9 @@ defmodule AshUI.LiveView.EventHandler do
   end
 
   defp assign_flash(socket, type, message) do
-    current_flashes = Map.get(socket.assigns, :flash, %{})
-    updated = Map.put(current_flashes, type, message)
-    Phoenix.LiveView.assign(socket, :flash, updated)
+    flash = Map.get(socket.assigns, :flash, %{})
+    updated_flash = Map.put(flash, type, message)
+    %{socket | assigns: Map.put(socket.assigns, :flash, updated_flash)}
   end
 
   defp validate_required_fields(event_data) do
@@ -315,6 +326,16 @@ defmodule AshUI.LiveView.EventHandler do
     # Additional type-specific validation
     :ok
   end
+
+  defp safe_to_existing_atom(value) when is_binary(value) do
+    try do
+      String.to_existing_atom(value)
+    rescue
+      ArgumentError -> nil
+    end
+  end
+
+  defp safe_to_existing_atom(_value), do: nil
 
   @doc """
   Wires all event handlers for a screen's bindings.
@@ -336,7 +357,7 @@ defmodule AshUI.LiveView.EventHandler do
     # Create handler map for all bindings
     handlers = ActionBinding.wire_handlers(Map.to_list(bindings), socket)
 
-    socket = Phoenix.LiveView.assign(socket, :ash_ui_handlers, handlers)
+    socket = Phoenix.Component.assign(socket, :ash_ui_handlers, handlers)
     {:ok, socket}
   end
 end

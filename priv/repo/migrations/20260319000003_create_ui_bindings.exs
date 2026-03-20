@@ -8,8 +8,8 @@ defmodule AshUi.Repo.Migrations.CreateUiBindings do
       add :target, :string
       add :binding_type, :string, default: "value"
       add :transform, :map, default: "{}"
-      add :element_id, :uuid, references(:ui_elements, type: :uuid, on_delete: :delete_all)
-      add :screen_id, :uuid, references(:ui_screens, type: :uuid, on_delete: :delete_all)
+      add :element_id, references(:ui_elements, type: :uuid, on_delete: :delete_all)
+      add :screen_id, references(:ui_screens, type: :uuid, on_delete: :delete_all)
       add :metadata, :map, default: "{}"
       add :version, :integer, default: 1
       timestamps(type: :utc_datetime)

@@ -1,0 +1,33 @@
+{
+  "title": "Ash UI Renderer Usage",
+  "version": 1,
+  "panels": [
+    {
+      "title": "Live UI Renders",
+      "event_name": "ash_ui.render.complete",
+      "measurement": "count",
+      "aggregation": "sum",
+      "filter": {
+        "renderer": "live_ui"
+      }
+    },
+    {
+      "title": "Web UI Renders",
+      "event_name": "ash_ui.render.complete",
+      "measurement": "count",
+      "aggregation": "sum",
+      "filter": {
+        "renderer": "web_ui"
+      }
+    },
+    {
+      "title": "Desktop UI Renders",
+      "event_name": "ash_ui.render.complete",
+      "measurement": "count",
+      "aggregation": "sum",
+      "filter": {
+        "renderer": "desktop_ui"
+      }
+    }
+  ]
+}

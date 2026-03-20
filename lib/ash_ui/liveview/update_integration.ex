@@ -122,13 +122,13 @@ defmodule AshUI.LiveView.UpdateIntegration do
   @spec batch_updates(Phoenix.LiveView.Socket.t(), fun()) :: update_result()
   def batch_updates(socket, update_fn) when is_function(update_fn, 1) do
     # Mark the start of a batch
-    socket = Phoenix.LiveView.assign(socket, :_ash_ui_batch_mode, true)
+    socket = Phoenix.Component.assign(socket, :_ash_ui_batch_mode, true)
 
     # Apply all updates
     socket = update_fn.(socket)
 
     # Clear batch mode and trigger single render
-    socket = Phoenix.LiveView.assign(socket, :_ash_ui_batch_mode, false)
+    socket = Phoenix.Component.assign(socket, :_ash_ui_batch_mode, false)
 
     {:noreply, socket}
   end
@@ -194,7 +194,7 @@ defmodule AshUI.LiveView.UpdateIntegration do
 
     case Integration.evaluate_bindings(screen, socket, user, params) do
       {:ok, bindings} ->
-        socket = Phoenix.LiveView.assign(socket, :ash_ui_bindings, bindings)
+        socket = Phoenix.Component.assign(socket, :ash_ui_bindings, bindings)
         {:noreply, socket}
 
       {:error, reason} ->
@@ -256,13 +256,13 @@ defmodule AshUI.LiveView.UpdateIntegration do
   defp track_subscription(socket, subscription) do
     subscriptions = Map.get(socket.assigns, :ash_ui_subscriptions, [])
     updated = [subscription | subscriptions]
-    Phoenix.LiveView.assign(socket, :ash_ui_subscriptions, updated)
+    Phoenix.Component.assign(socket, :ash_ui_subscriptions, updated)
   end
 
   defp remove_subscription(socket, subscription) do
     subscriptions = Map.get(socket.assigns, :ash_ui_subscriptions, [])
     updated = Enum.reject(subscriptions, fn sub -> sub.id == subscription.id end)
-    Phoenix.LiveView.assign(socket, :ash_ui_subscriptions, updated)
+    Phoenix.Component.assign(socket, :ash_ui_subscriptions, updated)
   end
 
   defp get_subscriptions(socket) do
@@ -332,7 +332,7 @@ defmodule AshUI.LiveView.UpdateIntegration do
   defp update_socket_assigns(socket, updated_values) do
     current_bindings = socket.assigns[:ash_ui_bindings] || %{}
     updated_bindings = Map.merge(current_bindings, updated_values)
-    Phoenix.LiveView.assign(socket, :ash_ui_bindings, updated_bindings)
+    Phoenix.Component.assign(socket, :ash_ui_bindings, updated_bindings)
   end
 
   defp maybe_trigger_render(socket) do

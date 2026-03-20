@@ -4,6 +4,8 @@ defmodule AshUI.Resources.ElementTest do
   alias AshUI.Resources.Screen
   alias AshUI.Resources.Element
 
+  @moduletag :conformance
+
   describe "Element CRUD operations" do
     setup do
       {:ok, screen} =
@@ -56,7 +58,7 @@ defmodule AshUI.Resources.ElementTest do
       }
 
       {:ok, element} = AshUI.Domain.create(Element, attrs: attrs)
-      assert {:ok, _} = AshUI.Domain.destroy(element)
+      assert :ok = AshUI.Domain.destroy(element)
 
       assert [] = AshUI.Domain.read!(Element, filter: [id: element.id])
     end

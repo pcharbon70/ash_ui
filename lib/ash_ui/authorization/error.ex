@@ -17,11 +17,17 @@ defmodule AshUI.AuthorizationError do
         }
 
   @impl true
+  @doc """
+  Builds an `AshUI.AuthorizationError` exception from keyword options.
+  """
   def exception(opts) do
     struct(__MODULE__, opts)
   end
 
   @impl true
+  @doc """
+  Returns the human-readable message for the authorization error.
+  """
   def message(%__MODULE__{reason: reason} = error) do
     format_message(error)
   end

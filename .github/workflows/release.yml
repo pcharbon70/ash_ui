@@ -21,9 +21,15 @@ jobs:
   release_readiness:
     name: Release Readiness
     runs-on: ubuntu-latest
+    env:
+      RELEASE_RUN_CONFORMANCE: "true"
+      RELEASE_RUN_COVERAGE: "true"
+      RELEASE_COVERAGE_THRESHOLD: "70"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup BEAM
         uses: erlef/setup-beam@v1
@@ -40,17 +46,8 @@ jobs:
       - name: Compile with warnings as errors
         run: mix compile --warnings-as-errors
 
-      - name: Validate specs governance
-        run: ./scripts/validate_specs_governance.sh
-
-      - name: Validate guides governance
-        run: ./scripts/validate_guides_governance.sh
-
-      - name: Validate RFC governance
-        run: ./scripts/validate_rfc_governance.sh
-
-      - name: Validate code docs
-        run: ./scripts/validate_code_docs.sh
+      - name: Validate release readiness
+        run: ./scripts/validate_release_readiness.sh
 
   release:
     name: Create Release
@@ -58,6 +55,20 @@ jobs:
     if: ${{ inputs.dry_run == false }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup BEAM
+        uses: erlef/setup-beam@v1
+        with:
+          version-type: strict
+          version-file: .tool-versions
+
+      - name: Install deps
+        run: mix deps.get
+
       - name: Ensure tag is provided
         run: |
           if [ -z "${{ inputs.tag_name }}" ]; then
@@ -65,12 +76,34 @@ jobs:
             exit 1
           fi
 
+      - name: Create git tag if needed
+        run: |
+          if git rev-parse "${{ inputs.tag_name }}" >/dev/null 2>&1; then
+            echo "Tag already exists: ${{ inputs.tag_name }}"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "${{ inputs.tag_name }}" -m "Release ${{ inputs.tag_name }}"
+            git push origin "${{ inputs.tag_name }}"
+          fi
+
+      - name: Generate changelog draft
+        run: ./scripts/generate_changelog.sh "${{ inputs.tag_name }}" "reports/release/changelog-${{ inputs.tag_name }}.md"
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag_name }}
-          generate_release_notes: true
+          body_path: reports/release/changelog-${{ inputs.tag_name }}.md
           target_commitish: ${{ github.sha }}
+
+      - name: Publish to Hex
+        if: ${{ secrets.HEX_API_KEY != '' }}
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+        run: |
+          mix hex.user auth --key "$HEX_API_KEY"
+          mix hex.publish --yes
 
   release_summary:
     name: Release Summary

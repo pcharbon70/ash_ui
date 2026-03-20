@@ -66,7 +66,7 @@ defmodule AshUI.DSLIntegrationTest do
         :card,
         :list,
         :table
-      }
+      ]
 
       Enum.each(valid_types, fn type ->
         attrs = %{

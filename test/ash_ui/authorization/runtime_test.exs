@@ -1,5 +1,5 @@
 defmodule AshUI.Authorization.RuntimeTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias AshUI.Authorization.Runtime
 
@@ -119,8 +119,9 @@ defmodule AshUI.Authorization.RuntimeTest do
 
     test "forbids user from writing to read-only binding" do
       binding = build_binding(read_only: true)
-      # Note: Actual check depends on BindingPolicy.can_write?/2
-      assert is_atom(Runtime.check_write_access(build_user(), binding))
+
+      assert {:forbidden, reason} = Runtime.check_write_access(build_user(), binding)
+      assert reason.reason == :forbidden
     end
 
     test "forbids unauthenticated user" do

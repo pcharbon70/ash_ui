@@ -70,9 +70,9 @@ defmodule AshUI.Compiler.IncrementalTest do
       assert graph.element_to_screen[element1.id] == screen.id
     end
 
-    test "tracks binding to element relationships" do
+    test "tracks binding to element relationships", %{screen: screen} do
       # Binding created in setup
-      {:ok, graph} = Incremental.build_dependencies(build_screen())
+      {:ok, graph} = Incremental.build_dependencies(screen)
 
       assert map_size(graph.binding_to_element) > 0
     end

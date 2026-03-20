@@ -6,391 +6,230 @@ title: Ash UI Architecture Overview
 audience: Framework Developers
 status: Active
 owners: Ash UI Team
-last_reviewed: 2026-03-18
-next_review: 2026-09-18
-related_reqs: [REQ-FRAMEWORK-001, REQ-COMP-001, REQ-RENDER-001]
-related_scns: [SCN-101]
-related_guides: [UG-0001]
+last_reviewed: 2026-03-20
+next_review: 2026-09-20
+related_reqs: [REQ-FRAMEWORK-001, REQ-COMP-001, REQ-RENDER-001, REQ-AUTH-002, REQ-OBS-001]
+related_scns: [SCN-041, SCN-061, SCN-081, SCN-101]
+related_guides: [UG-0001, UG-0002, UG-0003, DG-0003]
 diagram_required: true
 ---
 
 ## Overview
 
-This guide provides a comprehensive overview of the Ash UI architecture for framework contributors. It covers control planes, the compilation pipeline, rendering system, and extension points.
+This guide explains the current Ash UI architecture as implemented in this repository. The design has settled into a thin Ash-native control layer around stored UI resources, compiler output, canonical IUR conversion, runtime authorization, and renderer adapters.
 
 ## Prerequisites
 
 Before reading this guide, you should:
 
-- Have strong knowledge of Elixir and OTP
-- Understand Ash Framework resources and DSL
+- Know Ash resources, domains, and AshPostgres basics
+- Be comfortable reading Phoenix LiveView integration code
 - Have read [UG-0001: Getting Started](../user/UG-0001-getting-started.md)
 
-## System Architecture
+## System Shape
 
-### High-Level Architecture
-
-```mermaid
-flowchart TB
-    subgraph Application["Application Layer"]
-        LiveView["Phoenix LiveView"]
-        Static["Static Controller"]
-    end
-
-    subgraph Runtime["Runtime Control Plane"]
-        Session["Session Manager"]
-        Event["Event Dispatcher"]
-        Lifecycle["Lifecycle Manager"]
-    end
-
-    subgraph Compilation["Compilation Control Plane"]
-        Compiler["Resource Compiler"]
-        IUR["IUR Generator"]
-        Validator["Validator"]
-        Normalizer["Normalizer"]
-    end
-
-    subgraph Framework["Framework Control Plane"]
-        Element["UI.Element"]
-        Screen["UI.Screen"]
-        Binding["UI.Binding"]
-    end
-
-    subgraph Data["Data Layer"]
-        Resources["Ash Resources"]
-        DB[(Database)]
-    end
-
-    subgraph Rendering["Rendering Control Plane"]
-        Adapter["IUR Adapter"]
-        Registry["Renderer Registry"]
-    end
-
-    subgraph Unified["Unified Ecosystem"]
-        Canonical["Canonical IUR"]
-        LiveRenderer["LiveUI.Renderer"]
-        WebRenderer["WebUI.Renderer"]
-        DesktopRenderer["DesktopUI.Renderer"]
-    end
-
-    LiveView --> Session
-    Static --> WebRenderer
-
-    Session --> Event
-    Session --> Lifecycle
-
-    Event --> Compiler
-    Compiler --> IUR
-    IUR --> Validator
-    Validator --> Normalizer
-    Normalizer --> Adapter
-    Adapter --> Canonical
-
-    Canonical --> LiveRenderer
-    Canonical --> WebRenderer
-    Canonical --> DesktopRenderer
-
-    LiveRenderer --> LiveView
-    WebRenderer --> Static
-
-    Validator --> Element
-    Validator --> Screen
-    Validator --> Binding
-
-    Element --> Resources
-    Screen --> Resources
-    Binding --> Resources
-
-    Resources --> DB
-
-    classDef framework fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef compilation fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef rendering fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef runtime fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
-    classDef data fill:#eceff1,stroke:#37474f,stroke-width:2px
-    classDef unified fill:#e0f2f1,stroke:#00695c,stroke-width:2px
-
-    class Element,Screen,Binding framework
-    class Compiler,IUR,Validator,Normalizer compilation
-    class Adapter,Registry rendering
-    class Session,Event,Lifecycle runtime
-    class Resources,DB data
-    class Canonical,LiveRenderer,WebRenderer,DesktopRenderer unified
-```
-
-## Control Planes
-
-Ash UI is organized into five control planes, each with distinct authority and responsibility.
-
-### Framework Control Plane
-
-**Module**: `AshUI.Framework`
-
-**Authority**: Core resource definitions, type system, action semantics
-
-**Components**:
-- `AshUI.Resources.Element` - UI element definitions
-- `AshUI.Resources.Screen` - Screen definitions
-- `AshUI.Resources.Binding` - Data binding definitions
-- `AshUI.DSL` - DSL extensions for resources
-- `AshUI.Types` - Custom Ash types
-
-**Key Contract**: [resource_contract.md](../../specs/contracts/resource_contract.md)
-
-### Compilation Control Plane
-
-**Module**: `AshUI.Compilation`
-
-**Authority**: Resource → IUR transformation pipeline
-
-**Components**:
-- `AshUI.Compiler.Resource` - Main compiler
-- `AshUI.Compiler.IUR` - IUR schema and generation
-- `AshUI.Compiler.Validator` - Schema validation
-- `AshUI.Compiler.Normalizer` - Representation normalization
-- `AshUI.Compiler.Cache` - Compilation caching
-
-**Key Contract**: [compilation_contract.md](../../specs/contracts/compilation_contract.md)
-
-### Rendering Control Plane
-
-**Module**: `AshUI.Rendering`
-
-**Authority**: IUR adaptation and renderer delegation
-
-**Components**:
-- `AshUI.Rendering.IURAdapter` - Converts Ash IUR to canonical unified_iur format
-- `AshUI.Rendering.Registry` - Manages available renderer packages
-
-**External Renderer Packages** (unified ecosystem):
-- `live_ui` - LiveView rendering (https://github.com/your-org/unified/tree/main/packages/live_ui)
-- `web_ui` - Static HTML rendering (https://github.com/your-org/unified/tree/main/packages/web_ui)
-- `desktop_ui` - Desktop rendering (https://github.com/your-org/unified/tree/main/packages/desktop_ui)
-
-**Key Contract**: [rendering_contract.md](../../specs/contracts/rendering_contract.md)
-
-### Runtime Control Plane
-
-**Module**: `AshUI.Runtime`
-
-**Authority**: Session lifecycle and event handling
-
-**Components**:
-- `AshUI.Runtime.Session` - Session management
-- `AshUI.Runtime.Event` - Event handling
-- `AshUI.Runtime.Lifecycle` - Lifecycle hooks
-
-**Key Contract**: [screen_contract.md](../../specs/contracts/screen_contract.md)
-
-### Extension Control Plane
-
-**Module**: `AshUI.Extension`
-
-**Authority**: Widget and plugin system
-
-**Components**:
-- `AshUI.Extension.Widget` - Widget registry
-- `AshUI.Extension.Admission` - Plugin admission
-- `AshUI.Extension.Loader` - Plugin loading
-
-## Compilation Pipeline
-
-### Pipeline Stages
+Ash UI is organized around five control planes, but the codebase is intentionally practical about where responsibilities live today.
 
 ```mermaid
 flowchart LR
-    Resource["Ash Resource"] --> Parse["Parse"]
-    Parse --> Validate["Validate"]
-    Validate -->|Pass| Normalize["Normalize"]
-    Validate -->|Fail| Error["Error"]
-    Normalize --> Generate["Generate IUR"]
-    Generate --> Optimize["Optimize"]
-    Optimize --> Cache["Cache"]
-    Cache --> IUR["IUR Output"]
+    subgraph Framework["Framework plane"]
+        Domain["AshUI.Domain"]
+        Screen["AshUI.Resources.Screen"]
+        Element["AshUI.Resources.Element"]
+        Binding["AshUI.Resources.Binding"]
+        Builder["AshUI.DSL.Builder"]
+    end
+
+    subgraph Compilation["Compilation plane"]
+        Compiler["AshUI.Compiler"]
+        IUR["AshUI.Compilation.IUR"]
+    end
+
+    subgraph Runtime["Runtime plane"]
+        Live["AshUI.LiveView.Integration"]
+        Events["AshUI.LiveView.EventHandler"]
+        Auth["AshUI.Authorization.Runtime"]
+    end
+
+    subgraph Rendering["Rendering plane"]
+        Adapter["AshUI.Rendering.IURAdapter"]
+        Registry["AshUI.Rendering.Registry"]
+        LiveAdapter["AshUI.Rendering.LiveUIAdapter"]
+        WebAdapter["AshUI.Rendering.WebUIAdapter"]
+        DesktopAdapter["AshUI.Rendering.DesktopUIAdapter"]
+    end
+
+    subgraph Observability["Cross-cutting"]
+        Telemetry["AshUI.Telemetry"]
+    end
+
+    Domain --> Screen
+    Domain --> Element
+    Domain --> Binding
+    Builder --> Screen
+    Screen --> Compiler
+    Element --> Compiler
+    Binding --> Compiler
+    Compiler --> IUR
+    IUR --> Adapter
+    Adapter --> Registry
+    Live --> Auth
+    Live --> Compiler
+    Live --> Events
+    Live --> Telemetry
+    Compiler --> Telemetry
+    Adapter --> LiveAdapter
+    Adapter --> WebAdapter
+    Adapter --> DesktopAdapter
 ```
 
-### Stage Details
+## Architectural Center of Gravity
 
-1. **Parse** - Extract resource definitions using Ash.Info
-2. **Validate** - Verify schema, constraints, and relationships
-3. **Normalize** - Standardize attribute order, apply defaults
-4. **Generate IUR** - Create Intermediate UI Representation
-5. **Optimize** - Apply optimizations (dead code elimination, etc.)
-6. **Cache** - Store result for reuse
+The earlier specs describe first-class `UI.Screen`, `UI.Element`, and `UI.Binding` DSL-driven definitions. The implemented code still uses those resource concepts, but the operational center of gravity is now:
 
-## Intermediate UI Representation (IUR)
+1. Persist screen state in Ash resources.
+2. Store nested UI structure in `Screen.unified_dsl`.
+3. Compile into `AshUI.Compilation.IUR`.
+4. Convert into canonical renderer input.
+5. Mount and authorize through LiveView runtime helpers.
 
-### Ash UI IUR Schema (Internal)
+That means contributors should treat `unified_dsl` plus compiler/runtime boundaries as the most important integration seam.
 
-```elixir
-%AshUI.Compilation.IUR{
-  id: UUID.t(),
-  type: :screen | :element,
-  name: String.t(),
-  attributes: map(),
-  children: [%AshUI.Compilation.IUR{}],
-  bindings: [%AshUI.Compilation.BindingRef{}],
-  metadata: map(),
-  version: "1.0.0"
-}
-```
+## Framework Plane
 
-### Canonical IUR Schema (unified_iur package)
+The framework plane owns durable UI definitions.
 
-```elixir
-%UnifiedIUR.Screen{
-  id: UUID.t(),
-  elements: [%UnifiedIUR.Element{}],
-  layout: UnifiedIUR.Layout.t(),
-  signals: [%UnifiedIUR.Signal{}],
-  metadata: map()
-}
-```
+Primary modules:
 
-### IUR Properties
+- `AshUI.Domain`
+- `AshUI.Resources.Screen`
+- `AshUI.Resources.Element`
+- `AshUI.Resources.Binding`
+- `AshUI.DSL.Builder`
+- `AshUI.DSL.Storage`
 
-- **Serializable** - Can be encoded to JSON/binary
-- **Immutable** - IUR instances are never modified
-- **Self-contained** - All information needed for rendering
-- **Versioned** - Schema version for compatibility
-- **Convertible** - Ash UI IUR converts to canonical unified_iur format
+Important details:
 
-## Module Namespace
+- `Screen` stores `name`, `route`, `layout`, `unified_dsl`, and metadata.
+- `Element` and `Binding` provide relational structure for querying and runtime behavior.
+- updates increment `version`, which feeds cache and rollout safety checks.
 
-```elixir
-AshUI                                   # Application root
-├── Application                         # OTP Application
-├── Framework                           # Framework Control Plane
-│   ├── DSL
-│   ├── Types
-│   └── Resources
-│       ├── Element
-│       ├── Screen
-│       └── Binding
-├── Compilation                         # Compilation Control Plane
-│   ├── Compiler
-│   ├── IUR
-│   ├── Validator
-│   ├── Normalizer
-│   └── Cache
-├── Rendering                           # Rendering Control Plane
-│   ├── IURAdapter                      # Ash IUR → Canonical IUR
-│   └── Registry                        # Renderer package management
-├── Runtime                             # Runtime Control Plane
-│   ├── Session
-│   ├── Event
-│   └── Lifecycle
-└── Extension                           # Extension Control Plane
-    ├── Widget
-    ├── Admission
-    └── Loader
-```
+## Compilation Plane
 
-**External Packages** (unified ecosystem):
-- `unified_iur` - Canonical IUR schema and types
-- `live_ui` - LiveView renderer
-- `web_ui` - Static HTML renderer
-- `desktop_ui` - Desktop renderer
+The compilation plane turns Ash UI resources into internal IUR.
 
-## Extension Points
+Primary modules:
 
-### Custom Element Types
+- `AshUI.Compiler`
+- `AshUI.Compilation.IUR`
+- `AshUI.Compiler.Extensions`
+- `AshUI.Compiler.Incremental`
 
-Register custom element types:
+There are two active compilation paths:
 
-```elixir
-defmodule MyApp.CustomElement do
-  use AshUI.Extension.Widget
+- compile from `Screen.unified_dsl`
+- compile from relational screen, element, and binding records
 
-  def type, do: :my_custom
-  def render(iur, context) do
-    # Custom rendering logic
-  end
-end
+`AshUI.Compiler` also owns:
 
-AshUI.Extension.Widget.register(:my_custom, MyApp.CustomElement)
-```
+- ETS-backed compilation cache
+- batch compilation helpers
+- cache invalidation hooks
+- telemetry for compile start, completion, and failure
 
-### Custom Renderers
+## Runtime Plane
 
-Custom renderers are implemented via the unified ecosystem packages. To create a custom renderer:
+The runtime plane wires Ash UI into LiveView and binding updates.
 
-1. **For Ash UI integration**: Ensure your renderer accepts canonical unified_iur format
-2. **Implement renderer contract**: Follow the unified ecosystem renderer spec
-3. **Register with Ash UI**: Add to renderer registry
+Primary modules:
 
-```elixir
-# Example: Using live_ui renderer
-defmodule MyAppWeb.MyLive do
-  use Phoenix.LiveView
+- `AshUI.LiveView.Integration`
+- `AshUI.LiveView.EventHandler`
+- `AshUI.LiveView.Hooks`
+- `AshUI.LiveView.UpdateIntegration`
+- `AshUI.Runtime.BindingEvaluator`
+- `AshUI.Runtime.BidirectionalBinding`
+- `AshUI.Runtime.ActionBinding`
 
-  def mount(_params, _session, socket) do
-    # Compile Ash UI screen
-    {:ok, iur} = AshUI.Compilation.compile(:my_screen, %{})
+The mount flow is:
 
-    # Convert to canonical IUR
-    {:ok, canonical_iur} = AshUI.Rendering.IURAdapter.to_canonical(iur)
+1. read `:current_user` from the socket
+2. load a screen by ID or by `name`
+3. authorize mount
+4. compile screen to IUR and canonical IUR
+5. evaluate bindings
+6. assign screen state onto the socket
 
-    # Render via live_ui
-    {:ok, heex} = LiveUI.Renderer.render(canonical_iur, [])
+This flow is currently the best place to inspect end-to-end behavior when debugging regressions.
 
-    {:ok, assign(socket, :content, heex)}
-  end
-end
-```
+## Authorization Plane Responsibilities
 
-For creating custom renderer packages, see:
-- [Unified Ecosystem Architecture](https://github.com/your-org/unified/blob/main/.spec/specs/architecture.spec.md)
-- [Platform Runtimes Spec](https://github.com/your-org/unified/blob/main/.spec/specs/platform_runtimes.spec.md)
+Authorization is cross-cutting, but runtime enforcement is centralized in:
 
-## Data Flow
+- `AshUI.Authorization.Runtime`
+- `AshUI.Authorization.ScreenPolicy`
+- `AshUI.Authorization.ElementPolicy`
+- `AshUI.Authorization.BindingPolicy`
 
-### LiveView Request Flow
+Current notable behavior:
 
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant LV as LiveView
-    participant RT as Runtime
-    participant CC as Compiler
-    participant RD as Renderer
+- no implicit dev/test bypass
+- explicit `:runtime_authorization_bypass` configuration exists
+- inactive users are denied before protected operations continue
+- authorization emits telemetry and uses ETS caching
 
-    B->>LV: WebSocket Connect
-    LV->>RT: Mount Screen
-    RT->>CC: Compile Screen
-    CC->>RT: IUR
-    RT->>RD: Render IUR
-    RD->>LV: HEEx
-    LV->>B: Initial HTML
+## Rendering Plane
 
-    B->>LV: User Event
-    LV->>RT: Handle Event
-    RT->>CC: Recompile
-    CC->>RD: Render Update
-    RD->>LV: Patch
-    LV->>B: Update
-```
+Ash UI does not own the final renderer implementation. It owns the conversion and integration boundary.
 
-## Contributing
+Primary modules:
 
-### Adding New Element Types
+- `AshUI.Rendering.IURAdapter`
+- `AshUI.Rendering.Registry`
+- `AshUI.Rendering.Selector`
+- `AshUI.Rendering.LiveUIAdapter`
+- `AshUI.Rendering.WebUIAdapter`
+- `AshUI.Rendering.DesktopUIAdapter`
 
-1. Define type in `AshUI.Types`
-2. Add validation rules
-3. Implement rendering in both renderers
-4. Write conformance scenarios
-5. Update documentation
+The adapters currently support two operating modes:
 
-### Adding New Control Plane Components
+- delegate to external renderer packages if those modules are installed
+- fall back to local adapter output when those packages are absent
 
-1. Check ownership matrix for authority
-2. Create ADR if setting precedent
-3. Define requirements (REQ-*)
-4. Write scenarios (SCN-*)
-5. Implement and document
+That fallback behavior is intentional and is part of current release-readiness work.
+
+## Observability
+
+`AshUI.Telemetry` is the canonical telemetry catalog and default metrics aggregator.
+
+Major event families:
+
+- screen lifecycle
+- binding evaluation and update
+- compilation
+- rendering
+- authorization
+
+Dashboards under `priv/monitoring/dashboards/` consume the normalized telemetry shape rather than ad-hoc event names.
+
+## Design Constraints Contributors Should Respect
+
+- Preserve the control-plane boundary: framework data in resources, renderer behavior in adapters.
+- Keep canonical IUR as the renderer contract.
+- Prefer additive docs and tests when changing behavior that has spec implications.
+- When runtime behavior diverges from long-range RFC language, document the current state clearly rather than hiding the transition.
+
+## Common Debugging Entry Points
+
+- `AshUI.LiveView.Integration.mount_ui_screen/3` for mount failures
+- `AshUI.Compiler.compile/2` for IUR regressions
+- `AshUI.Rendering.IURAdapter.to_canonical/2` for renderer boundary issues
+- `AshUI.Authorization.Runtime` for access failures
+- `AshUI.Telemetry.snapshot/0` for observability checks
 
 ## See Also
 
-- [Topology](../../specs/topology.md) - Complete system topology
-- [Control Plane Ownership](../../specs/contracts/control_plane_ownership_matrix.md) - Ownership details
-- [ADR-0001](../../specs/adr/ADR-0001-control-plane-authority.md) - Control plane authority
+- [UG-0001: Getting Started](../user/UG-0001-getting-started.md)
+- [DG-0003: Testing Guide](./DG-0003-testing-guide.md)
+- [topology.md](../../specs/topology.md)
+- [ADR-0001-control-plane-authority.md](../../specs/adr/ADR-0001-control-plane-authority.md)

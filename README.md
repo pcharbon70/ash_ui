@@ -1,208 +1,122 @@
 # Ash UI
 
-A resource-driven UI framework for Elixir built on the Ash Framework, enabling dynamic UI generation from database resources through the unified UI rendering ecosystem.
+Ash UI is a resource-backed UI framework for Elixir built on Ash. It stores screens, elements, and bindings as Ash data, compiles them into an internal IUR, converts that structure into canonical renderer input, and wires the result into LiveView-oriented runtime helpers.
 
-## Overview
+## What Works Today
 
-Ash UI provides a declarative approach to building user interfaces by defining UI components as Ash resources. This enables:
+- persisted `Screen`, `Element`, and `Binding` resources in `AshUI.Domain`
+- `unified_dsl` storage and builder helpers through `AshUI.DSL.Builder`
+- compilation to `AshUI.Compilation.IUR` through `AshUI.Compiler`
+- canonical conversion through `AshUI.Rendering.IURAdapter`
+- LiveView mount, event, and update integration helpers
+- runtime authorization policies and checks
+- normalized telemetry events, in-memory metrics, and dashboard definitions
 
-- **Database-Driven UI** - Define screens and elements as resources
-- **Reactive Data Binding** - Connect UI directly to Ash resources
-- **Multi-Platform Rendering** - Output to LiveView, static HTML, or desktop via unified renderer packages
-- **Type Safety** - Leverage Ash's type system for UI components
-- **Authorization-First** - Built-in policy-based access control
-
-## Architecture
+## Architecture at a Glance
 
 ```mermaid
 flowchart LR
-    subgraph Input["Your Resources"]
-        Element["UI.Element"]
-        Screen["UI.Screen"]
-        Binding["UI.Binding"]
-    end
+    Resources["Ash UI resources"]
+    DSL["stored unified_dsl"]
+    Compiler["AshUI.Compiler"]
+    IUR["Ash UI IUR"]
+    Canonical["canonical IUR"]
+    Runtime["LiveView runtime"]
+    Renderers["renderer adapters"]
 
-    subgraph AshUI["Ash UI Framework"]
-        Compiler["Compiler"]
-        IUR["Ash IUR"]
-        Adapter["IUR Adapter"]
-    end
-
-    subgraph Unified["Unified Ecosystem"]
-        Canonical["Canonical IUR"]
-    end
-
-    subgraph Renderers["Renderer Packages"]
-        Live["live_ui"]
-        Web["web_ui"]
-        Desktop["desktop_ui"]
-    end
-
-    subgraph Output["User Interface"]
-        LV["LiveView"]
-        HTML["Static HTML"]
-        Native["Desktop UI"]
-    end
-
-    Element --> Compiler
-    Screen --> Compiler
-    Binding --> Compiler
+    Resources --> DSL
+    DSL --> Compiler
     Compiler --> IUR
-    IUR --> Adapter
-    Adapter --> Canonical
-    Canonical --> Live
-    Canonical --> Web
-    Canonical --> Desktop
-    Live --> LV
-    Web --> HTML
-    Desktop --> Native
+    IUR --> Canonical
+    Canonical --> Renderers
+    Canonical --> Runtime
 ```
 
 ## Quick Start
 
-### Installation
-
-Add to your `mix.exs`:
+Add the core dependencies:
 
 ```elixir
-def deps do
+defp deps do
   [
-    {:ash_ui, "~> 0.1"},
-    {:unified_iur, "~> 0.1"},  # Canonical IUR format
-    {:live_ui, "~> 0.1"},      # LiveView renderer (or web_ui, desktop_ui)
+    {:ash_ui, "~> 0.1.0"},
     {:ash, "~> 3.0"},
-    {:phoenix_live_view, "~> 1.0"}
+    {:ash_postgres, "~> 2.0"},
+    {:phoenix_live_view, "~> 1.0"},
+    {:telemetry, "~> 1.0"}
   ]
 end
 ```
 
-### Define Your First Screen
+Create a screen record:
 
 ```elixir
-defmodule MyApp.UI.Dashboard do
-  use Ash.Resource,
-    domain: MyApp.UI,
-    data_layer: AshPostgres.DataLayer
+alias AshUI.DSL.Builder
+alias AshUI.Domain
+alias AshUI.Resources.Screen
 
-  ui_screen do
-    layout :dashboard
-    route "/dashboard"
-  end
-
-  actions do
-    defaults [:read, :create, :update, :destroy]
-  end
-end
+{:ok, _screen} =
+  Domain.create(Screen,
+    attrs: %{
+      name: "dashboard",
+      route: "/dashboard",
+      layout: :column,
+      unified_dsl:
+        Builder.column(
+          children: [
+            Builder.text("Dashboard", size: 24, weight: :bold),
+            Builder.button("Refresh", on_click: "refresh-dashboard")
+          ]
+        )
+        |> Builder.to_store()
+    }
+  )
 ```
 
-### Mount in LiveView
+Mount it in LiveView:
 
 ```elixir
 defmodule MyAppWeb.DashboardLive do
   use MyAppWeb, :live_view
 
-  def mount(params, _session, socket) do
-    {:ok, mount_ui_screen(socket, :dashboard, params)}
+  alias AshUI.LiveView.Integration
+
+  def mount(_params, _session, socket) do
+    socket = assign(socket, :current_user, %{id: "admin-1", role: :admin, active: true})
+    Integration.mount_ui_screen(socket, :dashboard, %{})
   end
 end
 ```
 
-The `mount_ui_screen/3` helper handles compilation, IUR conversion, and rendering.
+## Renderer Status
+
+Ash UI owns the compiler, runtime, and adapter boundary. External renderer packages such as `live_ui`, `web_ui`, and `desktop_ui` are optional at the moment. When they are not present, Ash UI uses fallback adapter behavior so compile, integration, and telemetry flows remain testable.
 
 ## Documentation
 
-### User Guides
+- [User guides](/Users/Pascal/code/ash/ash_ui/guides/user/README.md)
+- [Developer guides](/Users/Pascal/code/ash/ash_ui/guides/developer/README.md)
+- [Guide index](/Users/Pascal/code/ash/ash_ui/guides/README.md)
+- [Specifications](/Users/Pascal/code/ash/ash_ui/specs/README.md)
+- [RFCs](/Users/Pascal/code/ash/ash_ui/rfcs/README.md)
 
-- **[Getting Started](guides/user/UG-0001-getting-started.md)** - Introduction to Ash UI
-- **[Resources](guides/user/README.md)** - UI resources overview
-- **[Data Binding](guides/user/README.md)** - Reactive data binding
+Key starting points:
 
-### Developer Guides
+- [UG-0001: Getting Started](/Users/Pascal/code/ash/ash_ui/guides/user/UG-0001-getting-started.md)
+- [DG-0001: Architecture Overview](/Users/Pascal/code/ash/ash_ui/guides/developer/DG-0001-architecture-overview.md)
+- [Example: basic dashboard](/Users/Pascal/code/ash/ash_ui/examples/basic_dashboard/README.md)
 
-- **[Architecture Overview](guides/developer/DG-0001-architecture-overview.md)** - System architecture
-- **[Contributing](guides/developer/README.md)** - Contribution guide
+## Current Phase
 
-### Specifications
+The project is in Phase 8, focused on governance gates and release readiness. CI, conformance coverage, observability, and documentation are now first-class parts of the repo instead of placeholders.
 
-- **[Top-Level Specs](specs/README.md)** - Technical specifications
-- **[Contracts](specs/contracts/)** - Normative requirements
-- **[ADRs](specs/adr/)** - Architecture decision records
-- **[Conformance](specs/conformance/)** - Test scenarios
+## Development Notes
 
-### RFCs
-
-- **[RFC System](rfcs/README.md)** - Proposal process
-- **[RFC Index](rfcs/index.md)** - All RFCs
-
-## Project Status
-
-**Phase**: 1 - Foundation
-
-This project is in early development. The governance system and core architecture are being established.
-
-### Current Status
-
-| Component | Status |
-|---|---|
-| Governance System | ✅ Implemented |
-| Resource Definitions | 🚧 In Progress |
-| Compilation Pipeline | 🚧 In Progress |
-| IUR Adapter | 🚧 Planned |
-| Renderer Integration | 🚧 Planned (via unified packages) |
-
-## Governance
-
-Ash UI follows a formal governance process:
-
-1. **RFCs** - Propose significant changes
-2. **Specifications** - Define normative requirements (REQ-*)
-3. **ADRs** - Document architecture decisions
-4. **Scenarios** - Test acceptance criteria (SCN-*)
-5. **Guides** - User and developer documentation
-
-See [RFC-0001](rfcs/RFC-0001-ash-ui-governance-system.md) for details on the governance system.
-
-## Control Planes
-
-| Control Plane | Scope | Module |
-|---|---|---|
-| Framework | Resource definitions, type system | `AshUI.Framework` |
-| Compilation | Resource → canonical IUR pipeline | `AshUI.Compilation` |
-| Rendering | IUR adaptation, renderer delegation | `AshUI.Rendering` |
-| Runtime | Session lifecycle | `AshUI.Runtime` |
-| Extension | Widgets, plugins | `AshUI.Extension` |
-
-**External Renderer Packages** (unified ecosystem):
-- `live_ui` - Phoenix LiveView rendering
-- `web_ui` - Static HTML + Elm rendering
-- `desktop_ui` - Native desktop rendering
-
-See [Control Plane Ownership](specs/contracts/control_plane_ownership_matrix.md) for details.
-
-## Contributing
-
-We welcome contributions! Please:
-
-1. Read the [Contributing Guide](CONTRIBUTING.md) (to be added)
-2. Check existing [RFCs](rfcs/) and [Issues](../../issues)
-3. Follow the [Code of Conduct](CODE_OF_CONDUCT.md) (to be added)
-4. Create an RFC for significant changes
+- compiler cache lives in ETS and is initialized at application start
+- authorization runtime also uses ETS-backed caching
+- telemetry events are aggregated through `AshUI.Telemetry.snapshot/0`
+- dashboard definitions live in `priv/monitoring/dashboards/`
 
 ## License
 
 [License to be determined]
-
-## Related Projects
-
-- [Ash Framework](https://ash-hq.org/) - The declarative foundation
-- [Unified UI Ecosystem](https://github.com/your-org/unified) - Renderer packages:
-  - [unified_iur](https://github.com/your-org/unified/tree/main/packages/unified_iur) - Canonical IUR format
-  - [live_ui](https://github.com/your-org/unified/tree/main/packages/live_ui) - LiveView renderer
-  - [web_ui](https://github.com/your-org/unified/tree/main/packages/web_ui) - Static HTML renderer
-  - [desktop_ui](https://github.com/your-org/unified/tree/main/packages/desktop_ui) - Desktop renderer
-- [Phoenix](https://www.phoenixframework.org/) - The web framework
-- [Phoenix LiveView](https://hexdocs.pm/phoenix_live_view) - Real-time UI
-
----
-
-**Ash UI** - Resource-Driven UI Architecture for Elixir

@@ -174,8 +174,8 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
       assert {:noreply, socket} =
                UpdateIntegration.batch_updates(socket, fn socket ->
                  socket
-                 |> Phoenix.LiveView.assign(:value1, 1)
-                 |> Phoenix.LiveView.assign(:value2, 2)
+                 |> Phoenix.Component.assign(:value1, 1)
+                 |> Phoenix.Component.assign(:value2, 2)
                end)
 
       assert socket.assigns[:value1] == 1

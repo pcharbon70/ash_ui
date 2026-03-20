@@ -231,13 +231,19 @@ defmodule AshUI.DSL.Builder do
   """
   @spec from_store(map()) :: dsl_map()
   def from_store(stored) when is_map(stored) do
-    # Recursively convert stored map back to DSL
-    stored
-    |> Map.update!("children", &Enum.map(&1, fn child -> from_store(child) end))
-    |> Map.update!("signals", &Enum.map(&1, fn signal -> Map.new(signal) end))
-    |> Map.update!("props", &Map.new/1)
-  rescue
-    _ -> stored
+    %{
+      type: fetch_store_value(stored, :type),
+      props: fetch_store_value(stored, :props, %{}) |> Map.new(),
+      children:
+        stored
+        |> fetch_store_value(:children, [])
+        |> Enum.map(&from_store/1),
+      signals:
+        stored
+        |> fetch_store_value(:signals, [])
+        |> Enum.map(&normalize_signal/1),
+      metadata: fetch_store_value(stored, :metadata, %{})
+    }
   end
 
   @doc """
@@ -268,6 +274,31 @@ defmodule AshUI.DSL.Builder do
       _ -> {:error, errors}
     end
   end
+
+  defp fetch_store_value(map, key, default \\ nil) do
+    string_key = Atom.to_string(key)
+
+    cond do
+      Map.has_key?(map, key) -> Map.get(map, key)
+      Map.has_key?(map, string_key) -> Map.get(map, string_key)
+      true -> default
+    end
+  end
+
+  defp normalize_signal(signal) when is_map(signal) do
+    Enum.into(signal, %{}, fn {key, value} ->
+      {normalize_signal_key(key), value}
+    end)
+  end
+
+  defp normalize_signal(signal), do: signal
+
+  defp normalize_signal_key("type"), do: :type
+  defp normalize_signal_key("target"), do: :target
+  defp normalize_signal_key("source"), do: :source
+  defp normalize_signal_key("transform"), do: :transform
+  defp normalize_signal_key("action"), do: :action
+  defp normalize_signal_key(key), do: key
 
   # Private validation functions
 

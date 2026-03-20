@@ -24,8 +24,8 @@ if [[ ! -f "$SCENARIO_CATALOG" ]]; then
   exit 1
 fi
 
-# Ash UI uses SCN (Scenario) entries, not AC entries
-KNOWN_SCENARIOS="$(rg -o 'SCN-[0-9]+' "$SCENARIO_CATALOG" | sort -u || true)"
+KNOWN_REQS="$(rg --no-filename -o 'REQ-[A-Z]+-[0-9A-Z]+' specs rfcs guides 2>/dev/null | sort -u || true)"
+KNOWN_SCENARIOS="$(rg --no-filename -o 'SCN-[0-9A-Z]+' "$SCENARIO_CATALOG" | sort -u || true)"
 
 echo "Checking required contract files exist..."
 required_contracts=(
@@ -54,6 +54,16 @@ for contract in specs/contracts/*.md; do
   if ! rg -q 'REQ-[A-Z]+-[0-9]+' "$contract"; then
     fail "contract may be missing REQ entries: $contract"
   fi
+
+  if [[ "$contract" != "specs/contracts/control_plane_ownership_matrix.md" ]]; then
+    if ! rg -q '^## Traceability$' "$contract"; then
+      fail "contract missing Traceability section: $contract"
+    fi
+
+    if ! rg -q '^## Conformance$' "$contract"; then
+      fail "contract missing Conformance section: $contract"
+    fi
+  fi
 done
 
 echo "Checking topology.md..."
@@ -61,5 +71,33 @@ if [[ ! -f "specs/topology.md" ]]; then
   fail "missing topology.md"
 fi
 
-echo "Governance validation passed."
+echo "Checking planning files..."
+for phase in specs/planning/phase-0{1,2,3,4,5,6,7,8}-*.md; do
+  if [[ ! -f "$phase" ]]; then
+    fail "missing planning phase file: $phase"
+  fi
+done
+
+echo "Checking matrix REQ references..."
+while IFS= read -r req; do
+  [[ -z "$req" ]] && continue
+  if ! grep -Fxq "$req" <<<"$KNOWN_REQS"; then
+    fail "matrix references unknown requirement: $req"
+  fi
+done < <(rg --no-filename -o 'REQ-[A-Z]+-[0-9A-Z]+' "$MATRIX" | sort -u || true)
+
+echo "Checking matrix SCN references..."
+while IFS= read -r scn; do
+  [[ -z "$scn" ]] && continue
+  if ! grep -Fxq "$scn" <<<"$KNOWN_SCENARIOS"; then
+    fail "matrix references unknown scenario: $scn"
+  fi
+done < <(rg --no-filename -o 'SCN-[0-9A-Z]+' "$MATRIX" | sort -u || true)
+
+if [[ "$failures" -ne 0 ]]; then
+  echo "Specs governance validation failed."
+  exit 1
+fi
+
+echo "Specs governance validation passed."
 exit 0

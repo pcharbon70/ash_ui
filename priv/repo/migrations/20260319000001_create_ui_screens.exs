@@ -9,7 +9,7 @@ defmodule Repo.Migrations.CreateUiScreens do
       add :layout, :string, default: "default"
       add :route, :string
       add :metadata, :map, default: "{}"
-      add :version, :integer, default:1, null: false
+      add :version, :integer, default: 1, null: false
       add :inserted_at, :utc_datetime_usec
       add :updated_at, :utc_datetime_usec
 
