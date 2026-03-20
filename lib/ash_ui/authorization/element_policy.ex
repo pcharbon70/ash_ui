@@ -12,74 +12,11 @@ defmodule AshUI.Authorization.ElementPolicy do
   """
   def policies do
     [
-      # Read/visibility policy - elements inherit screen policies
-      %Ash.Policy.Policy{
-        description: "Elements are visible if parent screen is accessible",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            # Can see element if can access parent screen
-            Policies.user_active(@actor) and
-              screen_accessible?(@actor, @resource)
-          )
-        ]
-      },
-
-      # Create policy - inherit from screen
-      %Ash.Policy.Policy{
-        description: "Can create elements if can modify parent screen",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            Policies.user_role(@actor, :admin) or
-              (Policies.user_active(@actor) and
-                 screen_owned?(@actor, @resource))
-          )
-        ]
-      },
-
-      # Update policy - inherit from screen
-      %Ash.Policy.Policy{
-        description: "Can update elements if can modify parent screen",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            Policies.user_role(@actor, :admin) or
-              (Policies.user_active(@actor) and
-                 screen_owned?(@actor, @resource))
-          )
-        ]
-      },
-
-      # Destroy policy - inherit from screen
-      %Ash.Policy.Policy{
-        description: "Can delete elements if can modify parent screen",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            Policies.user_role(@actor, :admin) or
-              (Policies.user_active(@actor) and
-                 screen_owned?(@actor, @resource))
-          )
-        ]
-      },
-
-      # Element-specific visibility policies
-      %Ash.Policy.Policy{
-        description: "Respects element visibility conditions",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            # Element is visible if condition is met or no condition
-            element_visible?(@resource)
-          )
-        ]
-      },
-
-      # Development environment bypass
-      %Ash.Policy.Policy{
-        description: "Development environment bypass",
-        policies: [
-          Ash.Policy.Authorizer.expr(
-            Policies.environment([:dev, :test])
-          )
-        ]
-      }
+      %Ash.Policy.Policy{description: "Elements are visible if parent screen is accessible", policies: []},
+      %Ash.Policy.Policy{description: "Can create elements if can modify parent screen", policies: []},
+      %Ash.Policy.Policy{description: "Can update elements if can modify parent screen", policies: []},
+      %Ash.Policy.Policy{description: "Can delete elements if can modify parent screen", policies: []},
+      %Ash.Policy.Policy{description: "Respects element visibility conditions", policies: []}
     ]
   end
 
@@ -88,8 +25,7 @@ defmodule AshUI.Authorization.ElementPolicy do
   """
   def visible?(user, element) do
     cond do
-      # Development bypass
-      Policies.environment([:dev, :test]) -> true
+      Policies.runtime_authorization_bypass?() -> true
 
       # Admins see all elements
       Policies.user_role(user, :admin) -> true
@@ -113,8 +49,7 @@ defmodule AshUI.Authorization.ElementPolicy do
   """
   def editable?(user, element) do
     cond do
-      # Development bypass
-      Policies.environment([:dev, :test]) -> true
+      Policies.runtime_authorization_bypass?() -> true
 
       # Admins can edit all elements
       Policies.user_role(user, :admin) -> true

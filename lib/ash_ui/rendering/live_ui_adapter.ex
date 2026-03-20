@@ -20,6 +20,7 @@ defmodule AshUI.Rendering.LiveUIAdapter do
 
   alias AshUI.Rendering.IURAdapter
   alias AshUI.Compilation.IUR
+  alias AshUI.Telemetry
 
   @doc """
   Renders a canonical IUR to HEEx template string.
@@ -41,11 +42,18 @@ defmodule AshUI.Rendering.LiveUIAdapter do
   """
   @spec render(map(), keyword()) :: {:ok, String.t()} | {:error, term()}
   def render(canonical_iur, opts \\ []) when is_map(canonical_iur) do
-    if Code.ensure_loaded?(LiveUI.Renderer) do
-      call_live_ui_renderer(canonical_iur, opts)
-    else
-      render_fallback(canonical_iur, opts)
-    end
+    started_at = System.monotonic_time()
+    metadata = render_metadata(canonical_iur, :live_ui)
+    Telemetry.emit(:render, :start, %{count: 1}, metadata)
+
+    result =
+      if Code.ensure_loaded?(LiveUI.Renderer) do
+        call_live_ui_renderer(canonical_iur, opts)
+      else
+        render_fallback(canonical_iur, opts)
+      end
+
+    emit_render_telemetry(result, started_at, metadata)
   end
 
   @doc """
@@ -126,16 +134,17 @@ defmodule AshUI.Rendering.LiveUIAdapter do
       }
     ]
 
-    patch_hooks = if optimize_patches do
-      [
-        %{
-          name: :ash_ui_patches,
-          on_mount: {AshUI.LiveView.PatchOptimizer, :on_mount_optimize}
-        }
-      ]
-    else
-      []
-    end
+    patch_hooks =
+      if optimize_patches do
+        [
+          %{
+            name: :ash_ui_patches,
+            on_mount: {AshUI.LiveView.PatchOptimizer, :on_mount_optimize}
+          }
+        ]
+      else
+        []
+      end
 
     default_hooks ++ patch_hooks ++ custom_hooks
   end
@@ -213,21 +222,23 @@ defmodule AshUI.Rendering.LiveUIAdapter do
     optimize_patches = Keyword.get(opts, :optimize_patches, true)
     event_prefix = Keyword.get(opts, :event_prefix, "ash")
 
-    heex = generate_heex(canonical_iur, %{
-      optimize_patches: optimize_patches,
-      event_prefix: event_prefix
-    })
+    heex =
+      generate_heex(canonical_iur, %{
+        optimize_patches: optimize_patches,
+        event_prefix: event_prefix
+      })
 
     {:ok, heex}
   end
 
   # Generate HEEx from canonical IUR with options
   defp generate_heex(%{"type" => "screen"} = iur, opts) do
-    patch_attrs = if Map.get(opts, :optimize_patches, true) do
-      " phx-update=\"stream\" id=\"#{iur["id"]}\""
-    else
-      " id=\"#{iur["id"]}\""
-    end
+    patch_attrs =
+      if Map.get(opts, :optimize_patches, true) do
+        " phx-update=\"stream\" id=\"#{iur["id"]}\""
+      else
+        " id=\"#{iur["id"]}\""
+      end
 
     """
     <div class="ash-screen ash-screen-#{iur["name"]}" data-screen-id="#{iur["id"]}"#{patch_attrs}>
@@ -238,6 +249,7 @@ defmodule AshUI.Rendering.LiveUIAdapter do
 
   defp generate_heex(%{"type" => "row"} = iur, opts) do
     spacing = Map.get(iur["props"] || %{}, "spacing", 8)
+
     """
     <div class="ash-row" style="gap: #{spacing}px">
       #{generate_children(iur["children"], opts)}
@@ -247,6 +259,7 @@ defmodule AshUI.Rendering.LiveUIAdapter do
 
   defp generate_heex(%{"type" => "column"} = iur, opts) do
     spacing = Map.get(iur["props"] || %{}, "spacing", 8)
+
     """
     <div class="ash-column" style="gap: #{spacing}px">
       #{generate_children(iur["children"], opts)}
@@ -270,6 +283,7 @@ defmodule AshUI.Rendering.LiveUIAdapter do
     variant = Map.get(iur["props"] || %{}, "variant", "primary")
 
     click_event = "#{event_prefix}:click"
+
     """
     <button class="ash-button ash-button-#{variant}" phx-click="#{click_event}" data-target="#{iur["id"]}">#{label}</button>
     """
@@ -322,6 +336,7 @@ defmodule AshUI.Rendering.LiveUIAdapter do
 
   defp generate_children(nil, _opts), do: ""
   defp generate_children([], _opts), do: ""
+
   defp generate_children(children, opts) when is_list(children) do
     Enum.map_join(children, &generate_heex(&1, opts))
   end
@@ -361,12 +376,13 @@ defmodule AshUI.Rendering.LiveUIAdapter do
     Enum.reduce(bindings, events, fn binding, acc ->
       type = Map.get(binding, "type")
 
-      event_type = case type do
-        "event" -> "action"
-        "bidirectional" -> "update"
-        "collection" -> "stream"
-        _ -> "change"
-      end
+      event_type =
+        case type do
+          "event" -> "action"
+          "bidirectional" -> "update"
+          "collection" -> "stream"
+          _ -> "change"
+        end
 
       [%{event: "#{event_prefix}:#{event_type}", target: binding["target"]} | acc]
     end)
@@ -385,6 +401,7 @@ defmodule AshUI.Rendering.LiveUIAdapter do
   defp extract_default_value(source) when is_map(source) do
     Map.get(source, "default", nil)
   end
+
   defp extract_default_value(_), do: nil
 
   defp extract_static_elements(iur) do
@@ -395,13 +412,14 @@ defmodule AshUI.Rendering.LiveUIAdapter do
   defp extract_static(children, acc) when is_list(children) do
     Enum.reduce(children, acc, fn child, acc2 ->
       if child["type"] in ["text", "divider", "spacer"] and
-         not has_signals(child) do
+           not has_signals(child) do
         [child["id"] | acc2]
       else
         extract_static(child["children"] || [], acc2)
       end
     end)
   end
+
   defp extract_static(_, acc), do: acc
 
   defp has_signals(child) do
@@ -416,5 +434,35 @@ defmodule AshUI.Rendering.LiveUIAdapter do
     bindings
     |> Enum.filter(fn binding -> Map.get(binding, "type") == "collection" end)
     |> Enum.map(fn binding -> Map.get(binding, "target") end)
+  end
+
+  defp emit_render_telemetry(result, started_at, metadata) do
+    duration = System.monotonic_time() - started_at
+
+    case result do
+      {:ok, _rendered} = success ->
+        Telemetry.emit(
+          :render,
+          :complete,
+          %{count: 1, duration: duration},
+          Map.put(metadata, :status, :ok)
+        )
+
+        success
+
+      {:error, reason} = error ->
+        error_metadata = Map.merge(metadata, %{status: :error, error: inspect(reason)})
+        Telemetry.emit(:render, :error, %{count: 1, duration: duration}, error_metadata)
+        error
+    end
+  end
+
+  defp render_metadata(canonical_iur, renderer) do
+    %{
+      renderer: renderer,
+      resource_id: Map.get(canonical_iur, "id"),
+      resource_type: :screen,
+      screen_id: Map.get(canonical_iur, "id")
+    }
   end
 end

@@ -20,6 +20,7 @@ defmodule AshUI.Rendering.WebUIAdapter do
 
   alias AshUI.Rendering.IURAdapter
   alias AshUI.Compilation.IUR
+  alias AshUI.Telemetry
 
   @doc """
   Renders a canonical IUR to static HTML string.
@@ -42,11 +43,18 @@ defmodule AshUI.Rendering.WebUIAdapter do
   """
   @spec render(map(), keyword()) :: {:ok, String.t()} | {:error, term()}
   def render(canonical_iur, opts \\ []) when is_map(canonical_iur) do
-    if Code.ensure_loaded?(WebUI.Renderer) do
-      call_web_ui_renderer(canonical_iur, opts)
-    else
-      render_fallback(canonical_iur, opts)
-    end
+    started_at = System.monotonic_time()
+    metadata = render_metadata(canonical_iur, :web_ui)
+    Telemetry.emit(:render, :start, %{count: 1}, metadata)
+
+    result =
+      if Code.ensure_loaded?(WebUI.Renderer) do
+        call_web_ui_renderer(canonical_iur, opts)
+      else
+        render_fallback(canonical_iur, opts)
+      end
+
+    emit_render_telemetry(result, started_at, metadata)
   end
 
   @doc """
@@ -277,21 +285,28 @@ defmodule AshUI.Rendering.WebUIAdapter do
   end
 
   defp generate_asset_tags(asset_config) do
-    css_tags = Enum.map_join(asset_config.css_files, fn file ->
-      fingerprint = if asset_config.fingerprinted, do: "?v=#{:erlang.phash2(:os.system_time())}", else: ""
-      "<link rel=\"stylesheet\" href=\"#{asset_config.base_url}/#{file}#{fingerprint}\">"
-    end)
+    css_tags =
+      Enum.map_join(asset_config.css_files, fn file ->
+        fingerprint =
+          if asset_config.fingerprinted, do: "?v=#{:erlang.phash2(:os.system_time())}", else: ""
 
-    js_tags = Enum.map_join(asset_config.js_files, fn file ->
-      fingerprint = if asset_config.fingerprinted, do: "?v=#{:erlang.phash2(:os.system_time())}", else: ""
-      "<script src=\"#{asset_config.base_url}/#{file}#{fingerprint}\"></script>"
-    end)
+        "<link rel=\"stylesheet\" href=\"#{asset_config.base_url}/#{file}#{fingerprint}\">"
+      end)
+
+    js_tags =
+      Enum.map_join(asset_config.js_files, fn file ->
+        fingerprint =
+          if asset_config.fingerprinted, do: "?v=#{:erlang.phash2(:os.system_time())}", else: ""
+
+        "<script src=\"#{asset_config.base_url}/#{file}#{fingerprint}\"></script>"
+      end)
 
     css_tags <> js_tags
   end
 
   defp generate_children(nil), do: ""
   defp generate_children([]), do: ""
+
   defp generate_children(children) when is_list(children) do
     Enum.map_join(children, &generate_html(&1, []))
   end
@@ -319,9 +334,9 @@ defmodule AshUI.Rendering.WebUIAdapter do
     description = get_default_description(iur)
 
     %{
-      "title": name,
-      "type": "website",
-      "description": description
+      title: name,
+      type: "website",
+      description: description
     }
   end
 
@@ -329,8 +344,8 @@ defmodule AshUI.Rendering.WebUIAdapter do
     name = Map.get(iur, "name", "")
 
     %{
-      "card": "summary",
-      "title": name
+      card: "summary",
+      title: name
     }
   end
 
@@ -353,6 +368,7 @@ defmodule AshUI.Rendering.WebUIAdapter do
     # Extract default value or initial data
     Map.get(source, "default", nil)
   end
+
   defp extract_port_value(_), do: nil
 
   defp encode_ports_json(ports) do
@@ -364,6 +380,36 @@ defmodule AshUI.Rendering.WebUIAdapter do
       "\"#{key}\": #{encoded_value}"
     end)
     |> wrap_in_object()
+  end
+
+  defp emit_render_telemetry(result, started_at, metadata) do
+    duration = System.monotonic_time() - started_at
+
+    case result do
+      {:ok, _rendered} = success ->
+        Telemetry.emit(
+          :render,
+          :complete,
+          %{count: 1, duration: duration},
+          Map.put(metadata, :status, :ok)
+        )
+
+        success
+
+      {:error, reason} = error ->
+        error_metadata = Map.merge(metadata, %{status: :error, error: inspect(reason)})
+        Telemetry.emit(:render, :error, %{count: 1, duration: duration}, error_metadata)
+        error
+    end
+  end
+
+  defp render_metadata(canonical_iur, renderer) do
+    %{
+      renderer: renderer,
+      resource_id: Map.get(canonical_iur, "id"),
+      resource_type: :screen,
+      screen_id: Map.get(canonical_iur, "id")
+    }
   end
 
   defp wrap_in_object(str), do: "{#{str}}"

@@ -9,6 +9,7 @@ defmodule AshUI.LiveView.ErrorHandler do
   require Logger
 
   alias AshUI.LiveView.Integration
+  alias AshUI.Telemetry
 
   @type error_info :: %{
           type: atom(),
@@ -33,7 +34,8 @@ defmodule AshUI.LiveView.ErrorHandler do
         {:error, reason} -> ErrorHandler.handle_compilation_error(reason, socket)
       end
   """
-  @spec handle_compilation_error(term(), Phoenix.LiveView.Socket.t()) :: {:error, Phoenix.LiveView.Socket.t()}
+  @spec handle_compilation_error(term(), Phoenix.LiveView.Socket.t()) ::
+          {:error, Phoenix.LiveView.Socket.t()}
   def handle_compilation_error(reason, socket) do
     error_info = build_error_info(:compilation, reason, socket)
 
@@ -65,7 +67,8 @@ defmodule AshUI.LiveView.ErrorHandler do
         {:error, reason} -> ErrorHandler.handle_binding_error(binding, reason, socket)
       end
   """
-  @spec handle_binding_error(map(), term(), Phoenix.LiveView.Socket.t()) :: {:error, term()} | term()
+  @spec handle_binding_error(map(), term(), Phoenix.LiveView.Socket.t()) ::
+          {:error, term()} | term()
   def handle_binding_error(binding, reason, socket) do
     error_info = build_error_info(:binding, reason, socket, binding: binding)
 
@@ -94,7 +97,8 @@ defmodule AshUI.LiveView.ErrorHandler do
         {:error, reason} -> ErrorHandler.handle_action_error(reason, socket)
       end
   """
-  @spec handle_action_error(term(), Phoenix.LiveView.Socket.t()) :: {:error, Phoenix.LiveView.Socket.t()}
+  @spec handle_action_error(term(), Phoenix.LiveView.Socket.t()) ::
+          {:error, Phoenix.LiveView.Socket.t()}
   def handle_action_error(reason, socket) do
     error_info = build_error_info(:action, reason, socket)
 
@@ -122,7 +126,8 @@ defmodule AshUI.LiveView.ErrorHandler do
         {:error, :unauthorized} = error -> ErrorHandler.handle_auth_error(error, socket)
       end
   """
-  @spec handle_auth_error({:error, :unauthorized}, Phoenix.LiveView.Socket.t()) :: {:error, term()}
+  @spec handle_auth_error({:error, :unauthorized}, Phoenix.LiveView.Socket.t()) ::
+          {:error, term()}
   def handle_auth_error({:error, :unauthorized}, socket) do
     error_info = build_error_info(:authorization, :unauthorized, socket)
 
@@ -149,7 +154,8 @@ defmodule AshUI.LiveView.ErrorHandler do
         e -> ErrorHandler.handle_runtime_error(e, __STACKTRACE__, socket)
       end
   """
-  @spec handle_runtime_error(Exception.t(), list(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  @spec handle_runtime_error(Exception.t(), list(), Phoenix.LiveView.Socket.t()) ::
+          Phoenix.LiveView.Socket.t()
   def handle_runtime_error(exception, stacktrace, socket) do
     error_info = %{
       type: :runtime,
@@ -398,13 +404,15 @@ defmodule AshUI.LiveView.ErrorHandler do
   end
 
   defp emit_error_telemetry(error_info) do
-    :telemetry.execute(
+    Telemetry.execute(
       [:ash_ui, :error, error_info.type],
-      %{timestamp: DateTime.to_unix(error_info.timestamp)},
+      %{count: 1},
       %{
-        reason: inspect(error_info.reason),
+        error: inspect(error_info.reason),
+        resource_type: :screen,
         screen_id: error_info.context.screen_id,
-        user_id: error_info.context.user_id
+        user_id: error_info.context.user_id,
+        status: :error
       }
     )
   end
@@ -449,7 +457,7 @@ defmodule AshUI.LiveView.ErrorHandler do
         {:ok, result}
 
       {:error, _reason} = error ->
-        delay = min(base_delay * :math.pow(2, attempt) |> trunc(), max_delay)
+        delay = min((base_delay * :math.pow(2, attempt)) |> trunc(), max_delay)
         Process.sleep(delay)
         retry_with_backoff(operation, attempt + 1, max_attempts, base_delay, max_delay)
     end

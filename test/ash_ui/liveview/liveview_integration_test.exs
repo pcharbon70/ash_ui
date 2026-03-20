@@ -1,5 +1,5 @@
 defmodule AshUI.LiveView.IntegrationTest do
-  use ExUnit.Case, async: true
+  use AshUI.DataCase, async: false
 
   alias AshUI.LiveView.Integration
   alias AshUI.Resources.Screen
@@ -13,7 +13,11 @@ defmodule AshUI.LiveView.IntegrationTest do
 
   # Mock user
   defp build_user(id \\ "user-1") do
-    %{id: id, name: "Test User"}
+    %{id: id, name: "Test User", role: :user, active: true}
+  end
+
+  defp build_admin(id \\ "admin-1") do
+    %{id: id, name: "Admin User", role: :admin, active: true}
   end
 
   # Mock screen
@@ -25,12 +29,30 @@ defmodule AshUI.LiveView.IntegrationTest do
     }
   end
 
+  setup do
+    {:ok, _screen} =
+      AshUI.Domain.create(Screen,
+        attrs: %{
+          name: "test_screen",
+          unified_dsl: %{"type" => "screen"}
+        }
+      )
+
+    {:ok, _restricted_screen} =
+      AshUI.Domain.create(Screen,
+        attrs: %{
+          name: "restricted_screen",
+          unified_dsl: %{"type" => "screen"}
+        }
+      )
+
+    :ok
+  end
+
   describe "mount_ui_screen/3" do
     test "mounts screen successfully with valid user and screen" do
-      socket = build_socket(current_user: build_user())
+      socket = build_socket(current_user: build_admin())
 
-      # Note: In actual implementation, would need to mock Ash.get
-      # This is a structural test
       assert {:ok, socket} = Integration.mount_ui_screen(socket, :test_screen, %{})
     end
 
@@ -50,11 +72,10 @@ defmodule AshUI.LiveView.IntegrationTest do
 
   describe "authorize_screen/2" do
     setup do
-      %{screen: build_screen(), user: build_user()}
+      %{screen: build_screen(), user: build_admin()}
     end
 
     test "returns :ok for authorized user", %{screen: screen, user: user} do
-      # Note: Would need to mock Ash.can?
       assert :ok = Integration.authorize_screen(screen, user)
     end
 
@@ -62,7 +83,6 @@ defmodule AshUI.LiveView.IntegrationTest do
       screen = build_screen("restricted-screen")
       unauthorized_user = build_user("unauthorized-user")
 
-      # Note: Would need to mock Ash.can?
       assert {:error, :unauthorized} = Integration.authorize_screen(screen, unauthorized_user)
     end
   end

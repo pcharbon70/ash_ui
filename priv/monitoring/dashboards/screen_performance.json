@@ -1,0 +1,24 @@
+{
+  "title": "Ash UI Screen Performance",
+  "version": 1,
+  "panels": [
+    {
+      "title": "Screen Mount Duration",
+      "event_name": "ash_ui.screen.mount",
+      "measurement": "duration",
+      "aggregation": "avg"
+    },
+    {
+      "title": "Compilation Duration",
+      "event_name": "ash_ui.compilation.compile_end",
+      "measurement": "duration",
+      "aggregation": "p95"
+    },
+    {
+      "title": "Render Duration",
+      "event_name": "ash_ui.render.complete",
+      "measurement": "duration",
+      "aggregation": "avg"
+    }
+  ]
+}

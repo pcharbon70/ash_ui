@@ -8,6 +8,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
 
   alias AshUI.Runtime.BindingEvaluator
   alias AshUI.Resources.Binding
+  alias AshUI.Telemetry
 
   @type socket :: map()
   @type context :: %{
@@ -30,7 +31,8 @@ defmodule AshUI.Runtime.BidirectionalBinding do
     * `{:ok, socket}` - Updated socket with binding value
     * `{:error, reason}` - Read failed
   """
-  @spec read_binding(Binding.t() | map(), socket(), context()) :: {:ok, socket()} | {:error, term()}
+  @spec read_binding(Binding.t() | map(), socket(), context()) ::
+          {:ok, socket()} | {:error, term()}
   def read_binding(binding, socket, context) do
     with {:ok, value} <- BindingEvaluator.evaluate(binding, context) do
       updated_socket = put_binding_value(socket, binding, value)
@@ -56,16 +58,21 @@ defmodule AshUI.Runtime.BidirectionalBinding do
   @spec write_binding(Binding.t() | map(), term(), socket(), context()) ::
           {:ok, socket(), map()} | {:error, term(), socket()}
   def write_binding(binding, new_value, socket, context) do
-    with :ok <- validate_input(binding, new_value),
-         {:ok, sanitized} <- sanitize_input(binding, new_value),
-         {:ok, result} <- update_resource(binding, sanitized, context) do
-      updated_socket = put_binding_value(socket, binding, sanitized)
-      {:ok, updated_socket, result}
-    else
-      {:error, reason} ->
-        error_socket = put_binding_error(socket, binding, reason)
-        {:error, reason, error_socket}
-    end
+    started_at = System.monotonic_time()
+
+    result =
+      with :ok <- validate_input(binding, new_value),
+           {:ok, sanitized} <- sanitize_input(binding, new_value),
+           {:ok, result} <- update_resource(binding, sanitized, context) do
+        updated_socket = put_binding_value(socket, binding, sanitized)
+        {:ok, updated_socket, result}
+      else
+        {:error, reason} ->
+          error_socket = put_binding_error(socket, binding, reason)
+          {:error, reason, error_socket}
+      end
+
+    emit_binding_update_telemetry(binding, context, started_at, result)
   end
 
   @doc """
@@ -246,11 +253,15 @@ defmodule AshUI.Runtime.BidirectionalBinding do
         "updated_at" => System.system_time(:millisecond)
       })
 
-    %{socket | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))}
+    %{
+      socket
+      | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
+    }
   end
 
   defp get_binding_value(socket, binding) do
     target = Map.get(binding, :target) || Map.get(binding, "target")
+
     socket.assigns
     |> Map.get(:ash_ui, %{})
     |> Map.get(:bindings, %{})
@@ -265,7 +276,10 @@ defmodule AshUI.Runtime.BidirectionalBinding do
     binding_state = Map.get(bindings, target, %{})
     updated_bindings = Map.put(bindings, target, Map.put(binding_state, "error", error))
 
-    %{socket | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))}
+    %{
+      socket
+      | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
+    }
   end
 
   defp get_binding_id(%Binding{id: id}), do: id
@@ -273,5 +287,38 @@ defmodule AshUI.Runtime.BidirectionalBinding do
 
   defp subscription_id(binding) do
     "#{get_binding_id(binding)}_#{System.system_time(:millisecond)}"
+  end
+
+  defp emit_binding_update_telemetry(binding, context, started_at, result) do
+    duration = System.monotonic_time() - started_at
+
+    metadata = %{
+      binding_id: get_binding_id(binding),
+      binding_type: Map.get(binding, :binding_type) || Map.get(binding, "binding_type"),
+      target: Map.get(binding, :target) || Map.get(binding, "target"),
+      resource_id: get_binding_id(binding),
+      resource_type: :binding,
+      screen_id: Map.get(binding, :screen_id) || Map.get(binding, "screen_id"),
+      user_id: Map.get(context, :user_id)
+    }
+
+    case result do
+      {:ok, updated_socket, update_result} = success ->
+        Telemetry.emit(
+          :binding,
+          :update,
+          %{count: 1, duration: duration},
+          Map.put(metadata, :status, :ok)
+        )
+
+        {:ok, updated_socket, update_result}
+
+      {:error, reason, error_socket} = error ->
+        error_metadata = Map.merge(metadata, %{status: :error, error: inspect(reason)})
+
+        Telemetry.emit(:binding, :update, %{count: 1, duration: duration}, error_metadata)
+        Telemetry.emit(:binding, :error, %{count: 1, duration: duration}, error_metadata)
+        {:error, reason, error_socket}
+    end
   end
 end

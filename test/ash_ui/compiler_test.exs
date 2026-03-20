@@ -263,6 +263,9 @@ defmodule AshUI.CompilerTest do
           }
         )
 
+      Compiler.clear_cache()
+      Compiler.init_cache()
+
       assert {:ok, _iur} = Compiler.compile(screen)
       assert Compiler.cache_stats().size > 0
 

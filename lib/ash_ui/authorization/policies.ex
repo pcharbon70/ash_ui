@@ -171,6 +171,16 @@ defmodule AshUI.Authorization.Policies do
     true
   end
 
+  @doc """
+  Returns whether runtime authorization checks should be bypassed.
+
+  This is opt-in so tests exercise the real authorization paths by default.
+  """
+  @spec runtime_authorization_bypass?() :: boolean()
+  def runtime_authorization_bypass? do
+    Application.get_env(:ash_ui, :runtime_authorization_bypass, false)
+  end
+
   # Private functions
 
   defp config_env do

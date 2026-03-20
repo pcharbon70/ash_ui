@@ -12,6 +12,7 @@ defmodule AshUI.Authorization.Runtime do
   alias AshUI.Authorization.ScreenPolicy
   alias AshUI.Authorization.ElementPolicy
   alias AshUI.Authorization.BindingPolicy
+  alias AshUI.Telemetry
 
   @type auth_result :: :authorized | {:forbidden, map()} | {:error, term()}
   @type auth_context :: %{
@@ -44,6 +45,7 @@ defmodule AshUI.Authorization.Runtime do
 
     with :ok <- emit_auth_telemetry(:mount_attempt, context),
          :ok <- check_user_present(user),
+         :ok <- check_user_active(user),
          :ok <- check_screen_accessible(user, screen),
          :ok <- check_policy(user, screen, :mount) do
       emit_auth_telemetry(:mount_success, context)
@@ -98,7 +100,8 @@ defmodule AshUI.Authorization.Runtime do
     else
       {:error, :no_user} ->
         emit_auth_telemetry(:action_no_user, context)
-        {:forbidden, %{reason: :unauthenticated, message: "You must be logged in"}}
+        {:forbidden,
+         %{reason: :unauthenticated, message: "You must be logged in", redirect: :login}}
 
       {:error, :inactive_user} ->
         emit_auth_telemetry(:action_inactive, context)
@@ -106,7 +109,9 @@ defmodule AshUI.Authorization.Runtime do
 
       {:error, :action_forbidden} ->
         emit_auth_telemetry(:action_forbidden, context)
-        {:forbidden, %{reason: :forbidden, message: "You don't have permission to perform this action"}}
+
+        {:forbidden,
+         %{reason: :forbidden, message: "You don't have permission to perform this action"}}
 
       {:error, reason} ->
         emit_auth_telemetry(:action_error, context)
@@ -268,6 +273,7 @@ defmodule AshUI.Authorization.Runtime do
   """
   @spec invalidate_user_cache(String.t() | nil) :: :ok
   def invalidate_user_cache(nil), do: :ok
+
   def invalidate_user_cache(user_id) when is_binary(user_id) do
     # In production, would selectively invalidate by user
     :ets.delete_all_objects(:ash_ui_auth_cache)
@@ -335,14 +341,25 @@ defmodule AshUI.Authorization.Runtime do
   Emits authorization telemetry for the given event and context.
   """
   def emit_auth_telemetry(event, context) do
-    :telemetry.execute(
+    metadata = %{
+      user_id: context.user_id,
+      action: context.action,
+      resource_id: get_resource_id(context.resource),
+      resource_type: :authorization,
+      event: event
+    }
+
+    Telemetry.execute(
       [:ash_ui, :auth, event],
-      %{timestamp: System.system_time(:microsecond)},
-      %{
-        user_id: context.user_id,
-        action: context.action,
-        resource_id: get_resource_id(context.resource)
-      }
+      %{count: 1},
+      metadata
+    )
+
+    Telemetry.emit(
+      :authorization,
+      auth_summary_event(event),
+      %{count: 1},
+      metadata
     )
 
     :ok
@@ -382,6 +399,16 @@ defmodule AshUI.Authorization.Runtime do
       :ok
     end
   end
+
+  defp auth_summary_event(event)
+       when event in [:mount_attempt, :action_attempt, :read_attempt, :write_attempt],
+       do: :auth_check
+
+  defp auth_summary_event(event)
+       when event in [:mount_success, :action_success, :read_success, :write_success],
+       do: :auth_success
+
+  defp auth_summary_event(_event), do: :auth_fail
 
   defp check_data_source_accessible(user, binding) do
     if BindingPolicy.source_accessible?(user, binding) do

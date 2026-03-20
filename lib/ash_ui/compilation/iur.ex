@@ -11,6 +11,7 @@ defmodule AshUI.Compilation.IUR do
           type: atom(),
           name: String.t() | nil,
           attributes: map(),
+          props: map(),
           children: [t()],
           bindings: [map()],
           metadata: map(),
@@ -22,6 +23,7 @@ defmodule AshUI.Compilation.IUR do
     :type,
     :name,
     attributes: %{},
+    props: %{},
     children: [],
     bindings: [],
     metadata: %{},
@@ -34,6 +36,7 @@ defmodule AshUI.Compilation.IUR do
   @spec new(atom(), keyword()) :: t()
   def new(type, opts \\ []) do
     attributes = Keyword.get(opts, :attributes, %{})
+    props = Keyword.get(opts, :props, attributes)
     children = Keyword.get(opts, :children, [])
     bindings = Keyword.get(opts, :bindings, [])
     metadata = Keyword.get(opts, :metadata, %{})
@@ -46,6 +49,7 @@ defmodule AshUI.Compilation.IUR do
       type: type,
       name: name,
       attributes: attributes,
+      props: props,
       children: children,
       bindings: bindings,
       metadata: metadata,
@@ -73,8 +77,12 @@ defmodule AshUI.Compilation.IUR do
   Sets an attribute on the IUR.
   """
   @spec put_attribute(t(), atom(), term()) :: t()
-  def put_attribute(%__MODULE__{attributes: attributes} = iur, key, value) do
-    %{iur | attributes: Map.put(attributes, key, value)}
+  def put_attribute(%__MODULE__{attributes: attributes, props: props} = iur, key, value) do
+    %{
+      iur
+      | attributes: Map.put(attributes, key, value),
+        props: Map.put(props, key, value)
+    }
   end
 
   @doc """
@@ -91,6 +99,10 @@ defmodule AshUI.Compilation.IUR do
 
   def validate(%__MODULE__{attributes: attrs}) when not is_map(attrs) do
     {:error, "IUR attributes must be a map"}
+  end
+
+  def validate(%__MODULE__{props: props}) when not is_map(props) do
+    {:error, "IUR props must be a map"}
   end
 
   def validate(%__MODULE__{children: children}) when not is_list(children) do

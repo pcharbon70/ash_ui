@@ -7,6 +7,7 @@ defmodule AshUI.Runtime.BindingEvaluator do
   """
 
   alias AshUI.Resources.Binding
+  alias AshUI.Telemetry
 
   @type context :: %{
           user_id: String.t() | nil,
@@ -42,21 +43,30 @@ defmodule AshUI.Runtime.BindingEvaluator do
 
   def evaluate(%Binding{} = binding, context, opts) do
     source_map = binding.source || %{}
+    transform = binding.transform || %{}
+    started_at = System.monotonic_time()
 
-    with {:ok, value} <- resolve_source(source_map, context, opts),
-         {:ok, transformed} <- apply_transformations(value, binding.transform, context) do
-      {:ok, transformed}
-    end
+    result =
+      with {:ok, value} <- resolve_source(source_map, context, opts),
+           {:ok, transformed} <- apply_transformations(value, transform, context) do
+        {:ok, transformed}
+      end
+
+    emit_binding_telemetry(binding, context, started_at, :evaluate, result)
   end
 
   def evaluate(binding, context, opts) when is_map(binding) do
     source = Map.get(binding, :source) || Map.get(binding, "source", %{})
     transform = Map.get(binding, :transform) || Map.get(binding, "transform", %{})
+    started_at = System.monotonic_time()
 
-    with {:ok, value} <- resolve_source(source, context, opts),
-         {:ok, transformed} <- apply_transformations(value, transform, context) do
-      {:ok, transformed}
-    end
+    result =
+      with {:ok, value} <- resolve_source(source, context, opts),
+           {:ok, transformed} <- apply_transformations(value, transform, context) do
+        {:ok, transformed}
+      end
+
+    emit_binding_telemetry(binding, context, started_at, :evaluate, result)
   end
 
   # Resolve source path to actual value
@@ -243,7 +253,9 @@ defmodule AshUI.Runtime.BindingEvaluator do
   ## Returns
     * Map of binding_id to result
   """
-  @spec evaluate_batch([Binding.t() | map()], context(), keyword()) :: %{String.t() => evaluation_result()}
+  @spec evaluate_batch([Binding.t() | map()], context(), keyword()) :: %{
+          String.t() => evaluation_result()
+        }
   def evaluate_batch(bindings, context, opts \\ []) do
     Enum.reduce(bindings, %{}, fn binding, acc ->
       id = get_binding_id(binding)
@@ -254,4 +266,37 @@ defmodule AshUI.Runtime.BindingEvaluator do
 
   defp get_binding_id(%Binding{id: id}), do: id
   defp get_binding_id(binding), do: Map.get(binding, :id) || Map.get(binding, "id")
+
+  defp emit_binding_telemetry(binding, context, started_at, event, result) do
+    duration = System.monotonic_time() - started_at
+
+    metadata = %{
+      binding_id: get_binding_id(binding),
+      binding_type: Map.get(binding, :binding_type) || Map.get(binding, "binding_type"),
+      target: Map.get(binding, :target) || Map.get(binding, "target"),
+      resource_id: get_binding_id(binding),
+      resource_type: :binding,
+      screen_id: Map.get(binding, :screen_id) || Map.get(binding, "screen_id"),
+      user_id: Map.get(context, :user_id)
+    }
+
+    case result do
+      {:ok, _value} = success ->
+        Telemetry.emit(
+          :binding,
+          event,
+          %{count: 1, duration: duration},
+          Map.put(metadata, :status, :ok)
+        )
+
+        success
+
+      {:error, reason} = error ->
+        error_metadata = Map.merge(metadata, %{status: :error, error: inspect(reason)})
+
+        Telemetry.emit(:binding, event, %{count: 1, duration: duration}, error_metadata)
+        Telemetry.emit(:binding, :error, %{count: 1, duration: duration}, error_metadata)
+        error
+    end
+  end
 end

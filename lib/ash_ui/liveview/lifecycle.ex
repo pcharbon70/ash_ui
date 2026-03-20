@@ -8,6 +8,8 @@ defmodule AshUI.LiveView.Lifecycle do
 
   require Logger
 
+  alias AshUI.Telemetry
+
   alias AshUI.LiveView.Integration
   alias AshUI.LiveView.UpdateIntegration
 
@@ -64,7 +66,8 @@ defmodule AshUI.LiveView.Lifecycle do
       end)
   """
   @spec register_hook(Phoenix.LiveView.Socket.t(), atom(), fun()) :: Phoenix.LiveView.Socket.t()
-  def register_hook(socket, hook_type, callback) when is_function(callback, 1) do
+  def register_hook(socket, hook_type, callback)
+      when is_function(callback, 1) or is_function(callback, 2) do
     hooks = Map.get(socket.assigns, :ash_ui_lifecycle_hooks, %{})
     type_hooks = Map.get(hooks, hook_type, [])
     updated_hooks = Map.put(hooks, hook_type, [callback | type_hooks])
@@ -83,8 +86,9 @@ defmodule AshUI.LiveView.Lifecycle do
   def execute_hooks(socket, hook_type) do
     hooks = Map.get(socket.assigns, :ash_ui_lifecycle_hooks, %{})
     type_hooks = Map.get(hooks, hook_type, [])
+    user_hooks = user_hooks_for(hooks, hook_type)
 
-    Enum.reduce(type_hooks, socket, fn hook, acc ->
+    Enum.reduce(type_hooks ++ user_hooks, socket, fn hook, acc ->
       execute_hook(hook, acc, hook_type)
     end)
   end
@@ -119,7 +123,8 @@ defmodule AshUI.LiveView.Lifecycle do
 
       socket = Lifecycle.put_session_state(socket, :current_tab, "profile")
   """
-  @spec put_session_state(Phoenix.LiveView.Socket.t(), atom(), term()) :: Phoenix.LiveView.Socket.t()
+  @spec put_session_state(Phoenix.LiveView.Socket.t(), atom(), term()) ::
+          Phoenix.LiveView.Socket.t()
   def put_session_state(socket, key, value) do
     session_state = Map.get(socket.assigns, :ash_ui_session_state, %{})
     updated = Map.put(session_state, key, value)
@@ -239,7 +244,8 @@ defmodule AshUI.LiveView.Lifecycle do
         e -> AshUI.LiveView.Lifecycle.handle_error(e, __STACKTRACE__, socket)
       end
   """
-  @spec handle_error(Exception.t(), list(), Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  @spec handle_error(Exception.t(), list(), Phoenix.LiveView.Socket.t()) ::
+          Phoenix.LiveView.Socket.t()
   def handle_error(exception, stacktrace, socket) do
     Logger.error("""
     Ash UI lifecycle error: #{inspect(exception)}
@@ -282,15 +288,24 @@ defmodule AshUI.LiveView.Lifecycle do
     screen_id = get_screen_id(socket)
 
     base_metadata = %{
+      resource_id: screen_id,
+      resource_type: :screen,
       session_id: session_id,
       screen_id: screen_id
     }
 
-    :telemetry.execute(
-      [:ash_ui, :lifecycle, event],
-      %{timestamp: System.system_time(:microsecond)},
-      Map.merge(base_metadata, metadata)
-    )
+    measurements = %{count: 1}
+    metadata = Map.merge(base_metadata, metadata)
+
+    case event do
+      canonical_event when canonical_event in [:mount, :unmount, :update] ->
+        Telemetry.emit(:screen, canonical_event, measurements, metadata,
+          legacy_event_names: [[:ash_ui, :lifecycle, event]]
+        )
+
+      _other ->
+        Telemetry.execute([:ash_ui, :lifecycle, event], measurements, metadata)
+    end
 
     :ok
   end
@@ -321,13 +336,19 @@ defmodule AshUI.LiveView.Lifecycle do
 
   defp execute_hook(hook, socket, hook_type) do
     try do
-      hook.(socket)
+      case :erlang.fun_info(hook, :arity) do
+        {:arity, 2} -> hook.(hook_type, socket)
+        _ -> hook.(socket)
+      end
     rescue
       e ->
         Logger.error("Ash UI lifecycle hook #{hook_type} failed: #{inspect(e)}")
         socket
     end
   end
+
+  defp user_hooks_for(_hooks, :user_callback), do: []
+  defp user_hooks_for(hooks, _hook_type), do: Map.get(hooks, :user_callback, [])
 
   defp isolate_binding_state(socket) do
     # Create isolated binding state using session-specific keys
@@ -378,12 +399,15 @@ defmodule AshUI.LiveView.Lifecycle do
   """
   @spec create_context(map()) :: map()
   def create_context(initial_state \\ %{}) do
-    Map.merge(%{
-      session_id: generate_session_id(),
-      created_at: DateTime.utc_now(),
-      hooks: %{},
-      state: %{}
-    }, initial_state)
+    Map.merge(
+      %{
+        session_id: generate_session_id(),
+        created_at: DateTime.utc_now(),
+        hooks: %{},
+        state: %{}
+      },
+      initial_state
+    )
   end
 
   @doc """

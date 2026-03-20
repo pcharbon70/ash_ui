@@ -7,6 +7,7 @@ defmodule AshUI.Rendering.IURAdapter do
   """
 
   alias AshUI.Compilation.IUR
+  alias AshUI.Telemetry
 
   @doc """
   Converts an Ash IUR to canonical unified_iur Screen format.
@@ -22,29 +23,26 @@ defmodule AshUI.Rendering.IURAdapter do
   def to_canonical(%IUR{} = ash_iur, opts \\ []) do
     telemetry? = Keyword.get(opts, :telemetry, true)
 
-    try do
-      canonical = convert_iur(ash_iur)
+    with :ok <- IUR.validate(ash_iur) do
+      try do
+        canonical = convert_iur(ash_iur)
 
-      if telemetry? do
-        :telemetry.execute(
-          [:ash_ui, :rendering, :convert_success],
-          %{count: 1},
-          %{type: ash_iur.type}
-        )
-      end
-
-      {:ok, canonical}
-    rescue
-      error ->
         if telemetry? do
-          :telemetry.execute(
-            [:ash_ui, :rendering, :convert_error],
+          Telemetry.execute(
+            [:ash_ui, :rendering, :convert_success],
             %{count: 1},
-            %{type: ash_iur.type, error: inspect(error)}
+            %{resource_id: ash_iur.id, resource_type: ash_iur.type, status: :ok}
           )
         end
 
-        {:error, {:conversion_failed, error}}
+        {:ok, canonical}
+      rescue
+        error ->
+          emit_conversion_error(ash_iur, telemetry?, error)
+      end
+    else
+      {:error, reason} ->
+        emit_conversion_error(ash_iur, telemetry?, reason)
     end
   end
 
@@ -90,12 +88,13 @@ defmodule AshUI.Rendering.IURAdapter do
   # Convert element type to unified widget type
   defp convert_element(%IUR{} = element) do
     widget_type = map_element_type(element.type)
+    props = if map_size(element.props || %{}) > 0, do: element.props, else: element.attributes
 
     %{
       "type" => widget_type,
       "id" => element.id || generate_id(),
       "name" => element.name,
-      "props" => convert_props(element.props, element.type),
+      "props" => convert_props(props, element.type),
       "children" => Enum.map(element.children, &convert_element/1),
       "metadata" => element.metadata
     }
@@ -153,6 +152,23 @@ defmodule AshUI.Rendering.IURAdapter do
   end
 
   defp convert_prop_value(value), do: value
+
+  defp emit_conversion_error(ash_iur, telemetry?, error) do
+    if telemetry? do
+      Telemetry.execute(
+        [:ash_ui, :rendering, :convert_error],
+        %{count: 1},
+        %{
+          resource_id: ash_iur.id,
+          resource_type: ash_iur.type,
+          status: :error,
+          error: inspect(error)
+        }
+      )
+    end
+
+    {:error, {:conversion_failed, error}}
+  end
 
   # Convert layout to canonical format
   defp convert_layout(nil), do: "column"

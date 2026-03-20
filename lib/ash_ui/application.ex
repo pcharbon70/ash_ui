@@ -12,7 +12,11 @@ defmodule AshUI.Application do
   Starts the Ash UI supervision tree.
   """
   def start(_type, _args) do
+    AshUI.Compiler.init_cache()
+    AshUI.Authorization.Runtime.init_cache()
+
     children = [
+      AshUI.Telemetry,
       AshUI.Repo,
       AshUI.Rendering.Registry
     ]

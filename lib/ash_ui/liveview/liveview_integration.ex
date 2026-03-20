@@ -9,10 +9,13 @@ defmodule AshUI.LiveView.Integration do
   require Logger
 
   alias AshUI.Compiler
+  alias AshUI.Domain
+  alias AshUI.Authorization.ScreenPolicy
   alias AshUI.Resources.Screen
   alias AshUI.Resources.Binding
   alias AshUI.Runtime.BindingEvaluator
   alias AshUI.Rendering.IURAdapter
+  alias AshUI.Telemetry
 
   @type screen_identifier :: String.t() | atom() | integer()
   @type mount_params :: map()
@@ -39,7 +42,8 @@ defmodule AshUI.LiveView.Integration do
         AshUI.LiveView.Integration.mount_ui_screen(socket, :dashboard, params)
       end
   """
-  @spec mount_ui_screen(Phoenix.LiveView.Socket.t(), screen_identifier(), mount_params()) :: mount_result()
+  @spec mount_ui_screen(Phoenix.LiveView.Socket.t(), screen_identifier(), mount_params()) ::
+          mount_result()
   def mount_ui_screen(socket, screen_id, params \\ %{}) do
     with {:ok, user} <- get_current_user(socket),
          {:ok, screen} <- load_screen(screen_id, user, params),
@@ -69,12 +73,7 @@ defmodule AshUI.LiveView.Integration do
   """
   @spec authorize_screen(Screen.t(), term()) :: :ok | {:error, :unauthorized}
   def authorize_screen(%Screen{} = screen, user) do
-    # Check :mount action policy using Ash authorizer
-    # In production, this would call Ash.can? with proper action
-    case check_mount_policy(screen, user) do
-      true -> :ok
-      false -> {:error, :unauthorized}
-    end
+    if ScreenPolicy.can_mount?(user, screen), do: :ok, else: {:error, :unauthorized}
   end
 
   @doc """
@@ -85,6 +84,9 @@ defmodule AshUI.LiveView.Integration do
     * `{:error, reason}` - Compilation failed
   """
   @spec compile_screen(Screen.t()) :: {:ok, map()} | {:error, term()}
+  def compile_screen(%Screen{id: nil}), do: {:error, :invalid_screen}
+  def compile_screen(%Screen{name: nil}), do: {:error, :invalid_screen}
+
   def compile_screen(%Screen{} = screen) do
     with {:ok, iur} <- Compiler.compile(screen),
          {:ok, canonical_iur} <- IURAdapter.to_canonical(iur) do
@@ -102,7 +104,8 @@ defmodule AshUI.LiveView.Integration do
     * `{:ok, binding_values}` - Map of binding IDs to evaluated values
     * `{:error, reason}` - Evaluation failed
   """
-  @spec evaluate_bindings(Screen.t(), Phoenix.LiveView.Socket.t(), term(), map()) :: {:ok, map()} | {:error, term()}
+  @spec evaluate_bindings(Screen.t(), Phoenix.LiveView.Socket.t(), term(), map()) ::
+          {:ok, map()} | {:error, term()}
   def evaluate_bindings(%Screen{} = screen, socket, user, params) do
     context = build_evaluation_context(socket, user, params)
 
@@ -121,25 +124,46 @@ defmodule AshUI.LiveView.Integration do
   end
 
   defp load_screen(screen_id, user, params) do
-    # Load screen resource by ID or name
-    # In production, would use Ash.get/3 with proper authorization
+    case load_screen_by_identifier(screen_id, user) do
+      {:ok, screen} -> {:ok, screen}
+      {:error, :invalid_primary_key} -> {:error, :not_found}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp load_screen_by_identifier(screen_id, user) when is_atom(screen_id) do
+    load_screen_by_name(Atom.to_string(screen_id))
+  end
+
+  defp load_screen_by_identifier(screen_id, user) do
+    case load_screen_by_primary_key(screen_id, user) do
+      {:ok, screen} = result ->
+        result
+
+      {:error, _reason} when is_binary(screen_id) ->
+        load_screen_by_name(screen_id)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp load_screen_by_primary_key(screen_id, user) do
     case Ash.get(Screen, screen_id, actor: user, authorize?: true) do
       {:ok, screen} -> {:ok, screen}
       {:error, reason} -> {:error, reason}
     end
   rescue
+    Ash.Error.Invalid.InvalidPrimaryKey -> {:error, :invalid_primary_key}
     Ash.Error.Invalid.NoSuchResource -> {:error, :not_found}
   end
 
-  defp check_mount_policy(%Screen{} = screen, user) do
-    # Check if user can :mount this screen
-    # In production, would use Ash.can?({:mount, screen}, user)
-    case Ash.can?({:mount, screen}, user) do
-      true -> true
-      _ -> Ash.can?(screen, user, action: :mount)
+  defp load_screen_by_name(name) do
+    case Domain.read_one(Screen, filter: [name: name]) do
+      {:ok, %Screen{} = screen} -> {:ok, screen}
+      {:ok, nil} -> {:error, :not_found}
+      {:error, reason} -> {:error, reason}
     end
-  rescue
-    _ -> false
   end
 
   defp build_evaluation_context(socket, user, params) do
@@ -229,10 +253,6 @@ defmodule AshUI.LiveView.Integration do
       emit_telemetry(:mount, %{screen_id: screen.id}, %{})
   """
   def emit_telemetry(event, metadata, measurements \\ %{}) do
-    :telemetry.execute(
-      [:ash_ui, :screen, event],
-      measurements,
-      metadata
-    )
+    Telemetry.emit(:screen, event, measurements, metadata)
   end
 end

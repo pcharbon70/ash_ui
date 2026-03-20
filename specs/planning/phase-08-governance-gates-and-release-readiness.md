@@ -87,32 +87,32 @@ Back to index: [README](./README.md)
       [X] 8.2.4.3 Subtask - Test renderer package integration
       [X] 8.2.4.4 Subtask - Test error handling and observability
 
-  [ ] 8.3 Section - Observability and Telemetry
+  [X] 8.3 Section - Observability and Telemetry
     Implement comprehensive telemetry for monitoring.
 
-    [ ] 8.3.1 Task - Define telemetry events
+    [X] 8.3.1 Task - Define telemetry events
     Create standard telemetry event definitions.
 
-      [ ] 8.3.1.1 Subtask - Define `[:ash_ui, :screen, :mount]` event
-      [ ] 8.3.1.2 Subtask - Define `[:ash_ui, :screen, :unmount]` event
-      [ ] 8.3.1.3 Subtask - Define `[:ash_ui, :binding, :evaluate]` event
-      [ ] 8.3.1.4 Subtask - Define `[:ash_ui, :render, :complete]` event
+      [X] 8.3.1.1 Subtask - Define `[:ash_ui, :screen, :mount]` event
+      [X] 8.3.1.2 Subtask - Define `[:ash_ui, :screen, :unmount]` event
+      [X] 8.3.1.3 Subtask - Define `[:ash_ui, :binding, :evaluate]` event
+      [X] 8.3.1.4 Subtask - Define `[:ash_ui, :render, :complete]` event
 
-    [ ] 8.3.2 Task - Implement telemetry handlers
+    [X] 8.3.2 Task - Implement telemetry handlers
     Attach telemetry to all major operations.
 
-      [ ] 8.3.2.1 Subtask - Attach telemetry to screen operations
-      [ ] 8.3.2.2 Subtask - Attach telemetry to binding evaluation
-      [ ] 8.3.2.3 Subtask - Attach telemetry to compilation
-      [ ] 8.3.2.4 Subtask - Attach telemetry to rendering
+      [X] 8.3.2.1 Subtask - Attach telemetry to screen operations
+      [X] 8.3.2.2 Subtask - Attach telemetry to binding evaluation
+      [X] 8.3.2.3 Subtask - Attach telemetry to compilation
+      [X] 8.3.2.4 Subtask - Attach telemetry to rendering
 
-    [ ] 8.3.3 Task - Create dashboards
+    [X] 8.3.3 Task - Create dashboards
     Create observability dashboards for monitoring.
 
-      [ ] 8.3.3.1 Subtask - Create screen performance dashboard
-      [ ] 8.3.3.2 Subtask - Create error rate dashboard
-      [ ] 8.3.3.3 Subtask - Create authorization failure dashboard
-      [ ] 8.3.3.4 Subtask - Create renderer usage dashboard
+      [X] 8.3.3.1 Subtask - Create screen performance dashboard
+      [X] 8.3.3.2 Subtask - Create error rate dashboard
+      [X] 8.3.3.3 Subtask - Create authorization failure dashboard
+      [X] 8.3.3.4 Subtask - Create renderer usage dashboard
 
   [ ] 8.4 Section - Documentation Completeness
     Ensure all documentation is complete and up-to-date.
