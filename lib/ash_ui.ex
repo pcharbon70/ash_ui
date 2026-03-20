@@ -9,6 +9,9 @@ defmodule AshUI do
   - Policy-based authorization for UI access
   """
 
+  @doc """
+  Returns the Ash domain that owns the Ash UI resources.
+  """
   def domain do
     AshUI.Domain
   end

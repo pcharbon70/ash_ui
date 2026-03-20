@@ -73,6 +73,7 @@ See [templates/rfc-template.md](templates/rfc-template.md) for the RFC template.
 | RFC | Title | Status | Phase |
 |---|---|---|---|
 | RFC-0001 | Ash UI Governance System | Active | 1 |
+| RFC-0002 | Ash UI as unified-ui Integration Layer | Draft | 1 |
 
 ## Related Documentation
 

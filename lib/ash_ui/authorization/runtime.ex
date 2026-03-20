@@ -308,7 +308,9 @@ defmodule AshUI.Authorization.Runtime do
     :ok
   end
 
-  @doc false
+  @doc """
+  Builds a normalized authorization context map for checks and telemetry.
+  """
   def build_context(user, action, resource, params \\ %{}) do
     %{
       user: user,
@@ -320,14 +322,18 @@ defmodule AshUI.Authorization.Runtime do
     }
   end
 
-  @doc false
+  @doc """
+  Builds a stable cache key for a user, resource, and action tuple.
+  """
   def build_cache_key(user, resource, action) do
     user_id = get_user_id(user) || "anonymous"
     resource_id = get_resource_id(resource)
     "#{user_id}:#{resource_id}:#{action}"
   end
 
-  @doc false
+  @doc """
+  Emits authorization telemetry for the given event and context.
+  """
   def emit_auth_telemetry(event, context) do
     :telemetry.execute(
       [:ash_ui, :auth, event],

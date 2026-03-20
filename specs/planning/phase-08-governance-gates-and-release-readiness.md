@@ -17,40 +17,40 @@ Back to index: [README](./README.md)
 [ ] 8 Phase 8 - Governance Gates and Release Readiness
   Finalize CI gates, conformance tests, and rollout readiness checks for production deployment.
 
-  [ ] 8.1 Section - CI/CD Pipeline Setup
+[X] 8.1 Section - CI/CD Pipeline Setup
     Implement automated governance gates in CI pipeline.
 
-    [ ] 8.1.1 Task - Create specs validation workflow
+    [X] 8.1.1 Task - Create specs validation workflow
     Add GitHub Actions workflow for specs validation.
 
-      [ ] 8.1.1.1 Subtask - Create `.github/workflows/specs-governance.yml`
-      [ ] 8.1.1.2 Subtask - Run `scripts/validate_specs_governance.sh`
-      [ ] 8.1.1.3 Subtask - Check on push to main and PRs
-      [ ] 8.1.1.4 Subtask - Fail build if validation fails
+      [X] 8.1.1.1 Subtask - Create `.github/workflows/specs-governance.yml`
+      [X] 8.1.1.2 Subtask - Run `scripts/validate_specs_governance.sh`
+      [X] 8.1.1.3 Subtask - Check on push to main and PRs
+      [X] 8.1.1.4 Subtask - Fail build if validation fails
 
-    [ ] 8.1.2 Task - Create RFC validation workflow
+    [X] 8.1.2 Task - Create RFC validation workflow
     Add GitHub Actions workflow for RFC validation.
 
-      [ ] 8.1.2.1 Subtask - Create `.github/workflows/rfc-governance.yml`
-      [ ] 8.1.2.2 Subtask - Run `scripts/validate_rfc_governance.sh`
-      [ ] 8.1.2.3 Subtask - Check RFC metadata completeness
-      [ ] 8.1.2.4 Subtask - Verify RFC traceability links
+      [X] 8.1.2.1 Subtask - Create `.github/workflows/rfc-governance.yml`
+      [X] 8.1.2.2 Subtask - Run `scripts/validate_rfc_governance.sh`
+      [X] 8.1.2.3 Subtask - Check RFC metadata completeness
+      [X] 8.1.2.4 Subtask - Verify RFC traceability links
 
-    [ ] 8.1.3 Task - Create guides validation workflow
+    [X] 8.1.3 Task - Create guides validation workflow
     Add GitHub Actions workflow for guides validation.
 
-      [ ] 8.1.3.1 Subtask - Create `.github/workflows/guides-governance.yml`
-      [ ] 8.1.3.2 Subtask - Run `scripts/validate_guides_governance.sh`
-      [ ] 8.1.3.3 Subtask - Check guide metadata completeness
-      [ ] 8.1.3.4 Subtask - Verify guide diagram requirements
+      [X] 8.1.3.1 Subtask - Create `.github/workflows/guides-governance.yml`
+      [X] 8.1.3.2 Subtask - Run `scripts/validate_guides_governance.sh`
+      [X] 8.1.3.3 Subtask - Check guide metadata completeness
+      [X] 8.1.3.4 Subtask - Verify guide diagram requirements
 
-    [ ] 8.1.4 Task - Create conformance test workflow
+    [X] 8.1.4 Task - Create conformance test workflow
     Add GitHub Actions workflow for conformance testing.
 
-      [ ] 8.1.4.1 Subtask - Create `.github/workflows/conformance.yml`
-      [ ] 8.1.4.2 Subtask - Run all conformance scenarios
-      [ ] 8.1.4.3 Subtask - Generate conformance report
-      [ ] 8.1.4.4 Subtask - Upload report as artifact
+      [X] 8.1.4.1 Subtask - Create `.github/workflows/conformance.yml`
+      [X] 8.1.4.2 Subtask - Run all conformance scenarios
+      [X] 8.1.4.3 Subtask - Generate conformance report
+      [X] 8.1.4.4 Subtask - Upload report as artifact
 
   [ ] 8.2 Section - Conformance Test Implementation
     Implement automated conformance tests for all requirements.

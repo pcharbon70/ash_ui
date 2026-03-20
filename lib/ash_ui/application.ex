@@ -1,9 +1,16 @@
 defmodule AshUI.Application do
-  @moduledoc false
+  @moduledoc """
+  OTP application entry point for Ash UI.
+
+  Starts the repo and runtime services required by the framework.
+  """
 
   use Application
 
   @impl true
+  @doc """
+  Starts the Ash UI supervision tree.
+  """
   def start(_type, _args) do
     children = [
       AshUI.Repo,

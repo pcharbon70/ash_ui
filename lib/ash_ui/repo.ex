@@ -11,6 +11,9 @@ defmodule AshUI.Repo do
   use AshPostgres.Repo,
     otp_app: :ash_ui
 
+  @doc """
+  Returns the PostgreSQL extensions expected by the Ash UI repo.
+  """
   def installed_extensions do
     # Add any Postgres extensions you need here
     ["uuid-ossp", "pg_trgm"]
