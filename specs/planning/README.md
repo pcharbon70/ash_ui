@@ -37,3 +37,7 @@ The plan aligns to:
 - unified-ui packages provide widgets, layouts, compilation, and rendering
 - Ash policies control access to UI resources
 - Data flows from Ash resources → Ash IUR → canonical IUR → renderer output
+
+## Status Note
+
+The phase files are historical planning documents, not a guarantee that every checked item is production-backed today. After the RFC-0002 re-baseline, some earlier phases have been reopened to reflect remaining gaps around resource-level authorization, real Ash-backed binding execution, and external renderer integration.

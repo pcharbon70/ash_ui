@@ -101,11 +101,11 @@ Back to index: [README](./README.md)
     [X] 2.3.2.4 Subtask - Handle transformation rules in signal definition
 
     [X] 2.3.3 Task - Implement signal source resolution
-      Resolve Ash resource paths in binding sources.
+      Resolve structured binding sources into canonical signal references.
 
-    [X] 2.3.3.1 Subtask - Parse binding source path (Domain.Resource.Attribute)
+    [X] 2.3.3.1 Subtask - Parse structured binding source maps
     [X] 2.3.3.2 Subtask - Validate source exists in Ash resource definitions
-    [X] 2.3.3.3 Subtask - Convert source path to unified signal reference
+    [X] 2.3.3.3 Subtask - Convert structured source to unified signal reference
     [X] 2.3.3.4 Subtask - Handle nested paths and relationship traversal
 
   [X] 2.4 Section - Error Handling and Validation

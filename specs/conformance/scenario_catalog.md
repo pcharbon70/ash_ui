@@ -80,13 +80,14 @@ Each scenario includes:
 - Ash UI application is running
 
 **Steps**:
-1. Define a UI.Screen resource with ui_screen DSL
+1. Create an `AshUI.Resources.Screen` record with `name`, `layout`, and `unified_dsl`
 2. Create screen instance
 3. Query the screen
 
 **Expected Outcome**:
 - Screen is created with valid UUID
 - Layout attribute is set
+- `unified_dsl` is persisted
 - Screen is queryable
 
 #### SCN-005: Screen Element Composition

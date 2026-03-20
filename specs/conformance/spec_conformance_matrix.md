@@ -155,19 +155,19 @@ The matrix provides complete traceability from:
 | Observability | 12 | 6 | 5 | 42% |
 | **TOTAL** | **78** | **32** | **34** | **41%** |
 
-## Phase Targets
+## Coverage Milestones
 
-### Phase 1: Foundation (Current)
+### Foundation Baseline
 - Target: 40% coverage
-- Focus: Core resource types, basic compilation, LiveView rendering
+- Focus: core resource types, basic compilation, LiveView rendering
 
-### Phase 2: Complete Framework
+### Complete Framework Target
 - Target: 70% coverage
-- Add: Full authorization, advanced compilation, all renderers
+- Add: full authorization, advanced compilation, all renderers
 
-### Phase 3: Production Ready
+### Production Target
 - Target: 90% coverage
-- Add: Extension system, comprehensive observability
+- Add: extension system, comprehensive observability
 
 ## Related Specifications
 
@@ -176,6 +176,7 @@ The matrix provides complete traceability from:
 
 ## Notes
 
+- Coverage reflects documented traceability, not proof that every requirement is fully production-backed
 - Component specs marked with `-` are planned but not yet written
 - Scenarios are added incrementally as features are implemented
 - Coverage percentages are updated monthly

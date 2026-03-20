@@ -15,8 +15,10 @@ Back to index: [README](./README.md)
 - Each LiveView session has isolated state
 - Events flow through LiveView `handle_event/3` and `handle_info/2`
 
-[X] 4 Phase 4 - Runtime and LiveView Integration
+[ ] 4 Phase 4 - Runtime and LiveView Integration
   Implement the LiveView integration layer that manages screen lifecycle, session state, and event handling.
+
+  Status note: mount-time compilation, socket assignment, and event routing are present, but full reactivity still depends on completing the real Ash-backed binding, action, and collection paths reopened in Phase 3.
 
   [X] 4.1 Section - LiveView Mount Integration
     Implement screen mounting through LiveView `mount/3` callback.
@@ -53,26 +55,26 @@ Back to index: [README](./README.md)
       [X] 4.1.4.3 Subtask - Store binding values in socket assigns
       [X] 4.1.4.4 Subtask - Handle binding evaluation errors
 
-  [X] 4.2 Section - LiveView Update Integration
+  [ ] 4.2 Section - LiveView Update Integration
     Implement reactive updates through LiveView `handle_info/2` callback.
 
-    [X] 4.2.1 Task - Subscribe to data changes
+    [ ] 4.2.1 Task - Subscribe to data changes
       Subscribe to Ash resource change notifications.
 
-      [X] 4.2.1.1 Subtask - Subscribe to `Ash.Notifier` for resource changes
+      [ ] 4.2.1.1 Subtask - Subscribe to real `Ash.Notifier` resource changes
       [X] 4.2.1.2 Subtask - Filter notifications to bound resources
       [X] 4.2.1.3 Subtask - Handle subscription messages in `handle_info/2`
       [X] 4.2.1.4 Subtask - Unsubscribe on unmount
 
-    [X] 4.2.2 Task - Re-render on data changes
+    [ ] 4.2.2 Task - Re-render on data changes
       Update LiveView when bound data changes.
 
-      [X] 4.2.2.1 Subtask - Re-evaluate affected bindings on notification
-      [X] 4.2.2.2 Subtask - Update socket assigns with new values
-      [X] 4.2.2.3 Subtask - Trigger LiveView re-render
-      [X] 4.2.2.4 Subtask - Batch multiple updates for performance
+      [ ] 4.2.2.1 Subtask - Re-evaluate affected bindings on notification
+      [ ] 4.2.2.2 Subtask - Update socket assigns with new values
+      [ ] 4.2.2.3 Subtask - Trigger LiveView re-render
+      [ ] 4.2.2.4 Subtask - Batch multiple updates for performance
 
-  [X] 4.3 Section - Event Handling Integration
+  [ ] 4.3 Section - Event Handling Integration
     Implement UI event handling through LiveView `handle_event/3` callback.
 
     [X] 4.3.1 Task - Implement event routing
@@ -83,21 +85,21 @@ Back to index: [README](./README.md)
       [X] 4.3.1.3 Subtask - Route to appropriate handler module
       [X] 4.3.1.4 Subtask - Handle unknown events gracefully
 
-    [X] 4.3.2 Task - Implement value change events
+    [ ] 4.3.2 Task - Implement value change events
       Handle input value changes from form elements.
 
       [X] 4.3.2.1 Subtask - Capture `phx-blur` or `phx-change` events
       [X] 4.3.2.2 Subtask - Update socket assigns with new value
-      [X] 4.3.2.3 Subtask - Write value to Ash resource for `:value` bindings
-      [X] 4.3.2.4 Subtask - Handle validation errors
+      [ ] 4.3.2.3 Subtask - Write value to Ash resource for `:value` bindings
+      [ ] 4.3.2.4 Subtask - Handle validation errors
 
-    [X] 4.3.3 Task - Implement action events
+    [ ] 4.3.3 Task - Implement action events
       Handle button clicks and other action triggers.
 
       [X] 4.3.3.1 Subtask - Capture `phx-click` events from buttons
       [X] 4.3.3.2 Subtask - Extract action binding from event target
-      [X] 4.3.3.3 Subtask - Execute Ash action with parameters
-      [X] 4.3.3.4 Subtask - Return action result to UI
+      [ ] 4.3.3.3 Subtask - Execute Ash action with parameters
+      [ ] 4.3.3.4 Subtask - Return action result to UI
 
   [X] 4.4 Section - Screen Lifecycle Management
     Implement screen lifecycle hooks and state management.
@@ -137,7 +139,7 @@ Back to index: [README](./README.md)
       [X] 4.5.2.3 Subtask - Log binding errors with context
       [X] 4.5.2.4 Subtask - Retry binding evaluation on recovery
 
-  [X] 4.6 Section - Phase 4 Integration Tests
+  [ ] 4.6 Section - Phase 4 Integration Tests
     Validate LiveView integration and lifecycle management end-to-end.
 
     [X] 4.6.1 Task - Mount lifecycle integration scenarios
