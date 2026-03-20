@@ -149,20 +149,30 @@ defmodule AshUI.Telemetry do
           metadata: [atom()]
         }
 
+  @doc """
+  Starts the telemetry process and installs the default handler set.
+  """
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, %{}, Keyword.put_new(opts, :name, __MODULE__))
   end
 
   @impl true
+  @doc false
   def init(state) do
     ensure_metrics_table()
     attach_default_handlers()
     {:ok, state}
   end
 
+  @doc """
+  Returns the canonical Ash UI event catalog.
+  """
   @spec events() :: [event_definition()]
   def events, do: @event_definitions
 
+  @doc """
+  Attaches the default telemetry handlers that populate the in-memory metrics table.
+  """
   @spec attach_default_handlers() :: :ok
   def attach_default_handlers do
     ensure_metrics_table()
@@ -174,6 +184,9 @@ defmodule AshUI.Telemetry do
     end
   end
 
+  @doc """
+  Detaches the default telemetry handlers if they are attached.
+  """
   @spec detach_default_handlers() :: :ok
   def detach_default_handlers do
     :telemetry.detach(@default_handler_id)
@@ -182,6 +195,9 @@ defmodule AshUI.Telemetry do
     _ -> :ok
   end
 
+  @doc """
+  Clears the accumulated in-memory telemetry counters.
+  """
   @spec reset_metrics() :: :ok
   def reset_metrics do
     ensure_metrics_table()
@@ -189,6 +205,9 @@ defmodule AshUI.Telemetry do
     :ok
   end
 
+  @doc """
+  Returns a snapshot of aggregated telemetry counters and dashboard-friendly metrics.
+  """
   @spec snapshot() :: map()
   def snapshot do
     ensure_metrics_table()
@@ -215,11 +234,17 @@ defmodule AshUI.Telemetry do
     }
   end
 
+  @doc """
+  Emits a canonical Ash UI telemetry event for the given category and event name.
+  """
   @spec emit(atom(), atom(), map(), map(), keyword()) :: :ok
   def emit(category, event, measurements \\ %{}, metadata \\ %{}, opts \\ []) do
     execute([:ash_ui, category, event], measurements, metadata, opts)
   end
 
+  @doc """
+  Executes a telemetry event after normalizing measurements and metadata.
+  """
   @spec execute([atom()], map(), map(), keyword()) :: :ok
   def execute(event_name, measurements \\ %{}, metadata \\ %{}, opts \\ [])
       when is_list(event_name) do
@@ -235,6 +260,9 @@ defmodule AshUI.Telemetry do
     :ok
   end
 
+  @doc """
+  Default telemetry handler used to accumulate counts, durations, and status metrics.
+  """
   @spec handle_event([atom()], map(), map(), map()) :: :ok
   def handle_event(event_name, measurements, metadata, _config) do
     ensure_metrics_table()

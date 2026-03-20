@@ -162,6 +162,9 @@ defmodule AshUI.Compiler do
         :ok
     end
 
+    ensure_stats_table()
+    reset_cache_stats()
+
     :ok
   end
 

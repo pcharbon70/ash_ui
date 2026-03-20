@@ -13,7 +13,10 @@ defmodule AshUI.Domain do
     resource AshUI.Resources.Binding
   end
 
-  @doc false
+  @doc """
+  Creates a record through `AshUI.Domain`, accepting either standard Ash options
+  or an `:attrs` key with the input attributes.
+  """
   def create(resource, opts) when is_atom(resource) and is_list(opts) do
     case Keyword.fetch(opts, :attrs) do
       {:ok, attrs} ->
@@ -25,7 +28,10 @@ defmodule AshUI.Domain do
     end
   end
 
-  @doc false
+  @doc """
+  Updates a record through `AshUI.Domain`, accepting either standard Ash options
+  or an `:attrs` key with the update attributes.
+  """
   def update(record, opts) when is_list(opts) do
     case Keyword.fetch(opts, :attrs) do
       {:ok, attrs} ->
@@ -37,7 +43,10 @@ defmodule AshUI.Domain do
     end
   end
 
-  @doc false
+  @doc """
+  Reads a collection of records from the given resource, optionally applying a
+  simple keyword filter before delegating to `Ash.read/2`.
+  """
   def read(resource, opts) when is_atom(resource) and is_list(opts) do
     {filter, opts} = Keyword.pop(opts, :filter)
     query = apply_filter(resource, filter)
@@ -45,7 +54,9 @@ defmodule AshUI.Domain do
     Ash.read(query, Keyword.put(opts, :domain, __MODULE__))
   end
 
-  @doc false
+  @doc """
+  Reads a collection of records and raises on failure.
+  """
   def read!(resource, opts) when is_atom(resource) and is_list(opts) do
     {filter, opts} = Keyword.pop(opts, :filter)
     query = apply_filter(resource, filter)
@@ -53,7 +64,9 @@ defmodule AshUI.Domain do
     Ash.read!(query, Keyword.put(opts, :domain, __MODULE__))
   end
 
-  @doc false
+  @doc """
+  Reads a single record from the given resource, optionally applying a filter.
+  """
   def read_one(resource, opts) when is_atom(resource) and is_list(opts) do
     {filter, opts} = Keyword.pop(opts, :filter)
     query = apply_filter(resource, filter)
@@ -61,7 +74,9 @@ defmodule AshUI.Domain do
     Ash.read_one(query, Keyword.put(opts, :domain, __MODULE__))
   end
 
-  @doc false
+  @doc """
+  Reads a single record and raises on failure.
+  """
   def read_one!(resource, opts) when is_atom(resource) and is_list(opts) do
     {filter, opts} = Keyword.pop(opts, :filter)
     query = apply_filter(resource, filter)
