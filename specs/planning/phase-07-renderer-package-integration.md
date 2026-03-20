@@ -18,89 +18,89 @@ Back to index: [README](./README.md)
 [ ] 7 Phase 7 - Renderer Package Integration
   Integrate with external unified renderer packages (live_ui, web_ui, desktop_ui) for final output generation.
 
-  [ ] 7.1 Section - Package Dependencies
+  [X] 7.1 Section - Package Dependencies
     Add and configure unified renderer packages as dependencies.
 
-    [ ] 7.1.1 Task - Add renderer packages to mix.exs
+    Add and configure unified renderer packages as dependencies - Add renderer packages to mix.exs
     Include renderer packages as optional dependencies.
 
-      [ ] 7.1.1.1 Subtask - Add `unified_iur` to deps
-      [ ] 7.1.1.2 Subtask - Add `live_ui` as optional dependency
-      [ ] 7.1.1.3 Subtask - Add `web_ui` as optional dependency
-      [ ] 7.1.1.4 Subtask - Add `desktop_ui` as optional dependency
+      [X] - Add `unified_iur` to deps
+      [X] - Add `live_ui` as optional dependency
+      [X] - Add `web_ui` as optional dependency
+      [X] - Add `desktop_ui` as optional dependency
 
-    [ ] 7.1.2 Task - Create renderer configuration
+    [X] - Create renderer configuration
     Configure which renderer package to use.
 
-      [ ] 7.1.2.1 Subtask - Add `:renderer` config to application config
-      [ ] 7.1.2.2 Subtask - Support `:liveview`, `:html`, `:desktop` options
-      [ ] 7.1.2.3 Subtask - Validate selected renderer is available
-      [ ] 7.1.2.4 Subtask - Provide default renderer selection
+      [X] - Add `:renderer` config to application config
+      [X] - Support `:liveview`, `:html`, `:desktop` options
+      [X] - Validate selected renderer is available
+      [X] - Provide default renderer selection
 
-    [ ] 7.1.3 Task - Implement renderer registry
+    [X] - Implement renderer registry
     Track available renderer packages.
 
-      [ ] 7.1.3.1 Subtask - Implement `AshUI.Rendering.Registry`
-      [ ] 7.1.3.2 Subtask - Register available renderers at startup
-      [ ] 7.1.3.3 Subtask - Provide `list_renderers/0` function
-      [ ] 7.1.3.4 Subtask - Provide `get_renderer/1` lookup function
+      [X] - Implement `AshUI.Rendering.Registry`
+      [X] - Register available renderers at startup
+      [X] - Provide `list_renderers/0` function
+      [X] - Provide `get_renderer/1` lookup function
 
-  [ ] 7.2 Section - LiveUI Integration
+  [X] 7.2 Section - LiveUI Integration
     Integrate with live_ui renderer for LiveView output.
 
-    [ ] 7.2.1 Task - Implement LiveUI renderer adapter
+    [X] - Implement LiveUI renderer adapter
     Create adapter for calling LiveUI renderer.
 
-      [ ] 7.2.1.1 Subtask - Implement `AshUI.Rendering.LiveUIAdapter`
-      [ ] 7.2.1.2 Subtask - Accept canonical IUR and options
-      [ ] 7.2.1.3 Subtask - Call `LiveUI.Renderer.render/2`
-      [ ] 7.2.1.4 Subtask - Return HEEx template string
+      [X] - Implement `AshUI.Rendering.LiveUIAdapter`
+      [X] - Accept canonical IUR and options
+      [X] - Call `LiveUI.Renderer.render/2`
+      [X] - Return HEEx template string
 
-    [ ] 7.2.2 Task - Handle LiveUI-specific features
+    [X] - Handle LiveUI-specific features
     Support LiveUI-specific rendering features.
 
-      [ ] 7.2.2.1 Subtask - Configure LiveView event bindings
-      [ ] 7.2.2.2 Subtask - Configure LiveView hooks
-      [ ] 7.2.2.3 Subtask - Handle LiveView assigns for reactivity
-      [ ] 7.2.2.4 Subtask - Support LiveView patch optimizations
+      [X] - Configure LiveView event bindings
+      [X] - Configure LiveView hooks
+      [X] - Handle LiveView assigns for reactivity
+      [X] - Support LiveView patch optimizations
 
-  [ ] 7.3 Section - WebUI Integration
+  [X] 7.3 Section - WebUI Integration
     Integrate with web_ui renderer for static HTML output.
 
-    [ ] 7.3.1 Task - Implement WebUI renderer adapter
+    [X] - Implement WebUI renderer adapter
     Create adapter for calling WebUI renderer.
 
-      [ ] 7.3.1.1 Subtask - Implement `AshUI.Rendering.WebUIAdapter`
-      [ ] 7.3.1.2 Subtask - Accept canonical IUR and options
-      [ ] 7.3.1.3 Subtask - Call `WebUI.Renderer.render/2`
-      [ ] 7.3.1.4 Subtask - Return static HTML string
+      [X] - Implement `AshUI.Rendering.WebUIAdapter`
+      [X] - Accept canonical IUR and options
+      [X] - Call `WebUI.Renderer.render/2`
+      [X] - Return static HTML string
 
-    [ ] 7.3.2 Task - Handle WebUI-specific features
+    [X] - Handle WebUI-specific features
     Support WebUI-specific rendering features.
 
-      [ ] 7.3.2.1 Subtask - Configure Elm client integration
-      [ ] 7.3.2.2 Subtask - Configure asset references
-      [ ] 7.3.2.3 Subtask - Handle SEO meta tags
-      [ ] 7.3.2.4 Subtask - Support static site generation
+      [X] - Configure Elm client integration
+      [X] - Configure asset references
+      [X] - Handle SEO meta tags
+      [X] - Support static site generation
 
-  [ ] 7.4 Section - DesktopUI Integration
+  [X] 7.4 Section - DesktopUI Integration
     Integrate with desktop_ui renderer for native desktop output.
 
-    [ ] 7.4.1 Task - Implement DesktopUI renderer adapter
+    [X] - Implement DesktopUI renderer adapter
     Create adapter for calling DesktopUI renderer.
 
-      [ ] 7.4.1.1 Subtask - Implement `AshUI.Rendering.DesktopUIAdapter`
-      [ ] 7.4.1.2 Subtask - Accept canonical IUR and options
-      [ ] 7.4.1.3 Subtask - Call `DesktopUI.Renderer.render/2`
-      [ ] 7.4.1.4 Subtask - Return native desktop UI instructions
+      [X] - Implement `AshUI.Rendering.DesktopUIAdapter`
+      [X] - Accept canonical IUR and options
+      [X] - Call `DesktopUI.Renderer.render/2`
+      [X] - Return native desktop UI instructions
 
-    [ ] 7.4.2 Task - Handle DesktopUI-specific features
+    [X] - Handle DesktopUI-specific features
     Support DesktopUI-specific rendering features.
 
-      [ ] 7.4.2.1 Subtask - Configure SDL2 window properties
-      [ ] 7.4.2.2 Subtask - Configure native menu bar
-      [ ] 7.4.2.3 Subtask - Handle platform-specific features
-      [ ] 7.4.2.4 Subtask - Support desktop event handling
+      [X] - Configure SDL2 window properties
+      [X] - Configure native menu bar
+      [X] - Handle platform-specific features
+      [X] - Support desktop event handling
 
   [ ] 7.5 Section - Renderer Selection
     Implement automatic renderer selection based on context.

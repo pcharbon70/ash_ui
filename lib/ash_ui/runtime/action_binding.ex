@@ -240,8 +240,8 @@ defmodule AshUI.Runtime.ActionBinding do
 
   # Build context from socket
   defp build_context(socket) do
-    user_id = get_in(socket, :assigns, :current_user_id)
-    params = get_in(socket, :assigns, :params) || %{}
+    user_id = get_in(socket.assigns, [:current_user_id])
+    params = Map.get(socket.assigns, :params, %{})
 
     %{
       user_id: user_id,
@@ -265,8 +265,8 @@ defmodule AshUI.Runtime.ActionBinding do
   defp put_flash(socket, kind, message) do
     # In production, this would use Phoenix.LiveView.put_flash/3
     # For now, store in assigns
-    flash = get_in(socket.assigns, :flash) || %{}
-    updated_flash = Map.update(flash, kind, [message | _], fn messages -> [message | messages] end)
-    put_in(socket, :assigns, :flash, updated_flash)
+    flash = Map.get(socket.assigns, :flash, %{})
+    updated_flash = Map.update(flash, kind, [message], fn messages -> [message | messages] end)
+    %{socket | assigns: Map.put(socket.assigns, :flash, updated_flash)}
   end
 end

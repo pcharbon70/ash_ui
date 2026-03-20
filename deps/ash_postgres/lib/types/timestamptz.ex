@@ -1,0 +1,80 @@
+# SPDX-FileCopyrightText: 2019 ash_postgres contributors <https://github.com/ash-project/ash_postgres/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
+
+defmodule AshPostgres.Timestamptz do
+  @moduledoc """
+  Implements the PostgresSQL [timestamptz](https://www.postgresql.org/docs/current/datatype-datetime.html) (aka `timestamp with time zone`) type.
+
+  Postgres [*strongly recommends*](https://wiki.postgresql.org/wiki/Don%27t_Do_This#Don.27t_use_timestamp_.28without_time_zone.29) using this type instead of the standard timestamps/datetimes without a time zone. Generally speaking, it is best practice to use the [nanosecond-precision](`AshPostgres.TimestamptzUsec`) variant.
+
+  The basic reason `timestamptz` exists is to guarantee that the precise moment in time is stored as microseconds since January 1st, 2000 in UTC. This guarantee eliminates many time arithmetic problems, and ensures portability.
+
+  It does not actually store a timezone, in spite of the name. As far as Elixir/Ecto is concerned, it is always of type `DateTime` and set to UTC. Using this type ensures Postgres internally uses the same contract as Ecto's `:utc_datetime`, which is to always store `DateTime` in UTC. This is especially helpful if you need to do complex time arithmetic in SQL fragments, or build reports/materialized views that use localized time formatting.
+
+  Using this type ubiquitously in your schemas is particularly beneficial for consistency, and this is currently [under consideration](https://github.com/ash-project/ash_postgres/issues/264) as a configuration option for the default datetime storage type.
+
+  ```elixir
+  attribute :timestamp, AshPostgres.Timestamptz
+  timestamps type: AshPostgres.Timestamptz
+  ```
+
+  Alternatively, you can set up a shortname:
+
+  ```elixir
+  # config.exs
+  config :ash, :custom_types, timestamptz: AshPostgres.Timestamptz
+  ```
+
+  After saving, you will need to run `mix compile ash --force`.
+
+  ```elixir
+  attribute :timestamp, :timestamptz
+  timestamps type: :timestamptz
+  ```
+  """
+  use Ash.Type.NewType, subtype_of: :datetime, constraints: [precision: :second]
+
+  @impl true
+  def storage_type(_constraints) do
+    :timestamptz
+  end
+
+  @impl true
+  def operator_overloads do
+    other_types = [
+      Ash.Type.UtcDatetimeUsec,
+      Ash.Type.UtcDatetime,
+      Ash.Type.DateTime
+    ]
+
+    # When THIS type is on the left, cast both to this type for consistent comparison
+    left_overloads =
+      for other <- other_types, into: %{} do
+        {[__MODULE__, other], {[__MODULE__, __MODULE__], Ash.Type.Boolean}}
+      end
+
+    # When THIS type is on the right, cast both to this type for consistent comparison
+    right_overloads =
+      for other <- other_types, into: %{} do
+        {[other, __MODULE__], {[__MODULE__, __MODULE__], Ash.Type.Boolean}}
+      end
+
+    # Same type comparison
+    same_type_overload = %{
+      [__MODULE__, __MODULE__] => Ash.Type.Boolean
+    }
+
+    comparison_overloads =
+      same_type_overload
+      |> Map.merge(left_overloads)
+      |> Map.merge(right_overloads)
+
+    %{
+      :< => comparison_overloads,
+      :<= => comparison_overloads,
+      :> => comparison_overloads,
+      :>= => comparison_overloads
+    }
+  end
+end

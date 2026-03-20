@@ -341,7 +341,7 @@ defmodule AshUI.Compiler.Extensions do
   @spec available_widget_types() :: [String.t()]
   def available_widget_types do
     built_in = ["text", "button", "input", "checkbox", "select", "image", "spacer"]
-    custom = Enum.map(registered_widgets(), & & &1.type)
+    custom = Enum.map(registered_widgets(), fn x -> x.type end)
 
     built_in ++ custom
   end
@@ -356,7 +356,7 @@ defmodule AshUI.Compiler.Extensions do
   @spec available_layout_types() :: [String.t()]
   def available_layout_types do
     built_in = ["row", "column", "grid", "stack", "fragment", "container"]
-    custom = Enum.map(registered_layouts(), & & &1.type)
+    custom = Enum.map(registered_layouts(), fn x -> x.type end)
 
     built_in ++ custom
   end

@@ -36,15 +36,14 @@ defmodule AshUI.Compiler do
     use_cache = Keyword.get(opts, :use_cache, true)
 
     with {:ok, screen} <- load_screen(screen_id, opts),
-         {:ok, cache_key} <- build_cache_key(screen),
-         {:ok, cached_iur} <- maybe_get_cached(cache_key, use_cache) do
-      {:ok, cached_iur}
-    else
-      :cache_miss ->
-        compile_and_cache(screen, cache_key, opts)
+         {:ok, cache_key} <- build_cache_key(screen) do
+      case maybe_get_cached(cache_key, use_cache) do
+        {:ok, cached_iur} ->
+          {:ok, cached_iur}
 
-      {:error, reason} ->
-        {:error, reason}
+        :cache_miss ->
+          compile_and_cache(screen, cache_key, opts)
+      end
     end
   end
 

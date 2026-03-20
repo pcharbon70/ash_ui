@@ -68,7 +68,7 @@ defmodule AshUI.Signal.CloudEvents do
       signal = Struct.new(
         id: cloud_event["id"],
         source: source,
-        target: get_in(cloud_event, ["ashui", "target"], ""),
+        target: get_in(cloud_event, ["ashui", "target"]) || "",
         type: type,
         transform: get_in(cloud_event, ["ashui", "transform"]),
         metadata: extract_metadata(cloud_event)
@@ -84,7 +84,7 @@ defmodule AshUI.Signal.CloudEvents do
   ## Returns
     * CloudEvents batch envelope
   """
-  @spec batch envelopes([Struct.t()]) :: map()
+  @spec batch([Struct.t()]) :: map()
   def batch(signals) when is_list(signals) do
     events = Enum.map(signals, &to_cloud_event/1)
 
