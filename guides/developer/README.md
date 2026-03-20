@@ -8,9 +8,9 @@ Developer guides for contributors to the Ash UI framework.
 
 ## Framework Development
 
-- **DG-0002: Compilation Pipeline** - Resource → IUR compilation (Planned)
-- **DG-0003: Rendering Architecture** - Output generation (Planned)
-- **DG-0004: Control Planes** - Understanding control plane ownership (Planned)
+- **[DG-0002: Contributing](DG-0002-contributing.md)** - Workflow and governance expectations for contributors
+- **[DG-0003: Testing Guide](DG-0003-testing-guide.md)** - How to validate compiler, runtime, rendering, and docs changes
+- **[DG-0004: Release Process](DG-0004-release-process.md)** - Release-readiness checks and publication flow
 
 ## Contributing
 
@@ -28,9 +28,10 @@ Developer guides for contributors to the Ash UI framework.
 
 | Guide | Status | Last Updated |
 |---|---|---|
-| DG-0001 | Active | 2026-03-18 |
-| DG-0002 | Planned | - |
-| DG-0003 | Planned | - |
+| DG-0001 | Active | 2026-03-20 |
+| DG-0002 | Active | 2026-03-20 |
+| DG-0003 | Active | 2026-03-20 |
+| DG-0004 | Active | 2026-03-20 |
 
 ## Related Documentation
 
