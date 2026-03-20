@@ -141,32 +141,32 @@ Back to index: [README](./README.md)
       [X] 8.4.3.3 Subtask - Add code examples to guides
       [X] 8.4.3.4 Subtask - Create migration guide from v0 to v1
 
-  [ ] 8.5 Section - Release Checklist
+  [X] 8.5 Section - Release Checklist
     Create final checklist for release readiness.
 
-    [ ] 8.5.1 Task - Define release criteria
+    [X] 8.5.1 Task - Define release criteria
     Establish what must pass before release.
 
-      [ ] 8.5.1.1 Subtask - All conformance tests must pass
-      [ ] 8.5.1.2 Subtask - All CI workflows must pass
-      [ ] 8.5.1.3 Subtask - Code coverage must meet threshold
-      [ ] 8.5.1.4 Subtask - No critical bugs outstanding
+      [X] 8.5.1.1 Subtask - All conformance tests must pass
+      [X] 8.5.1.2 Subtask - All CI workflows must pass
+      [X] 8.5.1.3 Subtask - Code coverage must meet threshold
+      [X] 8.5.1.4 Subtask - No critical bugs outstanding
 
-    [ ] 8.5.2 Task - Create release process
+    [X] 8.5.2 Task - Create release process
     Define the steps for cutting a release.
 
-      [ ] 8.5.2.1 Subtask - Update version numbers
-      [ ] 8.5.2.2 Subtask - Generate CHANGELOG
-      [ ] 8.5.2.3 Subtask - Create git tag
-      [ ] 8.5.2.4 Subtask - Publish to Hex (if applicable)
+      [X] 8.5.2.1 Subtask - Update version numbers
+      [X] 8.5.2.2 Subtask - Generate CHANGELOG
+      [X] 8.5.2.3 Subtask - Create git tag
+      [X] 8.5.2.4 Subtask - Publish to Hex (if applicable)
 
-    [ ] 8.5.3 Task - Create rollback plan
+    [X] 8.5.3 Task - Create rollback plan
     Define rollback procedures if issues arise.
 
-      [ ] 8.5.3.1 Subtask - Define rollback criteria
-      [ ] 8.5.3.2 Subtask - Document rollback steps
-      [ ] 8.5.3.3 Subtask - Create rollback communication template
-      [ ] 8.5.3.4 Subtask - Test rollback procedure
+      [X] 8.5.3.1 Subtask - Define rollback criteria
+      [X] 8.5.3.2 Subtask - Document rollback steps
+      [X] 8.5.3.3 Subtask - Create rollback communication template
+      [X] 8.5.3.4 Subtask - Test rollback procedure
 
   [ ] 8.6 Section - Phase 8 Integration Tests
     Validate end-to-end system behavior across all phases.

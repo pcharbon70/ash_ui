@@ -34,6 +34,7 @@ A release candidate is only meaningful when these are aligned:
 - conformance and governance checks
 - README and guide accuracy
 - telemetry/dashboard readiness
+- the operational assets in `release/`
 
 ## Standard Release Flow
 
@@ -47,10 +48,9 @@ A release candidate is only meaningful when these are aligned:
 ## Pre-Release Validation Commands
 
 ```bash
-mix test
-./scripts/validate_specs_governance.sh
-./scripts/validate_rfc_governance.sh
-./scripts/validate_guides_governance.sh
+./scripts/validate_release_readiness.sh
+./scripts/generate_changelog.sh vX.Y.Z
+./scripts/test_rollback_procedure.sh
 ```
 
 If the full suite is noisy or temporarily blocked, record the exact focused suites that passed and the specific remaining gaps before cutting anything intended for external use.
@@ -107,4 +107,5 @@ These are formalized further in the Phase 8 release checklist documents.
 - [DG-0002: Contributing](./DG-0002-contributing.md)
 - [DG-0003: Testing Guide](./DG-0003-testing-guide.md)
 - [UG-0005: Migration Guide from v0 to v1](../user/UG-0005-migration-v0-to-v1.md)
+- [release/README.md](../../release/README.md)
 - [phase-08-governance-gates-and-release-readiness.md](../../specs/planning/phase-08-governance-gates-and-release-readiness.md)
