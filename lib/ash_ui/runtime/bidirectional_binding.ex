@@ -216,7 +216,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
 
   # Update Ash resource with new value
   defp update_resource(binding, value, context) do
-    source = binding.source || %{}
+    source = Map.get(binding, :source) || Map.get(binding, "source") || %{}
     resource = Map.get(source, "resource")
     field = Map.get(source, "field")
     id = get_resource_id(source, context)
@@ -236,21 +236,36 @@ defmodule AshUI.Runtime.BidirectionalBinding do
 
   # Helper functions for socket management
   defp put_binding_value(socket, binding, value) do
-    target = binding.target || Map.get(binding, "target")
-    put_in(socket.assigns, [:ash_ui, :bindings, target], %{
-      "value" => value,
-      "updated_at" => System.system_time(:millisecond)
-    })
+    target = Map.get(binding, :target) || Map.get(binding, "target")
+    ash_ui = Map.get(socket.assigns, :ash_ui, %{})
+    bindings = Map.get(ash_ui, :bindings, %{})
+
+    updated_bindings =
+      Map.put(bindings, target, %{
+        "value" => value,
+        "updated_at" => System.system_time(:millisecond)
+      })
+
+    %{socket | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))}
   end
 
   defp get_binding_value(socket, binding) do
-    target = binding.target || Map.get(binding, "target")
-    get_in(socket.assigns, [:ash_ui, :bindings, target, "value"])
+    target = Map.get(binding, :target) || Map.get(binding, "target")
+    socket.assigns
+    |> Map.get(:ash_ui, %{})
+    |> Map.get(:bindings, %{})
+    |> Map.get(target, %{})
+    |> Map.get("value")
   end
 
   defp put_binding_error(socket, binding, error) do
-    target = binding.target || Map.get(binding, "target")
-    put_in(socket.assigns, [:ash_ui, :bindings, target, "error"], error)
+    target = Map.get(binding, :target) || Map.get(binding, "target")
+    ash_ui = Map.get(socket.assigns, :ash_ui, %{})
+    bindings = Map.get(ash_ui, :bindings, %{})
+    binding_state = Map.get(bindings, target, %{})
+    updated_bindings = Map.put(bindings, target, Map.put(binding_state, "error", error))
+
+    %{socket | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))}
   end
 
   defp get_binding_id(%Binding{id: id}), do: id

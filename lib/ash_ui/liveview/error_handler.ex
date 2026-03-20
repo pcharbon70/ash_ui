@@ -410,7 +410,7 @@ defmodule AshUI.LiveView.ErrorHandler do
   end
 
   defp assign_error(socket, error_info) do
-    Phoenix.LiveView.assign(socket, :ash_ui_error, %{
+    Phoenix.Component.assign(socket, :ash_ui_error, %{
       type: error_info.type,
       message: user_friendly_message(error_info),
       timestamp: error_info.timestamp
@@ -421,18 +421,18 @@ defmodule AshUI.LiveView.ErrorHandler do
     message = user_friendly_message(error_info)
     current_flashes = Map.get(socket.assigns, :flash, %{})
     updated = Map.put(current_flashes, :error, message)
-    Phoenix.LiveView.assign(socket, :flash, updated)
+    Phoenix.Component.assign(socket, :flash, updated)
   end
 
   defp store_binding_error(socket, binding, error_info) do
     binding_errors = Map.get(socket.assigns, :ash_ui_binding_errors, %{})
     updated = Map.put(binding_errors, binding.id, error_info)
-    Phoenix.LiveView.assign(socket, :ash_ui_binding_errors, updated)
+    Phoenix.Component.assign(socket, :ash_ui_binding_errors, updated)
   end
 
   defp maybe_enable_retry(socket, error_info) do
     if recoverable?(error_info) and determine_recovery(error_info) == :retry do
-      Phoenix.LiveView.assign(socket, :ash_ui_can_retry, true)
+      Phoenix.Component.assign(socket, :ash_ui_can_retry, true)
     else
       socket
     end

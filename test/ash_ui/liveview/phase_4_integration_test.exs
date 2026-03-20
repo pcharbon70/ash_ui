@@ -7,10 +7,12 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
   alias AshUI.LiveView.Lifecycle
   alias AshUI.LiveView.ErrorHandler
 
+  @moduletag :conformance
+
   # Integration test helpers
   defp build_socket(assigns \\ %{}) do
     %Phoenix.LiveView.Socket{
-      assigns: Enum.into(assigns, %{__changed__: %{}})
+      assigns: Enum.into(assigns, %{__changed__: %{}, flash: %{}})
     }
   end
 
@@ -172,9 +174,9 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
       assert {:noreply, socket} =
                UpdateIntegration.batch_updates(socket, fn socket ->
                  socket
-                 |> Phoenix.LiveView.assign(:value1, 1)
-                 |> Phoenix.LiveView.assign(:value2, 2)
-                 |> Phoenix.LiveView.assign(:value3, 3)
+                 |> Phoenix.Component.assign(:value1, 1)
+                 |> Phoenix.Component.assign(:value2, 2)
+                 |> Phoenix.Component.assign(:value3, 3)
                end)
 
       assert socket.assigns[:value1] == 1

@@ -5,6 +5,7 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
   alias AshUI.Compilation.IUR
 
   @moduletag :integration
+  @moduletag :conformance
 
   describe "Section 7.6.1 - LiveUI integration scenarios" do
     test "7.6.1.1 - Verify canonical IUR renders to valid HEEx" do

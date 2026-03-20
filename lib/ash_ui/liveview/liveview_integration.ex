@@ -191,11 +191,11 @@ defmodule AshUI.LiveView.Integration do
 
   defp assign_screen_state(socket, screen, iur, bindings, user) do
     socket
-    |> Phoenix.LiveView.assign(:ash_ui_screen, screen)
-    |> Phoenix.LiveView.assign(:ash_ui_iur, iur)
-    |> Phoenix.LiveView.assign(:ash_ui_bindings, bindings)
-    |> Phoenix.LiveView.assign(:ash_ui_user, user)
-    |> Phoenix.LiveView.assign(:ash_ui_loaded_at, DateTime.utc_now())
+    |> Phoenix.Component.assign(:ash_ui_screen, screen)
+    |> Phoenix.Component.assign(:ash_ui_iur, iur)
+    |> Phoenix.Component.assign(:ash_ui_bindings, bindings)
+    |> Phoenix.Component.assign(:ash_ui_user, user)
+    |> Phoenix.Component.assign(:ash_ui_loaded_at, DateTime.utc_now())
   end
 
   @doc """

@@ -1,5 +1,9 @@
 import Config
 
+config :ash_ui,
+  ecto_repos: [AshUI.Repo],
+  ash_domains: [AshUI.Domain]
+
 # Configure AshUI Domain
 config :ash_ui, AshUI.Domain,
   resources: [

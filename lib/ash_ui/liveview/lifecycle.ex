@@ -41,8 +41,8 @@ defmodule AshUI.LiveView.Lifecycle do
 
     socket =
       socket
-      |> Phoenix.LiveView.assign(:ash_ui_session, session_state)
-      |> Phoenix.LiveView.assign(:ash_ui_session_id, generate_session_id())
+      |> Phoenix.Component.assign(:ash_ui_session, session_state)
+      |> Phoenix.Component.assign(:ash_ui_session_id, generate_session_id())
 
     {:ok, socket}
   end
@@ -69,7 +69,7 @@ defmodule AshUI.LiveView.Lifecycle do
     type_hooks = Map.get(hooks, hook_type, [])
     updated_hooks = Map.put(hooks, hook_type, [callback | type_hooks])
 
-    Phoenix.LiveView.assign(socket, :ash_ui_lifecycle_hooks, updated_hooks)
+    Phoenix.Component.assign(socket, :ash_ui_lifecycle_hooks, updated_hooks)
   end
 
   @doc """
@@ -104,8 +104,8 @@ defmodule AshUI.LiveView.Lifecycle do
     session_id = get_session_id(socket)
 
     socket
-    |> Phoenix.LiveView.assign(:ash_ui_isolated, true)
-    |> Phoenix.LiveView.assign(:ash_ui_session_key, session_id)
+    |> Phoenix.Component.assign(:ash_ui_isolated, true)
+    |> Phoenix.Component.assign(:ash_ui_session_key, session_id)
     |> isolate_binding_state()
   end
 
@@ -124,7 +124,7 @@ defmodule AshUI.LiveView.Lifecycle do
     session_state = Map.get(socket.assigns, :ash_ui_session_state, %{})
     updated = Map.put(session_state, key, value)
 
-    Phoenix.LiveView.assign(socket, :ash_ui_session_state, updated)
+    Phoenix.Component.assign(socket, :ash_ui_session_state, updated)
   end
 
   @doc """
@@ -251,7 +251,7 @@ defmodule AshUI.LiveView.Lifecycle do
 
     # Store error for display
     socket =
-      Phoenix.LiveView.assign(socket, :ash_ui_error, %{
+      Phoenix.Component.assign(socket, :ash_ui_error, %{
         exception: exception,
         stacktrace: stacktrace,
         timestamp: DateTime.utc_now()
@@ -308,8 +308,14 @@ defmodule AshUI.LiveView.Lifecycle do
 
   defp get_screen_id(socket) do
     case socket.assigns[:ash_ui_screen] do
-      %{id: id} -> id
-      _ -> nil
+      %{id: id} ->
+        id
+
+      _ ->
+        case socket.assigns[:ash_ui_session] do
+          %{screen_id: screen_id} -> screen_id
+          _ -> nil
+        end
     end
   end
 
@@ -334,12 +340,12 @@ defmodule AshUI.LiveView.Lifecycle do
       end)
       |> Map.new()
 
-    Phoenix.LiveView.assign(socket, :ash_ui_bindings_isolated, isolated_bindings)
+    Phoenix.Component.assign(socket, :ash_ui_bindings_isolated, isolated_bindings)
   end
 
   defp maybe_update_screen_params(socket, params) do
     if Map.has_key?(params, "screen_id") or Map.has_key?(params, :screen_id) do
-      Phoenix.LiveView.assign(socket, :ash_ui_params, params)
+      Phoenix.Component.assign(socket, :ash_ui_params, params)
     else
       socket
     end

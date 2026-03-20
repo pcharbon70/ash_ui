@@ -8,7 +8,7 @@ defmodule Repo.Migrations.CreateUiElements do
       add :props, :map, default: "{}"
       add :variants, {:array, :string}, default: []
       add :position, :integer, default: 0
-      add :screen_id, :uuid
+      add :screen_id, references(:ui_screens, type: :uuid, on_delete: :delete_all)
       add :metadata, :map, default: "{}"
       add :inserted_at, :utc_datetime_usec
       add :updated_at, :utc_datetime_usec

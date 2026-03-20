@@ -23,8 +23,8 @@ defmodule AshUI.LiveView.Hooks do
   def on_mount_ash_ui(_params, session, socket) do
     socket =
       socket
-      |> Phoenix.LiveView.assign(:ash_ui_loaded, false)
-      |> Phoenix.LiveView.assign(:ash_ui_subscriptions, [])
+      |> Phoenix.Component.assign(:ash_ui_loaded, false)
+      |> Phoenix.Component.assign(:ash_ui_subscriptions, [])
 
     {:cont, socket}
   end
@@ -52,7 +52,7 @@ defmodule AshUI.LiveView.Hooks do
 
     case Integration.mount_ui_screen(socket, screen_id, session) do
       {:ok, socket} ->
-        socket = Phoenix.LiveView.assign(socket, :ash_ui_loaded, true)
+        socket = Phoenix.Component.assign(socket, :ash_ui_loaded, true)
         Integration.emit_telemetry(:mount, %{screen_id: screen_id}, %{})
         {:cont, socket}
 
@@ -142,7 +142,7 @@ defmodule AshUI.LiveView.Hooks do
     callbacks = Map.get(socket.assigns, :ash_ui_callbacks, %{})
     updated_callbacks = Map.update(callbacks, callback_type, [callback_fn], &[callback_fn | &1])
 
-    Phoenix.LiveView.assign(socket, :ash_ui_callbacks, updated_callbacks)
+    Phoenix.Component.assign(socket, :ash_ui_callbacks, updated_callbacks)
   end
 
   @doc """
@@ -190,8 +190,8 @@ defmodule AshUI.LiveView.Hooks do
     end)
 
     socket
-    |> Phoenix.LiveView.assign(:ash_ui_subscriptions, [])
-    |> Phoenix.LiveView.assign(:ash_ui_bindings, %{})
+    |> Phoenix.Component.assign(:ash_ui_subscriptions, [])
+    |> Phoenix.Component.assign(:ash_ui_bindings, %{})
   end
 
   # Private functions
@@ -217,7 +217,7 @@ defmodule AshUI.LiveView.Hooks do
   end
 
   defp assign_error(socket, reason) do
-    Phoenix.LiveView.assign(socket, :ash_ui_error, reason)
+    Phoenix.Component.assign(socket, :ash_ui_error, reason)
   end
 
   defp cleanup_subscriptions(socket) do

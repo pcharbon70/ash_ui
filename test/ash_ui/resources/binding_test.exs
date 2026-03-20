@@ -5,6 +5,8 @@ defmodule AshUI.Resources.BindingTest do
   alias AshUI.Resources.Element
   alias AshUI.Resources.Binding
 
+  @moduletag :conformance
+
   setup do
     {:ok, screen} =
       AshUI.Domain.create(Screen,
@@ -140,7 +142,7 @@ defmodule AshUI.Resources.BindingTest do
       {:ok, binding} = AshUI.Domain.create(Binding, attrs: attrs)
 
       # Delete screen
-      {:ok, _} = AshUI.Domain.destroy(screen)
+      :ok = AshUI.Domain.destroy(screen)
 
       # Element should be deleted
       assert [] = AshUI.Domain.read!(Element, filter: [id: element.id])

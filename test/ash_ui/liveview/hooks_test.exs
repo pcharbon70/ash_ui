@@ -23,7 +23,7 @@ defmodule AshUI.LiveView.HooksTest do
   describe "register_callback/4" do
     test "registers on_init callback" do
       socket = build_socket()
-      callback = fn socket -> assign(socket, :initialized, true) end
+      callback = fn socket -> Phoenix.Component.assign(socket, :initialized, true) end
 
       socket = Hooks.register_callback(socket, :on_init, callback)
 
@@ -50,7 +50,7 @@ defmodule AshUI.LiveView.HooksTest do
   describe "execute_callbacks/2" do
     test "executes registered on_init callbacks" do
       callback = fn socket ->
-        Phoenix.LiveView.assign(socket, :callback_executed, true)
+        Phoenix.Component.assign(socket, :callback_executed, true)
       end
 
       socket =
@@ -64,12 +64,12 @@ defmodule AshUI.LiveView.HooksTest do
 
     test "executes callbacks in order" do
       callback1 = fn socket ->
-        Phoenix.LiveView.assign(socket, :order, ["first"])
+        Phoenix.Component.assign(socket, :order, ["first"])
       end
 
       callback2 = fn socket ->
         order = socket.assigns[:order] || []
-        Phoenix.LiveView.assign(socket, :order, order ++ ["second"])
+        Phoenix.Component.assign(socket, :order, order ++ ["second"])
       end
 
       socket =
@@ -88,7 +88,7 @@ defmodule AshUI.LiveView.HooksTest do
 
       # Add a callback that should still execute
       success_callback = fn socket ->
-        Phoenix.LiveView.assign(socket, :still_executed, true)
+        Phoenix.Component.assign(socket, :still_executed, true)
       end
 
       socket =
@@ -116,7 +116,7 @@ defmodule AshUI.LiveView.HooksTest do
       socket = build_socket()
 
       callback = fn socket ->
-        Phoenix.LiveView.assign(socket, :updated, true)
+        Phoenix.Component.assign(socket, :updated, true)
       end
 
       assert {:cont, socket} = Hooks.on_update(socket, callback)
@@ -127,7 +127,7 @@ defmodule AshUI.LiveView.HooksTest do
       socket = build_socket()
 
       callback = fn socket ->
-        Phoenix.LiveView.assign(socket, :value, 42)
+        Phoenix.Component.assign(socket, :value, 42)
       end
 
       assert {:cont, socket} = Hooks.on_update(socket, callback)
