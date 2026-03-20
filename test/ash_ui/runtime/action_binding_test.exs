@@ -21,18 +21,18 @@ defmodule AshUI.Runtime.ActionBindingTest do
       %{binding: binding, context: context}
     end
 
-    test "executes action with event data" do
+    test "executes action with event data", %{binding: binding, context: context} do
       event_data = %{"name" => "John", "email" => "john@example.com"}
 
-      assert {:ok, result} = ActionBinding.execute_action(@binding, event_data, @context)
+      assert {:ok, result} = ActionBinding.execute_action(binding, event_data, context)
       assert result.status == :ok
       assert result.data != nil
     end
 
-    test "returns error for unauthorized action" do
+    test "returns error for unauthorized action", %{binding: binding} do
       unauthorized_context = %{user_id: nil, params: %{}, assigns: %{}}
 
-      assert {:error, _reason} = ActionBinding.execute_action(@binding, %{}, unauthorized_context)
+      assert {:error, _reason} = ActionBinding.execute_action(binding, %{}, unauthorized_context)
     end
   end
 

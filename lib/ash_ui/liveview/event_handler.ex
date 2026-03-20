@@ -8,7 +8,6 @@ defmodule AshUI.LiveView.EventHandler do
 
   require Logger
 
-  alias AshUI.Resources.Binding
   alias AshUI.Runtime.ActionBinding
   alias AshUI.Runtime.BidirectionalBinding
 
@@ -96,9 +95,10 @@ defmodule AshUI.LiveView.EventHandler do
   def handle_action_event(event_params, socket) do
     action_id = Map.get(event_params, "action_id")
     event_data = Map.get(event_params, "data", %{})
+    context = build_event_context(socket)
 
-    with {:ok, binding} <- find_action_binding(action_id, socket),
-         context <- build_event_context(socket),
+    with :ok <- authorize_action_context(context),
+         {:ok, binding} <- find_action_binding(action_id, socket),
          {:ok, result} <- execute_action(binding, event_data, socket, context),
          socket <- handle_action_result(result, socket) do
       {:reply, %{status: :ok}, socket}
@@ -183,7 +183,7 @@ defmodule AshUI.LiveView.EventHandler do
   """
   @spec validate_event_data(map(), String.t()) :: :ok | {:error, term()}
   def validate_event_data(event_data, expected_type) do
-    with :ok <- validate_required_fields(event_data),
+    with :ok <- validate_required_fields(event_data, expected_type),
          :ok <- validate_event_type(event_data, expected_type) do
       :ok
     end
@@ -272,6 +272,9 @@ defmodule AshUI.LiveView.EventHandler do
     }
   end
 
+  defp authorize_action_context(%{user_id: nil}), do: {:error, :unauthorized}
+  defp authorize_action_context(_context), do: :ok
+
   defp get_user_id(socket) do
     case socket.assigns[:ash_ui_user] do
       %{id: id} -> id
@@ -286,7 +289,7 @@ defmodule AshUI.LiveView.EventHandler do
     end
   end
 
-  defp execute_action(binding, event_data, socket, context) do
+  defp execute_action(binding, event_data, _socket, context) do
     case ActionBinding.execute_action(binding, event_data, context) do
       {:ok, result} -> {:ok, result}
       {:error, reason} -> {:error, reason}
@@ -311,8 +314,13 @@ defmodule AshUI.LiveView.EventHandler do
     %{socket | assigns: Map.put(socket.assigns, :flash, updated_flash)}
   end
 
-  defp validate_required_fields(event_data) do
-    required = ["target"]
+  defp validate_required_fields(event_data, expected_type) do
+    required =
+      case expected_type do
+        "change" -> ["target", "data"]
+        _ -> ["target"]
+      end
+
     missing = Enum.reject(required, &Map.has_key?(event_data, &1))
 
     if missing == [] do
@@ -355,7 +363,7 @@ defmodule AshUI.LiveView.EventHandler do
     bindings = socket.assigns[:ash_ui_bindings] || %{}
 
     # Create handler map for all bindings
-    handlers = ActionBinding.wire_handlers(Map.to_list(bindings), socket)
+    handlers = ActionBinding.wire_handlers(Map.values(bindings), socket)
 
     socket = Phoenix.Component.assign(socket, :ash_ui_handlers, handlers)
     {:ok, socket}

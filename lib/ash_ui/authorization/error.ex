@@ -28,7 +28,7 @@ defmodule AshUI.AuthorizationError do
   @doc """
   Returns the human-readable message for the authorization error.
   """
-  def message(%__MODULE__{reason: reason} = error) do
+  def message(%__MODULE__{} = error) do
     format_message(error)
   end
 
@@ -116,7 +116,7 @@ defmodule AshUI.AuthorizationError do
       AuthorizationError.format_message(error)
   """
   @spec format_message(t()) :: String.t()
-  def format_message(%__MODULE__{reason: :unauthenticated} = error) do
+  def format_message(%__MODULE__{reason: :unauthenticated}) do
     "You must be logged in to access this resource"
   end
 

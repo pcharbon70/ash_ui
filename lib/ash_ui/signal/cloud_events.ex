@@ -9,12 +9,7 @@ defmodule AshUI.Signal.CloudEvents do
   alias AshUI.Signal.Struct
 
   @type cloud_event :: %{
-          required: [String.t()],
-          "id": String.t(),
-          "source": String.t(),
-          "type": String.t(),
-          "datacontenttype": String.t(),
-          "data": map()
+          required(String.t()) => term()
         }
 
   @doc """
@@ -117,7 +112,8 @@ defmodule AshUI.Signal.CloudEvents do
       "{\\"id\\": \\"signal-123\\", ...}"
   """
   @spec serialize(cloud_event() | Struct.t(), keyword()) :: String.t() | binary()
-  def serialize(%Struct{} = signal, opts \\ []) do
+  def serialize(cloud_event_or_signal, opts \\ [])
+  def serialize(%Struct{} = signal, opts) do
     event = to_cloud_event(signal)
     serialize(event, opts)
   end
@@ -228,11 +224,6 @@ defmodule AshUI.Signal.CloudEvents do
   end
 
   @type envelope :: %{
-          "specversion": String.t(),
-          "id": String.t(),
-          "source": String.t(),
-          "type": String.t(),
-          "datacontenttype": String.t(),
-          "data": map()
+          required(String.t()) => term()
         }
 end

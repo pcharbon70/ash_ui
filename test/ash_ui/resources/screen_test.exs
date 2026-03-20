@@ -2,8 +2,6 @@ defmodule AshUI.Resources.ScreenTest do
   use AshUI.DataCase, async: false
 
   alias AshUI.Resources.Screen
-  alias AshUI.Resources.Element
-  alias AshUI.Resources.Binding
 
   @moduletag :conformance
 
@@ -19,7 +17,7 @@ defmodule AshUI.Resources.ScreenTest do
         route: "/test"
       }
 
-      assert {:ok, screen} = AshUI.Domain.create(Screen, attrs: attrs)
+      assert {:ok, screen} = AshUI.Data.create(Screen, attrs: attrs)
       assert screen.name == "test_screen"
       assert screen.layout == :row
       assert screen.route == "/test"
@@ -37,10 +35,10 @@ defmodule AshUI.Resources.ScreenTest do
           layout: :row
         }
 
-        AshUI.Domain.create(Screen, attrs: attrs)
+        AshUI.Data.create(Screen, attrs: attrs)
       end)
 
-      screens = AshUI.Domain.read!(Screen)
+      screens = AshUI.Data.read!(Screen)
       assert length(screens) >= 2
     end
 
@@ -51,8 +49,8 @@ defmodule AshUI.Resources.ScreenTest do
         layout: :column
       }
 
-      {:ok, screen} = AshUI.Domain.create(Screen, attrs: attrs)
-      {:ok, updated} = AshUI.Domain.update(screen, attrs: %{layout: :grid})
+      {:ok, screen} = AshUI.Data.create(Screen, attrs: attrs)
+      {:ok, updated} = AshUI.Data.update(screen, attrs: %{layout: :grid})
 
       assert updated.layout == :grid
       assert updated.version == 2
@@ -65,10 +63,10 @@ defmodule AshUI.Resources.ScreenTest do
         layout: :row
       }
 
-      {:ok, screen} = AshUI.Domain.create(Screen, attrs: attrs)
-      assert :ok = AshUI.Domain.destroy(screen)
+      {:ok, screen} = AshUI.Data.create(Screen, attrs: attrs)
+      assert :ok = AshUI.Data.destroy(screen)
 
-      assert [] = AshUI.Domain.read!(Screen, filter: [name: "destroy_test"])
+      assert [] = AshUI.Data.read!(Screen, filter: [name: "destroy_test"])
     end
   end
 
@@ -80,9 +78,9 @@ defmodule AshUI.Resources.ScreenTest do
         layout: :row
       }
 
-      {:ok, _screen} = AshUI.Domain.create(Screen, attrs: attrs)
+      {:ok, _screen} = AshUI.Data.create(Screen, attrs: attrs)
 
-      assert {:error, error} = AshUI.Domain.create(Screen, attrs: attrs)
+      assert {:error, error} = AshUI.Data.create(Screen, attrs: attrs)
       assert Exception.message(error) =~ "constraint error"
     end
   end

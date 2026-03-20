@@ -303,13 +303,13 @@ defmodule AshUI.Compiler.Extensions do
 
   defp store_widget(type, definition) do
     ensure_tables()
-    :ets.insert(:ash_ui_widgets, {type, definition})
+    :ets.insert(:ash_ui_widgets, {type, Map.put_new(definition, :type, type)})
     :ok
   end
 
   defp store_layout(type, definition) do
     ensure_tables()
-    :ets.insert(:ash_ui_layouts, {type, definition})
+    :ets.insert(:ash_ui_layouts, {type, Map.put_new(definition, :type, type)})
     :ok
   end
 
@@ -341,7 +341,7 @@ defmodule AshUI.Compiler.Extensions do
   @spec available_widget_types() :: [String.t()]
   def available_widget_types do
     built_in = ["text", "button", "input", "checkbox", "select", "image", "spacer"]
-    custom = Enum.map(registered_widgets(), fn x -> x.type end)
+    custom = Enum.map(registered_widgets(), &Map.get(&1, :type))
 
     built_in ++ custom
   end
@@ -356,7 +356,7 @@ defmodule AshUI.Compiler.Extensions do
   @spec available_layout_types() :: [String.t()]
   def available_layout_types do
     built_in = ["row", "column", "grid", "stack", "fragment", "container"]
-    custom = Enum.map(registered_layouts(), fn x -> x.type end)
+    custom = Enum.map(registered_layouts(), &Map.get(&1, :type))
 
     built_in ++ custom
   end
@@ -389,8 +389,8 @@ defmodule AshUI.Compiler.Extensions do
     end
   end
 
-  defp validate_widget_props_spec(definition, errors) do
-    props = definition.props || []
+  defp validate_widget_props_spec(errors, definition) do
+    props = Map.get(definition, :props, [])
 
     Enum.reduce(props, errors, fn prop_spec, acc ->
       case validate_prop_spec(prop_spec) do
@@ -411,16 +411,16 @@ defmodule AshUI.Compiler.Extensions do
     end
   end
 
-  defp validate_widget_module(definition, errors) do
-    if Code.ensure_loaded?(definition.module) do
+  defp validate_widget_module(errors, definition) do
+    if is_atom(Map.get(definition, :module)) do
       errors
     else
-      ["Module #{inspect(definition.module)} not loaded" | errors]
+      ["Widget must declare a module" | errors]
     end
   end
 
-  defp validate_widget_compile(definition, errors) do
-    if is_function(definition.compile) do
+  defp validate_widget_compile(errors, definition) do
+    if is_function(Map.get(definition, :compile)) do
       errors
     else
       ["Widget must have a compile function" | errors]
@@ -448,8 +448,8 @@ defmodule AshUI.Compiler.Extensions do
     end
   end
 
-  defp validate_layout_props_spec(definition, errors) do
-    props = definition.props || []
+  defp validate_layout_props_spec(errors, definition) do
+    props = Map.get(definition, :props, [])
 
     Enum.reduce(props, errors, fn prop_spec, acc ->
       case validate_prop_spec(prop_spec) do
@@ -459,16 +459,16 @@ defmodule AshUI.Compiler.Extensions do
     end)
   end
 
-  defp validate_layout_module(definition, errors) do
-    if Code.ensure_loaded?(definition.module) do
+  defp validate_layout_module(errors, definition) do
+    if is_atom(Map.get(definition, :module)) do
       errors
     else
-      ["Module #{inspect(definition.module)} not loaded" | errors]
+      ["Layout must declare a module" | errors]
     end
   end
 
-  defp validate_layout_compile(definition, errors) do
-    if is_function(definition.compile) do
+  defp validate_layout_compile(errors, definition) do
+    if is_function(Map.get(definition, :compile)) do
       errors
     else
       ["Layout must have a compile function" | errors]

@@ -10,7 +10,6 @@ defmodule AshUI.LiveView.Lifecycle do
 
   alias AshUI.Telemetry
 
-  alias AshUI.LiveView.Integration
   alias AshUI.LiveView.UpdateIntegration
 
   @type session_state :: %{

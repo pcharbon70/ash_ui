@@ -32,7 +32,7 @@ defmodule AshUI.Authorization.PolicyDSL do
     end
   end
 
-  def visible_if(user, condition) when is_boolean(condition) do
+  def visible_if(_user, condition) when is_boolean(condition) do
     condition
   end
 

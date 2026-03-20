@@ -31,7 +31,7 @@ defmodule AshUI.LiveView.IntegrationTest do
 
   setup do
     {:ok, _screen} =
-      AshUI.Domain.create(Screen,
+      AshUI.Data.create(Screen,
         attrs: %{
           name: "test_screen",
           unified_dsl: %{"type" => "screen"}
@@ -39,7 +39,7 @@ defmodule AshUI.LiveView.IntegrationTest do
       )
 
     {:ok, _restricted_screen} =
-      AshUI.Domain.create(Screen,
+      AshUI.Data.create(Screen,
         attrs: %{
           name: "restricted_screen",
           unified_dsl: %{"type" => "screen"}
@@ -53,7 +53,7 @@ defmodule AshUI.LiveView.IntegrationTest do
     test "mounts screen successfully with valid user and screen" do
       socket = build_socket(current_user: build_admin())
 
-      assert {:ok, socket} = Integration.mount_ui_screen(socket, :test_screen, %{})
+      assert {:ok, _mounted_socket} = Integration.mount_ui_screen(socket, :test_screen, %{})
     end
 
     test "returns error when no current user" do

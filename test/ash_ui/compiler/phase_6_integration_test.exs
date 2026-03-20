@@ -1,24 +1,10 @@
 defmodule AshUI.Compiler.Phase6IntegrationTest do
-  use ExUnit.Case, async: false
+  use AshUI.DataCase, async: false
 
   alias AshUI.Compiler
   alias AshUI.Compiler.Incremental
   alias AshUI.Compiler.Extensions
   alias AshUI.DSL.Builder
-  alias AshUI.DSL.Storage
-
-  # Mock resources
-  defp build_screen(opts \\ []) do
-    struct(AshUI.Resources.Screen,
-      id: Keyword.get(opts, :id, "screen-1"),
-      name: Keyword.get(opts, :name, "Test Screen"),
-      version: Keyword.get(opts, :version, 1),
-      layout: Keyword.get(opts, :layout, "vertical"),
-      route: Keyword.get(opts, :route, "/test"),
-      unified_dsl: Keyword.get(opts, :unified_dsl),
-      metadata: Keyword.get(opts, :metadata, %{})
-    )
-  end
 
   defp default_dsl do
     Builder.row(children: [
@@ -59,7 +45,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       dsl = Builder.text("Simple Screen")
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "simple_screen",
             unified_dsl: Builder.to_store(dsl),
@@ -81,7 +67,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         ])
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "complex_screen",
             unified_dsl: Builder.to_store(dsl),
@@ -102,7 +88,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       }
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "invalid_screen",
             unified_dsl: invalid_dsl,
@@ -117,7 +103,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       dsl = Builder.text("Cached Screen")
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "cached_screen",
             unified_dsl: Builder.to_store(dsl),
@@ -126,10 +112,10 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         )
 
       # First compilation
-      assert {:ok, iur1} = Compiler.compile(screen, use_cache: true)
+      assert {:ok, _iur1} = Compiler.compile(screen, use_cache: true)
 
       # Second compilation should hit cache
-      assert {:ok, iur2} = Compiler.compile(screen, use_cache: true)
+      assert {:ok, _iur2} = Compiler.compile(screen, use_cache: true)
 
       stats = Compiler.cache_stats()
       assert stats.hits >= 1
@@ -139,7 +125,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
   describe "Section 6.5.3 - Incremental compilation scenarios" do
     test "element change triggers screen recompile" do
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "incremental_screen",
             unified_dsl: Builder.to_store(default_dsl()),
@@ -148,7 +134,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         )
 
       {:ok, element} =
-        AshUI.Domain.create(AshUI.Resources.Element,
+        AshUI.Data.create(AshUI.Resources.Element,
           attrs: %{
             type: :text,
             props: %{"content" => "Initial"},
@@ -168,7 +154,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       Compiler.clear_cache()
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "cache_test_screen",
             unified_dsl: Builder.to_store(default_dsl()),
@@ -188,7 +174,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
 
     test "dependency tracking works" do
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "dependency_screen",
             unified_dsl: Builder.to_store(default_dsl()),
@@ -197,7 +183,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         )
 
       {:ok, element} =
-        AshUI.Domain.create(AshUI.Resources.Element,
+        AshUI.Data.create(AshUI.Resources.Element,
           attrs: %{
             type: :text,
             props: %{"content" => "Test"},
@@ -206,8 +192,8 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
           }
         )
 
-      {:ok, _binding} =
-        AshUI.Domain.create(AshUI.Resources.Binding,
+      {:ok, binding} =
+        AshUI.Data.create(AshUI.Resources.Binding,
           attrs: %{
             source: %{"resource" => "Test", "field" => "value"},
             target: "test_target",
@@ -223,7 +209,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       assert graph.element_to_screen[element.id] == screen.id
 
       # Check binding to element dependency
-      assert graph.binding_to_element[Integer.to_string(element.id)] == element.id
+      assert graph.binding_to_element[binding.id] == element.id
     end
 
     test "circular dependencies are detected" do
@@ -323,7 +309,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
 
       # Store in database
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "full_pipeline_screen",
             unified_dsl: Builder.to_store(dsl),
@@ -350,7 +336,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       }
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "error_screen",
             unified_dsl: invalid_dsl,
@@ -369,7 +355,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       dsl = Builder.text("Performance Test")
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "perf_screen",
             unified_dsl: Builder.to_store(dsl),

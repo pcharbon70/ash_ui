@@ -70,7 +70,7 @@ defmodule AshUI.Runtime.BindingEvaluator do
   end
 
   # Resolve source path to actual value
-  defp resolve_source(%{"resource" => resource} = source, context, opts) do
+  defp resolve_source(%{"resource" => _resource} = source, context, opts) do
     case Map.get(source, "action") do
       nil -> resolve_field_or_relationship(source, context, opts)
       action -> resolve_action(source, action, context, opts)
@@ -104,27 +104,17 @@ defmodule AshUI.Runtime.BindingEvaluator do
     # Build Ash query to read the resource
     # In production, this would use the actual Ash domain and resources
     # For now, return a placeholder
-    case load_resource(resource_name, id, context) do
-      {:ok, resource} ->
-        value = get_field(resource, field)
-        {:ok, value}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    {:ok, resource} = load_resource(resource_name, id, context)
+    value = get_field(resource, field)
+    {:ok, value}
   end
 
   # Resolve a relationship (e.g., user.profile.name)
-  defp resolve_relationship(resource_name, relationship, context, opts) do
+  defp resolve_relationship(resource_name, relationship, context, _opts) do
     parts = String.split(relationship, ".")
 
-    case load_resource(resource_name, nil, context) do
-      {:ok, resource} ->
-        navigate_relationship(resource, parts, context)
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    {:ok, resource} = load_resource(resource_name, nil, context)
+    navigate_relationship(resource, parts, context)
   end
 
   # Navigate through nested relationships
@@ -141,7 +131,7 @@ defmodule AshUI.Runtime.BindingEvaluator do
   end
 
   # Resolve an action source
-  defp resolve_action(source, action_name, context, _opts) do
+  defp resolve_action(source, action_name, _context, _opts) do
     resource = Map.get(source, "resource")
 
     # Actions don't have values to read
@@ -183,14 +173,22 @@ defmodule AshUI.Runtime.BindingEvaluator do
 
   # Apply transformations to the resolved value
   defp apply_transformations(value, transform, _context) do
-    transforms = List.wrap(transform)
-
-    Enum.reduce_while(transforms, {:ok, value}, fn transform, {:ok, acc} ->
-      case apply_single_transform(acc, transform) do
-        {:ok, new_value} -> {:cont, {:ok, new_value}}
-        {:error, _} = error -> {:halt, error}
+    transforms =
+      case transform do
+        nil -> []
+        %{} = map when map_size(map) == 0 -> []
+        %{} = map -> [map]
+        list when is_list(list) -> list
+        _ -> []
       end
-    end)
+
+    transformed =
+      Enum.reduce(transforms, value, fn transform, acc ->
+        {:ok, new_value} = apply_single_transform(acc, transform)
+        new_value
+      end)
+
+    {:ok, transformed}
   end
 
   # Apply a single transformation
@@ -232,9 +230,9 @@ defmodule AshUI.Runtime.BindingEvaluator do
     {:ok, value}
   end
 
-  defp apply_single_transform(_value, transform) do
+  defp apply_single_transform(value, _transform) do
     # Unknown transformation - pass through
-    {:ok, nil}
+    {:ok, value}
   end
 
   # Format a value (placeholder implementation)

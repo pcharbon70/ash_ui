@@ -6,8 +6,6 @@ defmodule AshUI.Runtime.ListBinding do
   of Ash resources to UI elements like lists and tables.
   """
 
-  alias AshUI.Runtime.BindingEvaluator
-
   @type context :: %{
           user_id: String.t() | nil,
           params: map(),
@@ -46,7 +44,7 @@ defmodule AshUI.Runtime.ListBinding do
   """
   @spec load_collection(map(), context(), keyword()) :: {:ok, list_result()} | {:error, term()}
   def load_collection(binding, context, opts \\ []) do
-    source = binding.source || %{}
+    source = binding_source(binding)
     resource = Map.get(source, "resource")
     relationship = Map.get(source, "relationship")
 
@@ -84,16 +82,17 @@ defmodule AshUI.Runtime.ListBinding do
     * `{:ok, socket}` - Subscribed successfully
   """
   @spec subscribe_collection(map(), map(), context()) :: {:ok, map()}
-  def subscribe_collection(binding, socket, context) do
+  def subscribe_collection(binding, socket, _context) do
     subscription_id = collection_subscription_id(binding)
+    source = binding_source(binding)
 
     # Track collection subscription
     subscriptions = get_in(socket.assigns, [:ash_ui, :list_subscriptions]) || %{}
 
     subscription = %{
       binding_id: get_binding_id(binding),
-      resource: Map.get(binding.source, "resource"),
-      relationship: Map.get(binding.source, "relationship"),
+      resource: Map.get(source, "resource"),
+      relationship: Map.get(source, "relationship"),
       subscribed_at: System.system_time(:millisecond)
     }
 
@@ -144,7 +143,7 @@ defmodule AshUI.Runtime.ListBinding do
   """
   @spec format_collection(list_result(), map(), context()) :: {:ok, [map()]} | {:error, term()}
   def format_collection(list_result, binding, context) do
-    transform = binding.transform || %{}
+    transform = Map.get(binding, :transform) || Map.get(binding, "transform") || %{}
     items = list_result.items
 
     formatted =
@@ -164,21 +163,30 @@ defmodule AshUI.Runtime.ListBinding do
   end
 
   defp mock_load_collection(resource, relationship, page, page_size, _filters) do
+    total = 100
+    start_index = (page - 1) * page_size + 1
+
     # Generate mock collection data
     items =
-      Enum.map(1..page_size, fn i ->
-        %{
-          "id" => "#{resource}-#{relationship}-#{(page - 1) * page_size + i}",
-          "type" => relationship,
-          "index" => (page - 1) * page_size + i
-        }
-      end)
+      if start_index > total do
+        []
+      else
+        end_index = min(start_index + page_size - 1, total)
+
+        Enum.map(start_index..end_index, fn index ->
+          %{
+            "id" => "#{resource}-#{relationship}-#{index}",
+            "type" => relationship,
+            "index" => index
+          }
+        end)
+      end
 
     {:ok,
      %{
-       "items" => items,
-       "total" => 100, # Mock total
-       "page" => page
+        "items" => items,
+        "total" => total,
+        "page" => page
      }}
   end
 
@@ -190,25 +198,44 @@ defmodule AshUI.Runtime.ListBinding do
     Map.get(collection, "items", [])
   end
 
-  defp handle_insert(binding, change_data, socket, context) do
+  defp handle_insert(binding, change_data, socket, _context) do
     # For insert, we may want to prepend to the list or refresh
-    target = binding.target || Map.get(binding, "target")
+    target = Map.get(binding, :target) || Map.get(binding, "target")
 
     # Store change for UI update
-    changes = get_in(socket.assigns, [:ash_ui, :list_changes, target]) || []
+    changes =
+      get_in(socket.assigns, [
+        Access.key(:ash_ui, %{}),
+        Access.key(:list_changes, %{}),
+        Access.key(target, [])
+      ])
+
     updated_changes = [{:insert, change_data} | changes]
-    updated_socket = put_in(socket.assigns, [:ash_ui, :list_changes, target], updated_changes)
+    updated_assigns =
+      put_in(socket.assigns, [
+        Access.key(:ash_ui, %{}),
+        Access.key(:list_changes, %{}),
+        Access.key(target, [])
+      ], updated_changes)
+
+    updated_socket = %{socket | assigns: updated_assigns}
 
     {:ok, updated_socket, true}
   end
 
   defp handle_update(binding, change_data, socket, _context) do
     # For update, find the item and update it
-    target = binding.target || Map.get(binding, "target")
+    target = Map.get(binding, :target) || Map.get(binding, "target")
     item_id = Map.get(change_data, "id")
 
     # Update the item in the cached list
-    items = get_in(socket.assigns, [:ash_ui, :lists, target, "items"]) || []
+    items =
+      get_in(socket.assigns, [
+        Access.key(:ash_ui, %{}),
+        Access.key(:lists, %{}),
+        Access.key(target, %{}),
+        Access.key("items", [])
+      ])
 
     updated_items =
       Enum.map(items, fn item ->
@@ -219,26 +246,59 @@ defmodule AshUI.Runtime.ListBinding do
         end
       end)
 
-    updated_socket = put_in(socket.assigns, [:ash_ui, :lists, target, "items"], updated_items)
+    updated_assigns =
+      put_in(socket.assigns, [
+        Access.key(:ash_ui, %{}),
+        Access.key(:lists, %{}),
+        Access.key(target, %{}),
+        Access.key("items", [])
+      ], updated_items)
+
+    updated_socket = %{socket | assigns: updated_assigns}
 
     {:ok, updated_socket, true}
   end
 
   defp handle_delete(binding, change_data, socket, _context) do
     # For delete, remove the item from the list
-    target = binding.target || Map.get(binding, "target")
+    target = Map.get(binding, :target) || Map.get(binding, "target")
     item_id = Map.get(change_data, "id")
 
-    items = get_in(socket.assigns, [:ash_ui, :lists, target, "items"]) || []
+    items =
+      get_in(socket.assigns, [
+        Access.key(:ash_ui, %{}),
+        Access.key(:lists, %{}),
+        Access.key(target, %{}),
+        Access.key("items", [])
+      ])
 
     updated_items = Enum.reject(items, fn item -> Map.get(item, "id") == item_id end)
+    current_total =
+      get_in(socket.assigns, [
+        Access.key(:ash_ui, %{}),
+        Access.key(:lists, %{}),
+        Access.key(target, %{}),
+        Access.key("total", 0)
+      ])
 
-    updated_socket =
-      put_in(socket.assigns, [:ash_ui, :lists, target, "items"], updated_items)
+    updated_total = max(current_total - 1, 0)
 
-    # Update total count
-    current_total = get_in(socket.assigns, [:ash_ui, :lists, target, "total"]) || 0
-    updated_socket = put_in(socket.assigns, [:ash_ui, :lists, target, "total"], current_total - 1)
+    updated_assigns =
+      socket.assigns
+      |> put_in([
+        Access.key(:ash_ui, %{}),
+        Access.key(:lists, %{}),
+        Access.key(target, %{}),
+        Access.key("items", [])
+      ], updated_items)
+      |> put_in([
+        Access.key(:ash_ui, %{}),
+        Access.key(:lists, %{}),
+        Access.key(target, %{}),
+        Access.key("total", 0)
+      ], updated_total)
+
+    updated_socket = %{socket | assigns: updated_assigns}
 
     {:ok, updated_socket, true}
   end
@@ -288,9 +348,14 @@ defmodule AshUI.Runtime.ListBinding do
     Map.get(binding, :id) || Map.get(binding, "id")
   end
 
+  defp binding_source(binding) do
+    Map.get(binding, :source) || Map.get(binding, "source") || %{}
+  end
+
   defp collection_subscription_id(binding) do
-    resource = get_in(binding, [:source, "resource"])
-    relationship = get_in(binding, [:source, "relationship"])
+    source = binding_source(binding)
+    resource = Map.get(source, "resource")
+    relationship = Map.get(source, "relationship")
     "list_#{resource}_#{relationship}"
   end
 end

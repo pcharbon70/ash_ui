@@ -52,7 +52,7 @@ defmodule AshUI.Compiler.ExtensionsTest do
     end
 
     test "returns empty list when no widgets registered" do
-      assert Extensions.registered_widgets() == []
+      assert Enum.empty?(Extensions.registered_widgets())
     end
 
     test "returns list of registered widgets" do
@@ -77,7 +77,7 @@ defmodule AshUI.Compiler.ExtensionsTest do
     end
 
     test "returns empty list when no layouts registered" do
-      assert Extensions.registered_layouts() == []
+      assert Enum.empty?(Extensions.registered_layouts())
     end
   end
 
@@ -373,8 +373,8 @@ defmodule AshUI.Compiler.ExtensionsTest do
       Extensions.init()
 
       # Tables should exist now
-      assert Extensions.available_widget_types() != []
-      assert Extensions.available_layout_types() != []
+      refute Enum.empty?(Extensions.available_widget_types())
+      refute Enum.empty?(Extensions.available_layout_types())
     end
   end
 end

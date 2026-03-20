@@ -9,7 +9,7 @@ defmodule AshUI.Resources.BindingTest do
 
   setup do
     {:ok, screen} =
-      AshUI.Domain.create(Screen,
+      AshUI.Data.create(Screen,
         attrs: %{
           name: "binding_test_screen",
           unified_dsl: %{"type" => "screen"},
@@ -18,7 +18,7 @@ defmodule AshUI.Resources.BindingTest do
       )
 
     {:ok, element} =
-      AshUI.Domain.create(Element,
+      AshUI.Data.create(Element,
         attrs: %{
           type: :textinput,
           props: %{},
@@ -43,7 +43,7 @@ defmodule AshUI.Resources.BindingTest do
         screen_id: screen.id
       }
 
-      assert {:ok, binding} = AshUI.Domain.create(Binding, attrs: attrs)
+      assert {:ok, binding} = AshUI.Data.create(Binding, attrs: attrs)
       assert binding.source == %{"resource" => "User", "field" => "name"}
       assert binding.target == "value"
       assert binding.binding_type == :value
@@ -60,7 +60,7 @@ defmodule AshUI.Resources.BindingTest do
         screen_id: screen.id
       }
 
-      assert {:ok, binding} = AshUI.Domain.create(Binding, attrs: attrs)
+      assert {:ok, binding} = AshUI.Data.create(Binding, attrs: attrs)
       assert binding.binding_type == :list
     end
 
@@ -73,7 +73,7 @@ defmodule AshUI.Resources.BindingTest do
         screen_id: screen.id
       }
 
-      assert {:ok, binding} = AshUI.Domain.create(Binding, attrs: attrs)
+      assert {:ok, binding} = AshUI.Data.create(Binding, attrs: attrs)
       assert binding.binding_type == :action
     end
 
@@ -86,10 +86,10 @@ defmodule AshUI.Resources.BindingTest do
         screen_id: screen.id
       }
 
-      {:ok, binding} = AshUI.Domain.create(Binding, attrs: attrs)
+      {:ok, binding} = AshUI.Data.create(Binding, attrs: attrs)
 
       {:ok, updated} =
-        AshUI.Domain.update(binding,
+        AshUI.Data.update(binding,
           attrs: %{
             transform: %{"function" => "uppercase"}
           }
@@ -111,12 +111,12 @@ defmodule AshUI.Resources.BindingTest do
           screen_id: screen.id
         }
 
-        AshUI.Domain.create(Binding, attrs: attrs)
+        AshUI.Data.create(Binding, attrs: attrs)
       end)
 
       # Load element with bindings
       element_with_bindings =
-        AshUI.Domain.read_one!(Element,
+        AshUI.Data.read_one!(Element,
           filter: [id: element.id],
           load: [:bindings]
         )
@@ -139,16 +139,16 @@ defmodule AshUI.Resources.BindingTest do
         screen_id: screen.id
       }
 
-      {:ok, binding} = AshUI.Domain.create(Binding, attrs: attrs)
+      {:ok, binding} = AshUI.Data.create(Binding, attrs: attrs)
 
       # Delete screen
-      :ok = AshUI.Domain.destroy(screen)
+      :ok = AshUI.Data.destroy(screen)
 
       # Element should be deleted
-      assert [] = AshUI.Domain.read!(Element, filter: [id: element.id])
+      assert [] = AshUI.Data.read!(Element, filter: [id: element.id])
 
       # Binding should be deleted
-      assert [] = AshUI.Domain.read!(Binding, filter: [id: binding.id])
+      assert [] = AshUI.Data.read!(Binding, filter: [id: binding.id])
     end
   end
 end

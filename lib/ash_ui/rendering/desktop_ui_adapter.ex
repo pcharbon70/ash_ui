@@ -66,7 +66,7 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
   """
   @spec available?() :: boolean()
   def available? do
-    Code.ensure_loaded?(DesktopUI.Renderer)
+    Code.ensure_loaded?(desktop_ui_renderer_module())
   end
 
   @doc """
@@ -133,7 +133,7 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
     * Menu bar configuration
   """
   @spec configure_menu_bar(map(), keyword()) :: map()
-  def configure_menu_bar(%{"type" => "screen"} = iur, opts \\ []) do
+  def configure_menu_bar(%{"type" => "screen"} = _iur, opts \\ []) do
     enabled = Keyword.get(opts, :native_menu_bar, true)
     custom_items = Keyword.get(opts, :menu_items, [])
 
@@ -240,10 +240,16 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
 
   # Private Functions
 
+  defp desktop_ui_renderer_module do
+    Module.concat(DesktopUI, Renderer)
+  end
+
   # Call actual DesktopUI.Renderer if available
   defp call_desktop_ui_renderer(canonical_iur, opts) do
+    renderer_module = desktop_ui_renderer_module()
+
     try do
-      case DesktopUI.Renderer.render(canonical_iur, opts) do
+      case apply(renderer_module, :render, [canonical_iur, opts]) do
         {:ok, instructions} -> {:ok, instructions}
         {:error, reason} -> {:error, {:desktop_ui_error, reason}}
         other -> {:error, {:unexpected_response, other}}
@@ -281,24 +287,6 @@ defmodule AshUI.Rendering.DesktopUIAdapter do
   defp generate_instructions(widget, _opts) do
     # Handle non-screen widgets (row, text, button, etc.)
     generate_widget(widget)
-  end
-
-  defp generate_menu_items(_iur) do
-    [
-      %{
-        "label" => "File",
-        "items" => [
-          %{"label" => "Quit", "action" => "quit"}
-        ]
-      },
-      %{
-        "label" => "Edit",
-        "items" => [
-          %{"label" => "Undo", "action" => "undo"},
-          %{"label" => "Redo", "action" => "redo"}
-        ]
-      }
-    ]
   end
 
   defp generate_content(nil), do: []

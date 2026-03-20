@@ -36,9 +36,6 @@ defmodule AshUI.Authorization.ElementPolicy do
       # Check element visibility conditions
       not meets_visibility_condition?(element, user) -> false
 
-      # Check parent screen access
-      not screen_accessible?(user, element) -> false
-
       # Default visible
       true -> true
     end
@@ -60,35 +57,12 @@ defmodule AshUI.Authorization.ElementPolicy do
       # Check if element is explicitly read-only
       Map.get(element, :read_only, false) -> false
 
-      # Must own parent screen
-      not screen_owned?(user, element) -> false
-
       # Default editable
       true -> true
     end
   end
 
   # Private functions
-
-  defp screen_accessible?(user, element) do
-    # In production, would check if user can access parent screen
-    true
-  end
-
-  defp screen_owned?(user, element) do
-    # In production, would check if user owns parent screen
-    true
-  end
-
-  defp element_visible?(element) do
-    # Check if element has visibility condition
-    case Map.get(element, :visible_when) do
-      nil -> true
-      condition when is_function(condition, 0) -> condition.()
-      condition when is_boolean(condition) -> condition
-      _ -> true
-    end
-  end
 
   defp meets_visibility_condition?(element, user) do
     case Map.get(element, :visible_when) do

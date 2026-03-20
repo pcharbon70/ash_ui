@@ -60,6 +60,9 @@ defmodule AshUI.Runtime.ActionBinding do
          errors: nil
        }}
     else
+      {:error, :unauthorized} ->
+        {:error, :unauthorized}
+
       {:error, reason} ->
         {:error,
          %{
@@ -88,7 +91,7 @@ defmodule AshUI.Runtime.ActionBinding do
       {:noreply, updated_socket}
   """
   @spec event_handler(Binding.t() | map(), String.t()) :: function()
-  def event_handler(binding, element_id) do
+  def event_handler(binding, _element_id) do
     fn socket, event_data, _event_opts ->
       context = build_context(socket)
 
@@ -113,15 +116,22 @@ defmodule AshUI.Runtime.ActionBinding do
     * Map of event_name to handler function
   """
   @spec wire_handlers([Binding.t() | map()], map()) :: %{String.t() => function()}
-  def wire_handlers(bindings, socket) do
+  def wire_handlers(bindings, _socket) do
     action_bindings =
-      Enum.filter(bindings, fn b ->
+      bindings
+      |> Enum.map(fn
+        {_id, binding} when is_map(binding) -> binding
+        binding when is_map(binding) -> binding
+        _other -> nil
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.filter(fn b ->
         type = b.binding_type || Map.get(b, "binding_type")
         type in [:action, "action"]
       end)
 
     Enum.reduce(action_bindings, %{}, fn binding, acc ->
-      target = binding.target || Map.get(binding, "target")
+      target = Map.get(binding, :target) || Map.get(binding, "target")
       element_id = get_binding_element_id(binding)
 
       handler_name = "ash_ui_action_#{target || element_id}"
@@ -202,7 +212,7 @@ defmodule AshUI.Runtime.ActionBinding do
 
   # Handle successful action
   defp handle_action_success(socket, binding, result) do
-    target = binding.target || Map.get(binding, "target")
+    target = Map.get(binding, :target) || Map.get(binding, "target")
     ash_ui = Map.get(socket.assigns, :ash_ui, %{})
     actions = Map.get(ash_ui, :actions, %{})
     action_state = Map.get(actions, target, %{})
@@ -229,7 +239,7 @@ defmodule AshUI.Runtime.ActionBinding do
 
   # Handle action error
   defp handle_action_error(socket, binding) do
-    target = binding.target || Map.get(binding, "target")
+    target = Map.get(binding, :target) || Map.get(binding, "target")
     ash_ui = Map.get(socket.assigns, :ash_ui, %{})
     actions = Map.get(ash_ui, :actions, %{})
     action_state = Map.get(actions, target, %{})
@@ -262,9 +272,6 @@ defmodule AshUI.Runtime.ActionBinding do
   defp format_action_error(reason) when is_binary(reason), do: [%{"message" => reason}]
   defp format_action_error(:unauthorized), do: [%{"message" => "Unauthorized"}]
   defp format_action_error(reason), do: [%{"message" => inspect(reason)}]
-
-  defp get_binding_id(%Binding{id: id}), do: id
-  defp get_binding_id(binding), do: Map.get(binding, :id) || Map.get(binding, "id")
 
   defp get_binding_element_id(binding) do
     Map.get(binding, :element_id) || Map.get(binding, "element_id")

@@ -82,7 +82,7 @@ defmodule AshUI.Authorization.BindingPolicy do
   @doc """
   Check if binding source resource is accessible.
   """
-  def source_accessible?(user, binding) do
+  def source_accessible?(_user, binding) do
     source = normalize_source(binding)
 
     cond do
@@ -92,9 +92,6 @@ defmodule AshUI.Authorization.BindingPolicy do
       # Check resource-level access
       not Policies.can_read_source(binding) -> false
 
-      # Check field-level access
-      not field_accessible?(user, binding) -> false
-
       # Default allow
       true -> true
     end
@@ -102,44 +99,23 @@ defmodule AshUI.Authorization.BindingPolicy do
 
   # Private functions
 
-  defp can_access_binding?(user, binding) do
-    # In production, would check parent screen access
-    Policies.user_active(user)
-  end
-
-  defp screen_owned?(user, binding) do
-    # In production, would check parent screen ownership
-    true
-  end
-
-  defp has_data_access?(binding, user) do
+  defp has_data_access?(binding, _user) do
     source = normalize_source(binding)
 
     cond do
       map_size(source) == 0 -> true
       not Policies.can_read_source(binding) -> false
-      not Policies.can_access_field(binding.source, Map.get(source, "field")) -> false
       true -> true
     end
   end
 
-  defp has_write_access?(binding, user) do
+  defp has_write_access?(binding, _user) do
     source = normalize_source(binding)
 
     cond do
       map_size(source) == 0 -> true
       not Policies.can_write_source(binding) -> false
       true -> true
-    end
-  end
-
-  defp field_accessible?(user, binding) do
-    source = normalize_source(binding)
-    field = Map.get(source, "field")
-
-    case field do
-      nil -> true
-      _ -> Policies.can_access_field(binding, field)
     end
   end
 

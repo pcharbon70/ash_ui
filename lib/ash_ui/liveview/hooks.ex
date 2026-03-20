@@ -20,7 +20,7 @@ defmodule AshUI.LiveView.Hooks do
   ## Assigns
     * `:ash_ui_loaded` - Set to true when screen is loaded
   """
-  def on_mount_ash_ui(_params, session, socket) do
+  def on_mount_ash_ui(_params, _session, socket) do
     socket =
       socket
       |> Phoenix.Component.assign(:ash_ui_loaded, false)
@@ -140,7 +140,7 @@ defmodule AshUI.LiveView.Hooks do
   """
   def register_callback(socket, callback_type, callback_fn) when is_function(callback_fn, 1) do
     callbacks = Map.get(socket.assigns, :ash_ui_callbacks, %{})
-    updated_callbacks = Map.update(callbacks, callback_type, [callback_fn], &[callback_fn | &1])
+    updated_callbacks = Map.update(callbacks, callback_type, [callback_fn], &(&1 ++ [callback_fn]))
 
     Phoenix.Component.assign(socket, :ash_ui_callbacks, updated_callbacks)
   end
@@ -228,7 +228,7 @@ defmodule AshUI.LiveView.Hooks do
     end)
   end
 
-  defp unsubscribe_from_resource(subscription) do
+  defp unsubscribe_from_resource(_subscription) do
     # Unsubscribe from Ash.Notifier
     # In production, would call Ash.Notifier.unsubscribe/1
     :ok

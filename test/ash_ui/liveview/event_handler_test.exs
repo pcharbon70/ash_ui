@@ -53,21 +53,21 @@ defmodule AshUI.LiveView.EventHandlerTest do
       socket = build_socket(ash_ui_bindings: %{})
       event = %{type: :change, target: "input-1", data: %{"value" => "test"}}
 
-      assert {:ok, socket} = EventHandler.route_event(event, socket)
+      assert {:ok, _updated_socket} = EventHandler.route_event(event, socket)
     end
 
     test "routes click events to action handler" do
       socket = build_socket(ash_ui_bindings: %{})
       event = %{type: :click, target: "button-1", data: %{}}
 
-      assert {:ok, socket} = EventHandler.route_event(event, socket)
+      assert {:ok, _updated_socket} = EventHandler.route_event(event, socket)
     end
 
     test "routes submit events to action handler" do
       socket = build_socket(ash_ui_bindings: %{})
       event = %{type: :submit, target: "form-1", data: %{}}
 
-      assert {:ok, socket} = EventHandler.route_event(event, socket)
+      assert {:ok, _updated_socket} = EventHandler.route_event(event, socket)
     end
 
     test "returns error for unknown event types" do
@@ -88,7 +88,7 @@ defmodule AshUI.LiveView.EventHandlerTest do
 
       params = %{"target" => "input-1", "value" => "new value"}
 
-      assert {:noreply, socket} = EventHandler.handle_value_change(params, socket)
+      assert {:noreply, _updated_socket} = EventHandler.handle_value_change(params, socket)
     end
 
     test "assigns flash on error" do
@@ -100,7 +100,7 @@ defmodule AshUI.LiveView.EventHandlerTest do
 
       params = %{"target" => "nonexistent", "value" => "test"}
 
-      assert {:noreply, socket} = EventHandler.handle_value_change(params, socket)
+      assert {:noreply, _updated_socket} = EventHandler.handle_value_change(params, socket)
     end
   end
 
@@ -116,7 +116,7 @@ defmodule AshUI.LiveView.EventHandlerTest do
 
       params = %{"action_id" => "action1", "data" => %{"name" => "Test"}}
 
-      assert {:reply, reply, socket} = EventHandler.handle_action_event(params, socket)
+      assert {:reply, reply, _updated_socket} = EventHandler.handle_action_event(params, socket)
       assert reply[:status] in [:ok, :error]
     end
 
@@ -129,7 +129,7 @@ defmodule AshUI.LiveView.EventHandlerTest do
 
       params = %{"action_id" => "restricted_action", "data" => %{}}
 
-      assert {:reply, reply, socket} = EventHandler.handle_action_event(params, socket)
+      assert {:reply, reply, _updated_socket} = EventHandler.handle_action_event(params, socket)
       assert reply[:status] == :error
       assert reply[:reason] == "unauthorized"
     end
@@ -143,9 +143,9 @@ defmodule AshUI.LiveView.EventHandlerTest do
 
       params = %{"action_id" => "nonexistent_action", "data" => %{}}
 
-      assert {:reply, reply, socket} = EventHandler.handle_action_event(params, socket)
+      assert {:reply, reply, updated_socket} = EventHandler.handle_action_event(params, socket)
       assert reply[:status] == :error
-      assert socket.assigns[:flash] != nil
+      assert is_map(updated_socket.assigns[:flash])
     end
   end
 
@@ -166,7 +166,7 @@ defmodule AshUI.LiveView.EventHandlerTest do
     test "returns error for missing data field" do
       event_data = %{"target" => "input-1"}
 
-      assert {:error, {:missing_fields, ["target"]}} =
+      assert {:error, {:missing_fields, ["data"]}} =
                EventHandler.validate_event_data(event_data, "change")
     end
   end
@@ -175,24 +175,28 @@ defmodule AshUI.LiveView.EventHandlerTest do
     test "assigns flash error message" do
       socket = build_socket()
 
-      assert {:noreply, socket} = EventHandler.handle_validation_error(:missing_target, socket)
-      assert socket.assigns[:flash][:error] != nil
+      assert {:noreply, updated_socket} =
+               EventHandler.handle_validation_error(:missing_target, socket)
+
+      assert is_binary(updated_socket.assigns[:flash][:error])
     end
 
     test "handles invalid type errors" do
       socket = build_socket()
 
-      assert {:noreply, socket} =
+      assert {:noreply, updated_socket} =
                EventHandler.handle_validation_error({:invalid_type, :got, :expected}, socket)
 
-      assert socket.assigns[:flash][:error] != nil
+      assert is_binary(updated_socket.assigns[:flash][:error])
     end
 
     test "handles unknown errors" do
       socket = build_socket()
 
-      assert {:noreply, socket} = EventHandler.handle_validation_error(:unknown_error, socket)
-      assert socket.assigns[:flash][:error] != nil
+      assert {:noreply, updated_socket} =
+               EventHandler.handle_validation_error(:unknown_error, socket)
+
+      assert is_binary(updated_socket.assigns[:flash][:error])
     end
   end
 
@@ -206,15 +210,15 @@ defmodule AshUI.LiveView.EventHandlerTest do
           }
         )
 
-      assert {:ok, socket} = EventHandler.wire_handlers(socket)
-      assert socket.assigns[:ash_ui_handlers] != nil
+      assert {:ok, updated_socket} = EventHandler.wire_handlers(socket)
+      assert is_map(updated_socket.assigns[:ash_ui_handlers])
     end
 
     test "handles socket with no bindings" do
       socket = build_socket(ash_ui_bindings: %{})
 
-      assert {:ok, socket} = EventHandler.wire_handlers(socket)
-      assert socket.assigns[:ash_ui_handlers] != nil
+      assert {:ok, updated_socket} = EventHandler.wire_handlers(socket)
+      assert is_map(updated_socket.assigns[:ash_ui_handlers])
     end
   end
 
@@ -223,19 +227,20 @@ defmodule AshUI.LiveView.EventHandlerTest do
       socket = build_socket(ash_ui_bindings: %{})
       params = %{"target" => "test"}
 
-      assert {:noreply, socket} = EventHandler.handle_event("ash_ui_change", params, socket)
+      assert {:noreply, _updated_socket} =
+               EventHandler.handle_event("ash_ui_change", params, socket)
     end
 
     test "handles unknown events gracefully" do
       socket = build_socket()
 
-      assert {:noreply, socket} = EventHandler.handle_event("unknown", %{}, socket)
+      assert {:noreply, _updated_socket} = EventHandler.handle_event("unknown", %{}, socket)
     end
 
     test "handles events with errors" do
       socket = build_socket(ash_ui_user: nil)
 
-      assert {:noreply, socket} =
+      assert {:noreply, _updated_socket} =
                EventHandler.handle_event("ash_ui_change", %{"target" => "test"}, socket)
     end
   end

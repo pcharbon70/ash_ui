@@ -9,7 +9,7 @@ defmodule AshUI.Authorization.RuntimeTest do
   defp build_inactive(), do: %{id: "user-2", role: :user, active: false}
 
   # Mock socket
-  defp build_socket(assigns \\ %{}) do
+  defp build_socket(assigns) do
     %Phoenix.LiveView.Socket{
       assigns: Enum.into(assigns, %{__changed__: %{}})
     }
@@ -89,8 +89,10 @@ defmodule AshUI.Authorization.RuntimeTest do
     end
 
     test "includes error message in forbidden response" do
-      assert {:forbidden, reason} = Runtime.check_action_authorization(build_inactive(), :delete, %{})
-      assert reason.message != nil
+      assert {:forbidden, reason} =
+               Runtime.check_action_authorization(build_inactive(), :delete, %{})
+
+      assert is_binary(reason.message)
     end
   end
 

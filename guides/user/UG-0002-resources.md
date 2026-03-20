@@ -53,7 +53,7 @@ Important fields:
 Create a screen:
 
 ```elixir
-alias AshUI.Domain
+alias AshUI.Data, as: Domain
 alias AshUI.Resources.Screen
 
 {:ok, screen} =

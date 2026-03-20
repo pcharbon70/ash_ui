@@ -52,7 +52,7 @@ Create a screen record:
 
 ```elixir
 alias AshUI.DSL.Builder
-alias AshUI.Domain
+alias AshUI.Data, as: Domain
 alias AshUI.Resources.Screen
 
 {:ok, _screen} =

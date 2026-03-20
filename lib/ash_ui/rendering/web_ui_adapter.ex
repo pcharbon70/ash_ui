@@ -66,7 +66,7 @@ defmodule AshUI.Rendering.WebUIAdapter do
   """
   @spec available?() :: boolean()
   def available? do
-    Code.ensure_loaded?(WebUI.Renderer)
+    Code.ensure_loaded?(web_ui_renderer_module())
   end
 
   @doc """
@@ -181,7 +181,7 @@ defmodule AshUI.Rendering.WebUIAdapter do
     * SSG configuration
   """
   @spec configure_ssg(map(), keyword()) :: map()
-  def configure_ssg(%{"type" => "screen"} = iur, opts \\ []) do
+  def configure_ssg(%{"type" => "screen"} = _iur, opts \\ []) do
     %{
       output_path: Keyword.get(opts, :output_path, "output"),
       generate_index: Keyword.get(opts, :generate_index, true),
@@ -193,10 +193,16 @@ defmodule AshUI.Rendering.WebUIAdapter do
 
   # Private Functions
 
+  defp web_ui_renderer_module do
+    Module.concat(WebUI, Renderer)
+  end
+
   # Call actual WebUI.Renderer if available
   defp call_web_ui_renderer(canonical_iur, opts) do
+    renderer_module = web_ui_renderer_module()
+
     try do
-      case WebUI.Renderer.render(canonical_iur, opts) do
+      case apply(renderer_module, :render, [canonical_iur, opts]) do
         {:ok, html} -> {:ok, html}
         {:error, reason} -> {:error, {:web_ui_error, reason}}
         other -> {:error, {:unexpected_response, other}}
