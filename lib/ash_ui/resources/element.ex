@@ -16,6 +16,7 @@ defmodule AshUI.Resources.Element do
     attribute :position, :integer, default: 0
     attribute :screen_id, :uuid
     attribute :metadata, :map, default: %{}
+    attribute :version, :integer, default: 1
     create_timestamp :inserted_at
     update_timestamp :updated_at
   end
