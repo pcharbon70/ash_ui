@@ -3,14 +3,26 @@ defmodule AshUI.Resources.Screen do
   Ash Resource for storing unified-ui screen definitions.
   """
 
+  @resource_topic_prefix "ash_ui:resource:AshUI:Resources:Screen"
+
   use Ash.Resource,
     domain: AshUI.Domain,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Ash.Notifier.PubSub],
     data_layer: AshPostgres.DataLayer
 
   postgres do
     table "ui_screens"
     repo AshUI.Repo
+  end
+
+  pub_sub do
+    module AshUI.Notifications
+    prefix @resource_topic_prefix
+
+    publish :create, "changes"
+    publish :update, "changes"
+    publish :destroy, "changes"
   end
 
   attributes do

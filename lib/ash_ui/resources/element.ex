@@ -5,14 +5,26 @@ defmodule AshUI.Resources.Element do
   Elements are atomic UI components (widgets) like buttons, inputs, text, etc.
   """
 
+  @resource_topic_prefix "ash_ui:resource:AshUI:Resources:Element"
+
   use Ash.Resource,
     domain: AshUI.Domain,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Ash.Notifier.PubSub],
     data_layer: AshPostgres.DataLayer
 
   postgres do
     table "ui_elements"
     repo AshUI.Repo
+  end
+
+  pub_sub do
+    module AshUI.Notifications
+    prefix @resource_topic_prefix
+
+    publish :create, "changes"
+    publish :update, "changes"
+    publish :destroy, "changes"
   end
 
   attributes do

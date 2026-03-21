@@ -16,6 +16,7 @@ defmodule AshUI.Application do
     AshUI.Authorization.Runtime.init_cache()
 
     children = [
+      {Phoenix.PubSub, name: AshUI.PubSub},
       AshUI.Telemetry,
       AshUI.Repo,
       AshUI.Rendering.Registry

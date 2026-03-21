@@ -108,7 +108,7 @@ Key starting points:
 
 ## Current Status
 
-Phase 8 governance work is complete, but the repo is still closing feature gaps in earlier phases. The current implementation is strongest in resource storage, compilation, runtime wiring, observability, and governance, while real Ash-backed binding execution and full external renderer integration remain open in reopened Phase 1, 3, 4, 5, and 7 workstreams.
+Phase 8 governance work is complete, and the runtime stack now includes real Ash-backed binding execution, authorization, and LiveView reactivity. The main remaining open workstreams are the legacy resource DSL items in Phase 1 and the optional external renderer package integration tracked in Phase 7.
 
 ## Development Notes
 

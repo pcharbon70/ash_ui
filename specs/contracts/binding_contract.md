@@ -151,7 +151,7 @@ Bindings MUST emit telemetry events for evaluation, update, and error flows.
 
 ## Implementation Note
 
-The repository currently exposes the binding APIs and telemetry surface described here, but some read, write, list, and action paths are still backed by placeholder implementations. This contract describes the intended real Ash-backed behavior that the reopened Phase 3 and Phase 4 work will complete.
+The repository now exposes the binding APIs and telemetry surface described here through real Ash-backed read, write, list, and action paths. This contract describes the behavior that the runtime and LiveView integration enforce today.
 
 ## Traceability
 
