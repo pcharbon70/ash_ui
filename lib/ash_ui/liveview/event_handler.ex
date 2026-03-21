@@ -8,7 +8,6 @@ defmodule AshUI.LiveView.EventHandler do
 
   require Logger
 
-  alias AshUI.Resources.Binding
   alias AshUI.Runtime.ActionBinding
   alias AshUI.Runtime.BidirectionalBinding
 
@@ -74,6 +73,11 @@ defmodule AshUI.LiveView.EventHandler do
          {:ok, socket} <- write_value(binding, value, socket, context) do
       {:noreply, socket}
     else
+      {:error, reason, error_socket} ->
+        Logger.error("Value change failed: #{inspect(reason)}")
+        socket = assign_flash(error_socket, :error, "Update failed: #{inspect(reason)}")
+        {:noreply, socket}
+
       {:error, reason} ->
         Logger.error("Value change failed: #{inspect(reason)}")
         socket = assign_flash(socket, :error, "Update failed: #{inspect(reason)}")
@@ -268,7 +272,8 @@ defmodule AshUI.LiveView.EventHandler do
       user: socket.assigns[:ash_ui_user],
       params: socket.assigns[:ash_ui_params] || %{},
       assigns: socket.assigns,
-      socket: socket
+      socket: socket,
+      ash_domains: Map.get(socket.assigns, :ash_ui_domains, Application.get_env(:ash_ui, :ash_domains, [AshUI.Domain]))
     }
   end
 
@@ -282,13 +287,14 @@ defmodule AshUI.LiveView.EventHandler do
   defp write_value(binding, value, socket, context) do
     case BidirectionalBinding.write_binding(binding, value, socket, context) do
       {:ok, updated_socket, _result} -> {:ok, updated_socket}
-      {:error, reason, _error_socket} -> {:error, reason}
+      {:error, reason, error_socket} -> {:error, reason, error_socket}
     end
   end
 
-  defp execute_action(binding, event_data, socket, context) do
+  defp execute_action(binding, event_data, _socket, context) do
     case ActionBinding.execute_action(binding, event_data, context) do
       {:ok, result} -> {:ok, result}
+      {:error, %{errors: [%{"message" => "Unauthorized"} | _]}} -> {:error, :unauthorized}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -312,7 +318,7 @@ defmodule AshUI.LiveView.EventHandler do
   end
 
   defp validate_required_fields(event_data) do
-    required = ["target"]
+    required = ["target", "data"]
     missing = Enum.reject(required, &Map.has_key?(event_data, &1))
 
     if missing == [] do
@@ -355,7 +361,7 @@ defmodule AshUI.LiveView.EventHandler do
     bindings = socket.assigns[:ash_ui_bindings] || %{}
 
     # Create handler map for all bindings
-    handlers = ActionBinding.wire_handlers(Map.to_list(bindings), socket)
+    handlers = ActionBinding.wire_handlers(Map.values(bindings), socket)
 
     socket = Phoenix.Component.assign(socket, :ash_ui_handlers, handlers)
     {:ok, socket}

@@ -115,15 +115,16 @@ defmodule AshUI.Runtime.ActionBinding do
   def wire_handlers(bindings, _socket) do
     action_bindings =
       Enum.filter(bindings, fn b ->
-        type = b.binding_type || Map.get(b, "binding_type")
+        type = Map.get(b, :binding_type) || Map.get(b, "binding_type")
         type in [:action, "action"]
       end)
 
     Enum.reduce(action_bindings, %{}, fn binding, acc ->
-      target = binding.target || Map.get(binding, "target")
+      target = binding_target(binding)
       element_id = get_binding_element_id(binding)
+      fallback_id = Map.get(binding, :id) || Map.get(binding, "id")
 
-      handler_name = "ash_ui_action_#{target || element_id}"
+      handler_name = "ash_ui_action_#{target || element_id || fallback_id}"
 
       Map.put(acc, handler_name, event_handler(binding, element_id))
     end)
@@ -179,7 +180,7 @@ defmodule AshUI.Runtime.ActionBinding do
 
   # Handle successful action
   defp handle_action_success(socket, binding, result) do
-    target = binding.target || Map.get(binding, "target")
+    target = binding_target(binding)
     ash_ui = Map.get(socket.assigns, :ash_ui, %{})
     actions = Map.get(ash_ui, :actions, %{})
     action_state = Map.get(actions, target, %{})
@@ -206,7 +207,7 @@ defmodule AshUI.Runtime.ActionBinding do
 
   # Handle action error
   defp handle_action_error(socket, binding) do
-    target = binding.target || Map.get(binding, "target")
+    target = binding_target(binding)
     ash_ui = Map.get(socket.assigns, :ash_ui, %{})
     actions = Map.get(ash_ui, :actions, %{})
     action_state = Map.get(actions, target, %{})
@@ -244,6 +245,10 @@ defmodule AshUI.Runtime.ActionBinding do
 
   defp get_binding_element_id(binding) do
     Map.get(binding, :element_id) || Map.get(binding, "element_id")
+  end
+
+  defp binding_target(binding) do
+    Map.get(binding, :target) || Map.get(binding, "target")
   end
 
   defp put_flash(socket, kind, message) do

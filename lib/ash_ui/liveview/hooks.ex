@@ -9,6 +9,7 @@ defmodule AshUI.LiveView.Hooks do
   require Logger
 
   alias AshUI.LiveView.Integration
+  alias AshUI.LiveView.UpdateIntegration
 
   @doc """
   on_mount hook for initializing Ash UI screens.
@@ -20,7 +21,7 @@ defmodule AshUI.LiveView.Hooks do
   ## Assigns
     * `:ash_ui_loaded` - Set to true when screen is loaded
   """
-  def on_mount_ash_ui(_params, session, socket) do
+  def on_mount_ash_ui(_params, _session, socket) do
     socket =
       socket
       |> Phoenix.Component.assign(:ash_ui_loaded, false)
@@ -102,7 +103,7 @@ defmodule AshUI.LiveView.Hooks do
   """
   def on_unmount(socket) do
     # Unsubscribe from all Ash resource notifications
-    cleanup_subscriptions(socket)
+    UpdateIntegration.cleanup_subscriptions(socket)
 
     # Emit unmount telemetry
     screen_id = get_screen_id(socket)
@@ -140,7 +141,7 @@ defmodule AshUI.LiveView.Hooks do
   """
   def register_callback(socket, callback_type, callback_fn) when is_function(callback_fn, 1) do
     callbacks = Map.get(socket.assigns, :ash_ui_callbacks, %{})
-    updated_callbacks = Map.update(callbacks, callback_type, [callback_fn], &[callback_fn | &1])
+    updated_callbacks = Map.update(callbacks, callback_type, [callback_fn], &(&1 ++ [callback_fn]))
 
     Phoenix.Component.assign(socket, :ash_ui_callbacks, updated_callbacks)
   end
@@ -182,12 +183,7 @@ defmodule AshUI.LiveView.Hooks do
       end
   """
   def cleanup_session(socket) do
-    # Clean up any session-specific state
-    subscriptions = Map.get(socket.assigns, :ash_ui_subscriptions, [])
-
-    Enum.each(subscriptions, fn sub ->
-      unsubscribe_from_resource(sub)
-    end)
+    UpdateIntegration.cleanup_subscriptions(socket)
 
     socket
     |> Phoenix.Component.assign(:ash_ui_subscriptions, [])
@@ -218,19 +214,5 @@ defmodule AshUI.LiveView.Hooks do
 
   defp assign_error(socket, reason) do
     Phoenix.Component.assign(socket, :ash_ui_error, reason)
-  end
-
-  defp cleanup_subscriptions(socket) do
-    subscriptions = Map.get(socket.assigns, :ash_ui_subscriptions, [])
-
-    Enum.each(subscriptions, fn sub ->
-      unsubscribe_from_resource(sub)
-    end)
-  end
-
-  defp unsubscribe_from_resource(subscription) do
-    # Unsubscribe from Ash.Notifier
-    # In production, would call Ash.Notifier.unsubscribe/1
-    :ok
   end
 end

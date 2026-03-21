@@ -1,18 +1,20 @@
 defmodule AshUI.LiveView.Phase4IntegrationTest do
   use ExUnit.Case, async: false
 
-  alias AshUI.LiveView.Integration
-  alias AshUI.LiveView.UpdateIntegration
-  alias AshUI.LiveView.EventHandler
   alias AshUI.LiveView.Lifecycle
   alias AshUI.LiveView.ErrorHandler
+  alias AshUI.LiveView.EventHandler
+  alias AshUI.LiveView.UpdateIntegration
+  alias AshUI.Test.RuntimeDomain
+  alias AshUI.Test.RuntimeFixtures
+  alias AshUI.Test.User
 
   @moduletag :conformance
 
   # Integration test helpers
   defp build_socket(assigns \\ %{}) do
     %Phoenix.LiveView.Socket{
-      assigns: Enum.into(assigns, %{__changed__: %{}, flash: %{}})
+      assigns: Enum.into(assigns, %{__changed__: %{}, flash: %{}, ash_ui_domains: [RuntimeDomain]})
     }
   end
 
@@ -76,32 +78,56 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
 
   describe "Section 4.6.2 - Event handling integration scenarios" do
     test "button clicks trigger Ash actions" do
+      fixtures = RuntimeFixtures.seed!()
+
       socket =
         build_socket(
           ash_ui_bindings: %{
-            action1: %{id: "action1", source: %{"resource" => "User", "action" => "create"}}
+            action1: %{
+              id: "action1",
+              target: "action1",
+              source: %{"resource" => "User", "action" => "create"},
+              binding_type: :action,
+              transform: %{
+                "params" => %{
+                  "name" => {"event", "name"},
+                  "email" => {"event", "email"}
+                }
+              }
+            }
           },
-          ash_ui_user: build_user()
+          ash_ui_user: fixtures.actor
         )
 
-      params = %{"action_id" => "action1", "data" => %{"name" => "Test"}}
+      params = %{"action_id" => "action1", "data" => %{"name" => "Test", "email" => "test@example.com"}}
 
-      # Action events should be handled
       assert {:reply, reply, socket} = EventHandler.handle_action_event(params, socket)
-      assert reply != nil
+      assert reply[:status] == :ok
+      assert get_in(socket.assigns, [:flash, :info]) == "Action completed successfully"
     end
 
     test "input changes update Ash resources" do
+      fixtures = RuntimeFixtures.seed!()
+
       socket =
         build_socket(
-          ash_ui_bindings: %{binding1: %{target: "input-1", value: "old"}},
-          ash_ui_user: build_user()
+          ash_ui_bindings: %{
+            binding1: %{
+              id: "binding1",
+              target: "input-1",
+              source: %{"resource" => "User", "field" => "name", "id" => fixtures.user.id},
+              binding_type: :value,
+              value: fixtures.user.name
+            }
+          },
+          ash_ui_user: fixtures.actor
         )
 
       params = %{"target" => "input-1", "value" => "new value"}
 
-      # Value changes should be handled
       assert {:noreply, socket} = EventHandler.handle_value_change(params, socket)
+      assert socket.assigns[:ash_ui_bindings][:binding1].value == "new value"
+      assert get_in(socket.assigns, [:ash_ui, :bindings, "input-1", "value"]) == "new value"
     end
 
     test "action errors display feedback" do
@@ -131,21 +157,34 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
 
   describe "Section 4.6.3 - Reactivity integration scenarios" do
     test "UI updates when bound data changes" do
+      fixtures = RuntimeFixtures.seed!()
+
       socket =
         build_socket(
           ash_ui_screen: build_screen(),
-          ash_ui_user: build_user(),
-          ash_ui_bindings: %{binding1: "old_value"}
+          ash_ui_user: fixtures.actor,
+          ash_ui_bindings: %{
+            binding1: %{
+              id: "binding1",
+              target: "input-1",
+              source: %{"resource" => "User", "field" => "name", "id" => fixtures.user.id},
+              binding_type: :value,
+              value: fixtures.user.name
+            }
+          }
         )
+
+      {:ok, _updated_user} = Ash.update(fixtures.user, %{name: "Reactive Update"}, domain: RuntimeDomain)
 
       notification = %{
         type: :updated,
-        resource: User.Profile,
+        resource: User,
         timestamp: DateTime.utc_now()
       }
 
-      # Resource changes should trigger updates
       assert {:noreply, socket} = UpdateIntegration.handle_resource_change(notification, socket)
+      assert socket.assigns[:ash_ui_bindings][:binding1].value == "Reactive Update"
+      assert get_in(socket.assigns, [:ash_ui, :bindings, "input-1", "value"]) == "Reactive Update"
     end
 
     test "multiple sessions don't interfere" do
@@ -191,7 +230,7 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
         |> elem(1)
 
       # Subscribe to some resources
-      {:ok, sub} = UpdateIntegration.subscribe(socket, User.Profile)
+      {:ok, _sub} = UpdateIntegration.subscribe(socket, User.Profile)
 
       # Cleanup should remove subscriptions
       assert :ok = UpdateIntegration.cleanup_subscriptions(socket)
@@ -246,24 +285,32 @@ defmodule AshUI.LiveView.Phase4IntegrationTest do
     end
 
     test "event flow from UI to Ash and back" do
+      fixtures = RuntimeFixtures.seed!()
+
       socket =
         build_socket(
           ash_ui_screen: build_screen(),
-          ash_ui_user: build_user(),
+          ash_ui_user: fixtures.actor,
           ash_ui_bindings: %{
-            binding1: %{id: "binding1", target: "input-1", value: "initial"}
+            binding1: %{
+              id: "binding1",
+              target: "input-1",
+              source: %{"resource" => "User", "field" => "name", "id" => fixtures.user.id},
+              binding_type: :value,
+              value: fixtures.user.name
+            }
           }
         )
 
-      # 1. User changes value
       {:noreply, socket} = EventHandler.handle_value_change(%{"target" => "input-1", "value" => "changed"}, socket)
+      assert socket.assigns[:ash_ui_bindings][:binding1].value == "changed"
 
-      # 2. Resource change notification
-      notification = %{type: :updated, resource: User.Profile, timestamp: DateTime.utc_now()}
+      {:ok, _updated_user} = Ash.update(fixtures.user, %{name: "server change"}, domain: RuntimeDomain)
+
+      notification = %{type: :updated, resource: User, timestamp: DateTime.utc_now()}
       {:noreply, socket} = UpdateIntegration.handle_resource_change(notification, socket)
 
-      # Socket should be updated
-      assert socket != nil
+      assert socket.assigns[:ash_ui_bindings][:binding1].value == "server change"
     end
   end
 

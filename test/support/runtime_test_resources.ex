@@ -244,7 +244,11 @@ defmodule AshUI.Test.RuntimeFixtures do
       end
 
     %Phoenix.LiveView.Socket{
-      assigns: Map.put_new(assigns, :ash_ui, %{})
+      assigns:
+        assigns
+        |> Map.put_new(:ash_ui, %{})
+        |> Map.put_new(:ash_ui_domains, [RuntimeDomain])
+        |> Map.put_new(:__changed__, %{})
     }
   end
 end

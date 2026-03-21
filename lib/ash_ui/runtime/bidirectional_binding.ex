@@ -240,10 +240,13 @@ defmodule AshUI.Runtime.BidirectionalBinding do
         "updated_at" => System.system_time(:millisecond)
       })
 
-    %{
-      socket
-      | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
-    }
+    socket =
+      %{
+        socket
+        | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
+      }
+
+    update_binding_state(socket, binding, %{value: value, error: nil})
   end
 
   defp get_binding_value(socket, binding) do
@@ -261,12 +264,22 @@ defmodule AshUI.Runtime.BidirectionalBinding do
     ash_ui = Map.get(socket.assigns, :ash_ui, %{})
     bindings = Map.get(ash_ui, :bindings, %{})
     binding_state = Map.get(bindings, target, %{})
-    updated_bindings = Map.put(bindings, target, Map.put(binding_state, "error", error))
+    updated_bindings =
+      Map.put(
+        bindings,
+        target,
+        binding_state
+        |> Map.put("error", error)
+        |> Map.put("updated_at", System.system_time(:millisecond))
+      )
 
-    %{
-      socket
-      | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
-    }
+    socket =
+      %{
+        socket
+        | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
+      }
+
+    update_binding_state(socket, binding, %{error: error})
   end
 
   defp get_binding_id(%Binding{id: id}), do: id
@@ -275,6 +288,46 @@ defmodule AshUI.Runtime.BidirectionalBinding do
   defp subscription_id(binding) do
     "#{get_binding_id(binding)}_#{System.system_time(:millisecond)}"
   end
+
+  defp update_binding_state(socket, binding, attrs) do
+    binding_id = get_binding_id(binding)
+    bindings = Map.get(socket.assigns, :ash_ui_bindings, %{})
+    atom_binding_id = maybe_to_existing_atom(binding_id)
+
+    existing_binding =
+      Map.get(bindings, binding_id) ||
+        (atom_binding_id && Map.get(bindings, atom_binding_id))
+
+    if is_map(existing_binding) do
+      updated_binding =
+        existing_binding
+        |> Map.merge(attrs)
+        |> Map.put(:updated_at, System.system_time(:millisecond))
+
+      updated_bindings =
+        bindings
+        |> Map.put(binding_id, updated_binding)
+        |> maybe_put(atom_binding_id, updated_binding)
+
+      %{socket | assigns: Map.put(socket.assigns, :ash_ui_bindings, updated_bindings)}
+    else
+      socket
+    end
+  end
+
+  defp maybe_put(map, nil, _value), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp maybe_to_existing_atom(value) when is_binary(value) do
+    try do
+      String.to_existing_atom(value)
+    rescue
+      ArgumentError -> nil
+    end
+  end
+
+  defp maybe_to_existing_atom(value) when is_atom(value), do: value
+  defp maybe_to_existing_atom(_value), do: nil
 
   defp emit_binding_update_telemetry(binding, context, started_at, result) do
     duration = System.monotonic_time() - started_at

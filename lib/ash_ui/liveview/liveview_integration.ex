@@ -7,6 +7,7 @@ defmodule AshUI.LiveView.Integration do
   """
 
   require Logger
+  require Ash.Query
 
   alias AshUI.Compiler
   alias AshUI.Domain
@@ -14,6 +15,7 @@ defmodule AshUI.LiveView.Integration do
   alias AshUI.Resources.Screen
   alias AshUI.Resources.Binding
   alias AshUI.Runtime.BindingEvaluator
+  alias AshUI.LiveView.UpdateIntegration
   alias AshUI.Rendering.IURAdapter
   alias AshUI.Telemetry
 
@@ -50,7 +52,8 @@ defmodule AshUI.LiveView.Integration do
          :ok <- authorize_screen(screen, user),
          {:ok, iur} <- compile_screen(screen),
          {:ok, bindings} <- evaluate_bindings(screen, socket, user, params),
-         socket <- assign_screen_state(socket, screen, iur, bindings, user) do
+         socket <- assign_screen_state(socket, screen, iur, bindings, user, params),
+         socket <- UpdateIntegration.sync_binding_subscriptions(socket) do
       {:ok, socket}
     else
       {:error, :unauthorized} ->
@@ -123,7 +126,7 @@ defmodule AshUI.LiveView.Integration do
     end
   end
 
-  defp load_screen(screen_id, user, params) do
+  defp load_screen(screen_id, user, _params) do
     case load_screen_by_identifier(screen_id, user) do
       {:ok, screen} -> {:ok, screen}
       {:error, :invalid_primary_key} -> {:error, :not_found}
@@ -131,13 +134,13 @@ defmodule AshUI.LiveView.Integration do
     end
   end
 
-  defp load_screen_by_identifier(screen_id, user) when is_atom(screen_id) do
+  defp load_screen_by_identifier(screen_id, _user) when is_atom(screen_id) do
     load_screen_by_name(Atom.to_string(screen_id))
   end
 
   defp load_screen_by_identifier(screen_id, user) do
     case load_screen_by_primary_key(screen_id, user) do
-      {:ok, screen} = result ->
+      {:ok, _screen} = result ->
         result
 
       {:error, _reason} when is_binary(screen_id) ->
@@ -159,7 +162,12 @@ defmodule AshUI.LiveView.Integration do
   end
 
   defp load_screen_by_name(name) do
-    case Domain.read_one(Screen, filter: [name: name]) do
+    query =
+      Screen
+      |> Ash.Query.new()
+      |> Ash.Query.filter(name == ^name)
+
+    case Ash.read_one(query, domain: Domain) do
       {:ok, %Screen{} = screen} -> {:ok, screen}
       {:ok, nil} -> {:error, :not_found}
       {:error, reason} -> {:error, reason}
@@ -172,7 +180,8 @@ defmodule AshUI.LiveView.Integration do
       user: user,
       params: params,
       assigns: socket.assigns,
-      socket: socket
+      socket: socket,
+      ash_domains: Map.get(socket.assigns, :ash_ui_domains, Application.get_env(:ash_ui, :ash_domains, [Domain]))
     }
   end
 
@@ -186,9 +195,12 @@ defmodule AshUI.LiveView.Integration do
   end
 
   defp load_screen_bindings(%Screen{} = screen) do
-    # Load all bindings for this screen
-    # In production, would use Ash.read/2 with proper filtering
-    case Ash.read(Binding, filter: [screen_id: screen.id], authorize?: true) do
+    query =
+      Binding
+      |> Ash.Query.new()
+      |> Ash.Query.filter(screen_id == ^screen.id)
+
+    case Ash.read(query, authorize?: true) do
       {:ok, bindings} -> bindings
       {:error, _} -> []
     end
@@ -201,25 +213,27 @@ defmodule AshUI.LiveView.Integration do
       Enum.reduce(bindings, %{}, fn binding, acc ->
         case BindingEvaluator.evaluate(binding, context) do
           {:ok, value} ->
-            Map.put(acc, binding.id, value)
+            Map.put(acc, binding.id, build_binding_state(binding, value: value, error: nil))
 
           {:error, reason} ->
             Logger.warning("Binding #{binding.id} evaluation failed: #{inspect(reason)}")
-            # Store error state for UI to handle
-            Map.put(acc, binding.id, {:error, reason})
+            Map.put(acc, binding.id, build_binding_state(binding, value: nil, error: reason))
         end
       end)
 
     {:ok, results}
   end
 
-  defp assign_screen_state(socket, screen, iur, bindings, user) do
+  defp assign_screen_state(socket, screen, iur, bindings, user, params) do
     socket
     |> Phoenix.Component.assign(:ash_ui_screen, screen)
     |> Phoenix.Component.assign(:ash_ui_iur, iur)
     |> Phoenix.Component.assign(:ash_ui_bindings, bindings)
+    |> Phoenix.Component.assign(:ash_ui_params, params)
+    |> Phoenix.Component.assign(:ash_ui_domains, Application.get_env(:ash_ui, :ash_domains, [Domain]))
     |> Phoenix.Component.assign(:ash_ui_user, user)
     |> Phoenix.Component.assign(:ash_ui_loaded_at, DateTime.utc_now())
+    |> sync_runtime_binding_assigns(bindings)
   end
 
   @doc """
@@ -234,7 +248,7 @@ defmodule AshUI.LiveView.Integration do
       end
   """
   @spec redirect_to_login(Phoenix.LiveView.Socket.t(), term()) :: {:error, term()}
-  def redirect_to_login(socket, _error) do
+  def redirect_to_login(_socket, _error) do
     # In production, would use Phoenix.LiveView.redirect/3
     # This is a placeholder for the redirect logic
     {:error, :unauthorized}
@@ -254,5 +268,43 @@ defmodule AshUI.LiveView.Integration do
   """
   def emit_telemetry(event, metadata, measurements \\ %{}) do
     Telemetry.emit(:screen, event, measurements, metadata)
+  end
+
+  defp build_binding_state(binding, attrs) do
+    %{
+      id: binding.id,
+      source: binding.source || %{},
+      target: binding.target,
+      binding_type: binding.binding_type,
+      transform: binding.transform || %{},
+      metadata: binding.metadata || %{},
+      screen_id: binding.screen_id,
+      element_id: binding.element_id,
+      value: Keyword.get(attrs, :value),
+      error: Keyword.get(attrs, :error),
+      updated_at: System.system_time(:millisecond)
+    }
+  end
+
+  defp sync_runtime_binding_assigns(socket, bindings) do
+    ash_ui = Map.get(socket.assigns, :ash_ui, %{})
+    runtime_bindings = Map.get(ash_ui, :bindings, %{})
+
+    updated_runtime_bindings =
+      Enum.reduce(bindings, runtime_bindings, fn {_binding_id, binding_state}, acc ->
+        case Map.get(binding_state, :target) || Map.get(binding_state, "target") do
+          nil ->
+            acc
+
+          target ->
+            Map.put(acc, target, %{
+              "value" => Map.get(binding_state, :value),
+              "error" => Map.get(binding_state, :error),
+              "updated_at" => Map.get(binding_state, :updated_at)
+            })
+        end
+      end)
+
+    Phoenix.Component.assign(socket, :ash_ui, Map.put(ash_ui, :bindings, updated_runtime_bindings))
   end
 end

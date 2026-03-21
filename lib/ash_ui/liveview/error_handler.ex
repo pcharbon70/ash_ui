@@ -8,7 +8,6 @@ defmodule AshUI.LiveView.ErrorHandler do
 
   require Logger
 
-  alias AshUI.LiveView.Integration
   alias AshUI.Telemetry
 
   @type error_info :: %{
@@ -68,7 +67,7 @@ defmodule AshUI.LiveView.ErrorHandler do
       end
   """
   @spec handle_binding_error(map(), term(), Phoenix.LiveView.Socket.t()) ::
-          {:error, term()} | term()
+          {:error, term(), Phoenix.LiveView.Socket.t()}
   def handle_binding_error(binding, reason, socket) do
     error_info = build_error_info(:binding, reason, socket, binding: binding)
 
@@ -79,10 +78,9 @@ defmodule AshUI.LiveView.ErrorHandler do
     emit_error_telemetry(error_info)
 
     # Store error in binding state for UI to handle
-    socket = store_binding_error(socket, binding, error_info)
+    updated_socket = store_binding_error(socket, binding, error_info)
 
-    # Return error placeholder value
-    {:error, reason}
+    {:error, reason, updated_socket}
   end
 
   @doc """
@@ -157,15 +155,10 @@ defmodule AshUI.LiveView.ErrorHandler do
   @spec handle_runtime_error(Exception.t(), list(), Phoenix.LiveView.Socket.t()) ::
           Phoenix.LiveView.Socket.t()
   def handle_runtime_error(exception, stacktrace, socket) do
-    error_info = %{
-      type: :runtime,
-      reason: exception,
-      message: Exception.message(exception),
-      timestamp: DateTime.utc_now(),
-      context: %{
-        stacktrace: Exception.format_stacktrace(stacktrace)
-      }
-    }
+    error_info =
+      build_error_info(:runtime, exception, socket, %{
+        stacktrace: format_stacktrace(stacktrace)
+      })
 
     # Log runtime error
     log_runtime_error(error_info)
@@ -264,7 +257,7 @@ defmodule AshUI.LiveView.ErrorHandler do
 
   def user_friendly_message(%{type: :binding, reason: reason}) do
     case reason do
-      {:not_found, resource} -> "The requested data could not be found."
+      {:not_found, _resource} -> "The requested data could not be found."
       {:unauthorized, _} -> "You don't have permission to view this data."
       _ -> "Unable to load some data. Please refresh the page."
     end
@@ -322,6 +315,12 @@ defmodule AshUI.LiveView.ErrorHandler do
   # Private functions
 
   defp build_error_info(type, reason, socket, extra_context \\ %{}) do
+    extra_context =
+      case extra_context do
+        extra when is_list(extra) -> Enum.into(extra, %{})
+        extra when is_map(extra) -> extra
+      end
+
     base_context = %{
       screen_id: get_screen_id(socket),
       user_id: get_user_id(socket),
@@ -339,6 +338,12 @@ defmodule AshUI.LiveView.ErrorHandler do
 
   defp format_error_message(reason) when is_binary(reason), do: reason
   defp format_error_message(reason), do: inspect(reason)
+
+  defp format_stacktrace(stacktrace) do
+    Exception.format_stacktrace(stacktrace)
+  rescue
+    FunctionClauseError -> inspect(stacktrace)
+  end
 
   defp get_screen_id(socket) do
     case socket.assigns[:ash_ui_screen] do
@@ -409,6 +414,7 @@ defmodule AshUI.LiveView.ErrorHandler do
       %{count: 1},
       %{
         error: inspect(error_info.reason),
+        reason: inspect(error_info.reason),
         resource_type: :screen,
         screen_id: error_info.context.screen_id,
         user_id: error_info.context.user_id,
@@ -429,12 +435,13 @@ defmodule AshUI.LiveView.ErrorHandler do
     message = user_friendly_message(error_info)
     current_flashes = Map.get(socket.assigns, :flash, %{})
     updated = Map.put(current_flashes, :error, message)
-    Phoenix.Component.assign(socket, :flash, updated)
+    %{socket | assigns: Map.put(socket.assigns, :flash, updated)}
   end
 
   defp store_binding_error(socket, binding, error_info) do
     binding_errors = Map.get(socket.assigns, :ash_ui_binding_errors, %{})
-    updated = Map.put(binding_errors, binding.id, error_info)
+    binding_id = Map.get(binding, :id) || Map.get(binding, "id")
+    updated = Map.put(binding_errors, binding_id, error_info)
     Phoenix.Component.assign(socket, :ash_ui_binding_errors, updated)
   end
 
@@ -456,7 +463,7 @@ defmodule AshUI.LiveView.ErrorHandler do
       {:ok, result} ->
         {:ok, result}
 
-      {:error, _reason} = error ->
+      {:error, _reason} = _error ->
         delay = min((base_delay * :math.pow(2, attempt)) |> trunc(), max_delay)
         Process.sleep(delay)
         retry_with_backoff(operation, attempt + 1, max_attempts, base_delay, max_delay)
