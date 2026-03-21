@@ -33,23 +33,17 @@ defmodule AshUI.LiveView.UpdateIntegration do
 
   ## Returns
     * `{:ok, subscription}` - Subscription created
-    * `{:error, reason}` - Subscription failed
   """
   @spec subscribe(Phoenix.LiveView.Socket.t(), module(), keyword()) ::
-          {:ok, subscription()} | {:error, term()}
+          {:ok, subscription()}
   def subscribe(socket, resource, opts \\ []) do
     filter = opts |> Keyword.get(:filter, %{}) |> Enum.into(%{})
     action = Keyword.get(opts, :action, :update)
     subscription = build_subscription(resource, action, filter)
 
-    case subscribe_to_resource(resource, subscription) do
-      :ok ->
-        store_subscription(socket, subscription)
-        {:ok, subscription}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    :ok = subscribe_to_resource(resource, subscription)
+    store_subscription(socket, subscription)
+    {:ok, subscription}
   end
 
   @doc """
@@ -69,16 +63,9 @@ defmodule AshUI.LiveView.UpdateIntegration do
           {created, subscriptions}
         else
           subscription = build_subscription(resource, :update, %{})
-
-          case subscribe_to_resource(resource, subscription) do
-            :ok ->
-              store_subscription(socket, subscription)
-              {[subscription | created], [subscription | subscriptions]}
-
-            {:error, reason} ->
-              Logger.warning("Failed to subscribe #{inspect(resource)}: #{inspect(reason)}")
-              {created, subscriptions}
-          end
+          :ok = subscribe_to_resource(resource, subscription)
+          store_subscription(socket, subscription)
+          {[subscription | created], [subscription | subscriptions]}
         end
       end)
 
@@ -106,16 +93,11 @@ defmodule AshUI.LiveView.UpdateIntegration do
   @doc """
   Unsubscribes from a resource change notification.
   """
-  @spec unsubscribe(Phoenix.LiveView.Socket.t(), subscription()) :: :ok | {:error, term()}
+  @spec unsubscribe(Phoenix.LiveView.Socket.t(), subscription()) :: :ok
   def unsubscribe(socket, subscription) do
-    case unsubscribe_from_resource(subscription) do
-      :ok ->
-        delete_subscription(socket, subscription)
-        :ok
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    :ok = unsubscribe_from_resource(subscription)
+    delete_subscription(socket, subscription)
+    :ok
   end
 
   @doc """
@@ -186,20 +168,15 @@ defmodule AshUI.LiveView.UpdateIntegration do
         {:noreply, socket}
 
       true ->
-        case Integration.evaluate_bindings(screen, socket, user, params) do
-          {:ok, bindings} ->
-            socket =
-              socket
-              |> Phoenix.Component.assign(:ash_ui_bindings, bindings)
-              |> sync_runtime_binding_assigns(bindings)
-              |> sync_binding_subscriptions()
+        {:ok, bindings} = Integration.evaluate_bindings(screen, socket, user, params)
 
-            {:noreply, socket}
+        socket =
+          socket
+          |> Phoenix.Component.assign(:ash_ui_bindings, bindings)
+          |> sync_runtime_binding_assigns(bindings)
+          |> sync_binding_subscriptions()
 
-          {:error, reason} ->
-            Logger.error("Failed to refresh bindings: #{inspect(reason)}")
-            {:noreply, socket}
-        end
+        {:noreply, socket}
     end
   end
 
