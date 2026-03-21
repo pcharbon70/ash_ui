@@ -6,9 +6,11 @@ defmodule AshUI.Compiler.Incremental do
   affected resources when things change.
   """
 
+  require Ash.Query
   require Logger
 
   alias AshUI.Compiler
+  alias AshUI.Domain
   alias AshUI.Resources.Screen
   alias AshUI.Resources.Element
   alias AshUI.Resources.Binding
@@ -39,8 +41,9 @@ defmodule AshUI.Compiler.Incremental do
     # Load elements and build relationships
     with {:ok, elements} <- load_screen_elements(screen),
          graph <- build_element_dependencies(graph, screen, elements),
-         graph <- build_binding_dependencies(graph, elements) do
-      detect_circular_dependencies(graph)
+         graph <- build_binding_dependencies(graph, elements),
+         :ok <- detect_circular_dependencies(graph) do
+      {:ok, graph}
     end
   end
 
@@ -200,14 +203,20 @@ defmodule AshUI.Compiler.Incremental do
     actor = Keyword.get(opts, :actor)
     tenant = Keyword.get(opts, :tenant)
 
-    case Ash.get(Screen, screen_id, actor: actor, tenant: tenant) do
+    case Ash.get(Screen, screen_id, actor: actor, tenant: tenant, domain: Domain) do
       {:ok, screen} -> {:ok, screen}
       {:error, reason} -> {:error, {:screen_not_found, reason}}
     end
   end
 
   defp load_screen_elements(%Screen{id: screen_id}) do
-    case Ash.read(Element, filter: [screen_id: screen_id], sort: [position: :asc]) do
+    query =
+      Element
+      |> Ash.Query.new()
+      |> Ash.Query.filter(screen_id == ^screen_id)
+      |> Ash.Query.sort(position: :asc)
+
+    case Ash.read(query, domain: Domain) do
       {:ok, elements} -> {:ok, elements}
       {:error, _} -> {:ok, []}
     end
@@ -250,7 +259,12 @@ defmodule AshUI.Compiler.Incremental do
   end
 
   defp get_element_bindings(%Element{id: element_id}) do
-    case Ash.read(Binding, filter: [element_id: element_id]) do
+    query =
+      Binding
+      |> Ash.Query.new()
+      |> Ash.Query.filter(element_id == ^element_id)
+
+    case Ash.read(query, domain: Domain) do
       {:ok, bindings} -> bindings
       {:error, _} -> []
     end

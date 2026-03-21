@@ -1,5 +1,5 @@
 defmodule AshUI.Compiler.IncrementalTest do
-  use ExUnit.Case, async: false
+  use AshUI.DataCase, async: false
 
   alias AshUI.Compiler.Incremental
   alias AshUI.Resources.Screen
@@ -11,7 +11,7 @@ defmodule AshUI.Compiler.IncrementalTest do
       {:ok, screen} =
         AshUI.Domain.create(Screen,
           attrs: %{
-            name: "incremental_test_screen",
+            name: unique_name("incremental_test_screen"),
             unified_dsl: %{"type" => "screen"},
             layout: :row
           }
@@ -89,7 +89,7 @@ defmodule AshUI.Compiler.IncrementalTest do
       {:ok, screen} =
         AshUI.Domain.create(Screen,
           attrs: %{
-            name: "affects_test_screen",
+            name: unique_name("affects_test_screen"),
             unified_dsl: %{"type" => "screen"},
             layout: :row
           }
@@ -110,7 +110,11 @@ defmodule AshUI.Compiler.IncrementalTest do
       %{screen: screen, element: element, graph: graph}
     end
 
-    test "returns true when element belongs to screen", %{graph: graph, element: element, screen: screen} do
+    test "returns true when element belongs to screen", %{
+      graph: graph,
+      element: element,
+      screen: screen
+    } do
       assert Incremental.affects_screen?(graph, :element, element.id, screen.id) == true
     end
 
@@ -124,7 +128,7 @@ defmodule AshUI.Compiler.IncrementalTest do
       {:ok, screen} =
         AshUI.Domain.create(Screen,
           attrs: %{
-            name: "dependents_test_screen",
+            name: unique_name("dependents_test_screen"),
             unified_dsl: %{"type" => "screen"},
             layout: :row
           }
@@ -195,7 +199,7 @@ defmodule AshUI.Compiler.IncrementalTest do
       {:ok, screen} =
         AshUI.Domain.create(Screen,
           attrs: %{
-            name: "recompile_test_screen",
+            name: unique_name("recompile_test_screen"),
             unified_dsl: %{"type" => "screen"},
             layout: :row
           }
@@ -240,5 +244,9 @@ defmodule AshUI.Compiler.IncrementalTest do
     test "handles empty changes list" do
       assert {:ok, %{}} = Incremental.recompile_batch([])
     end
+  end
+
+  defp unique_name(prefix) do
+    "#{prefix}_#{System.unique_integer([:positive])}"
   end
 end

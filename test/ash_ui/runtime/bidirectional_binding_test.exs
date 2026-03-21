@@ -8,6 +8,8 @@ defmodule AshUI.Runtime.BidirectionalBindingTest do
   alias AshUI.Test.RuntimeFixtures
   alias AshUI.Test.User
 
+  @moduletag :conformance
+
   describe "read_binding/3" do
     test "reads binding value and updates socket assigns" do
       fixtures = RuntimeFixtures.seed!()
@@ -23,7 +25,9 @@ defmodule AshUI.Runtime.BidirectionalBindingTest do
       context = RuntimeFixtures.context(fixtures)
 
       assert {:ok, updated_socket} = BidirectionalBinding.read_binding(binding, socket, context)
-      assert get_in(updated_socket.assigns, [:ash_ui, :bindings, "name-input", "value"]) == "Pascal"
+
+      assert get_in(updated_socket.assigns, [:ash_ui, :bindings, "name-input", "value"]) ==
+               "Pascal"
     end
   end
 
@@ -56,7 +60,9 @@ defmodule AshUI.Runtime.BidirectionalBindingTest do
 
       assert result.status == :ok
       assert result.value == "Updated Name"
-      assert get_in(updated_socket.assigns, [:ash_ui, :bindings, "name-input", "value"]) == "Updated Name"
+
+      assert get_in(updated_socket.assigns, [:ash_ui, :bindings, "name-input", "value"]) ==
+               "Updated Name"
 
       query = Ash.Query.filter(User, id == ^fixtures.user.id)
 
@@ -76,7 +82,8 @@ defmodule AshUI.Runtime.BidirectionalBindingTest do
       assert {:error, :required, error_socket} =
                BidirectionalBinding.write_binding(binding, "", socket, context)
 
-      assert get_in(error_socket.assigns, [:ash_ui, :bindings, "email-input", "error"]) == :required
+      assert get_in(error_socket.assigns, [:ash_ui, :bindings, "email-input", "error"]) ==
+               :required
     end
   end
 
@@ -94,7 +101,8 @@ defmodule AshUI.Runtime.BidirectionalBindingTest do
 
       context = RuntimeFixtures.context(fixtures)
 
-      assert {:ok, updated_socket} = BidirectionalBinding.subscribe_binding(binding, socket, context)
+      assert {:ok, updated_socket} =
+               BidirectionalBinding.subscribe_binding(binding, socket, context)
 
       subscriptions = get_in(updated_socket.assigns, [:ash_ui, :subscriptions])
       assert is_map(subscriptions)

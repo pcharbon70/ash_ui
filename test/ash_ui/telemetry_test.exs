@@ -7,6 +7,8 @@ defmodule AshUI.TelemetryTest do
   alias AshUI.Runtime.BindingEvaluator
   alias AshUI.Telemetry
 
+  @moduletag :conformance
+
   setup do
     Telemetry.reset_metrics()
     :ok
@@ -155,5 +157,69 @@ defmodule AshUI.TelemetryTest do
       assert is_list(definition["panels"])
       assert definition["panels"] != []
     end)
+  end
+
+  test "propagates trace and span metadata through emitted events" do
+    handler_id = "screen-mount-span-#{System.unique_integer([:positive])}"
+
+    :telemetry.attach(
+      handler_id,
+      [:ash_ui, :screen, :mount],
+      fn _, _measurements, metadata, _ ->
+        send(self(), {:screen_mount, metadata})
+      end,
+      :ok
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+
+    Telemetry.emit(
+      :screen,
+      :mount,
+      %{count: 1},
+      %{
+        trace_id: "trace-1",
+        span_id: "span-1",
+        parent_span_id: "parent-1",
+        screen_id: "screen-123"
+      }
+    )
+
+    assert_receive {:screen_mount, metadata}
+    assert metadata.trace_id == "trace-1"
+    assert metadata.span_id == "span-1"
+    assert metadata.parent_span_id == "parent-1"
+    assert metadata.screen_id == "screen-123"
+  end
+
+  test "redacts sensitive metadata before telemetry handlers receive it" do
+    handler_id = "screen-mount-redaction-#{System.unique_integer([:positive])}"
+
+    :telemetry.attach(
+      handler_id,
+      [:ash_ui, :screen, :mount],
+      fn _, _measurements, metadata, _ ->
+        send(self(), {:screen_mount_redacted, metadata})
+      end,
+      :ok
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+
+    Telemetry.emit(
+      :screen,
+      :mount,
+      %{count: 1},
+      %{
+        user_id: "user-1",
+        email: "pascal@example.com",
+        token: "secret-token"
+      }
+    )
+
+    assert_receive {:screen_mount_redacted, metadata}
+    assert metadata.user_id == "user-1"
+    refute Map.has_key?(metadata, :email)
+    refute Map.has_key?(metadata, :token)
   end
 end

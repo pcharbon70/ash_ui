@@ -191,6 +191,24 @@ Each scenario includes:
 - Valid source compiles successfully
 - Invalid source produces error
 
+#### SCN-011: Binding Transformation
+
+**Requirements**: REQ-BIND-005
+
+**Preconditions**:
+- Binding resource exists
+- Runtime context provides source data
+
+**Steps**:
+1. Evaluate a binding with a transformation configured
+2. Write through a bidirectional binding with sanitization or validation
+3. Verify the transformed result returned to the UI
+
+**Expected Outcome**:
+- Transformations apply deterministically
+- Sanitization occurs before persistence
+- Validation failures return structured errors
+
 ### Lifecycle Scenarios (SCN-021 to SCN-040)
 
 #### SCN-021: Screen Mount
@@ -277,6 +295,43 @@ Each scenario includes:
 **Expected Outcome**:
 - All sessions operate independently
 - No session interference
+
+#### SCN-026: Screen Data Binding
+
+**Requirements**: REQ-SCREEN-004, REQ-BIND-006, REQ-BIND-007
+
+**Preconditions**:
+- Screen is mounted
+- Runtime binding exists for a resource-backed field
+
+**Steps**:
+1. Load the screen with an evaluated binding
+2. Update the underlying Ash resource
+3. Verify the UI binding refreshes
+4. Write a new value through the UI binding
+
+**Expected Outcome**:
+- Initial value is loaded into assigns
+- Resource changes propagate back to the UI
+- User edits persist through the binding
+
+#### SCN-027: Screen Event Handling
+
+**Requirements**: REQ-SCREEN-007, REQ-BIND-008
+
+**Preconditions**:
+- Screen includes event or action bindings
+
+**Steps**:
+1. Trigger a UI event
+2. Route the event to the bound handler
+3. Execute the bound action
+4. Verify socket state and feedback are updated
+
+**Expected Outcome**:
+- Events are parsed correctly
+- Action handlers receive expected parameters
+- Success and error feedback are surfaced
 
 ### Compilation Scenarios (SCN-041 to SCN-060)
 
@@ -396,6 +451,42 @@ Each scenario includes:
 - Resource is recompiled
 - New IUR is cached
 
+#### SCN-048: Compilation Error Reporting
+
+**Requirements**: REQ-COMP-008
+
+**Preconditions**:
+- Screen with invalid DSL or invalid compilation input exists
+
+**Steps**:
+1. Attempt to compile invalid UI input
+2. Capture the returned error
+3. Verify the error shape is descriptive
+
+**Expected Outcome**:
+- Compilation fails safely
+- Error details identify the invalid input
+- Calling code can branch on the returned error tuple
+
+#### SCN-049: Incremental Compilation
+
+**Requirements**: REQ-COMP-009
+
+**Preconditions**:
+- Dependency graph support is enabled
+- Screen has dependent elements or bindings
+
+**Steps**:
+1. Build the incremental dependency graph
+2. Change a dependent resource
+3. Verify the compiler marks the screen as affected
+4. Check circular dependency detection
+
+**Expected Outcome**:
+- Dependency graph records screen-element-binding relationships
+- Changed resources trigger the expected recompilation target
+- Circular dependencies are reported
+
 ### Rendering Scenarios (SCN-061 to SCN-080)
 
 #### SCN-061: LiveView Rendering
@@ -493,6 +584,75 @@ Each scenario includes:
 - Error details are included
 - Renderer doesn't crash
 
+#### SCN-067: Desktop Rendering
+
+**Requirements**: REQ-RENDER-003B
+
+**Preconditions**:
+- Canonical IUR exists
+
+**Steps**:
+1. Render the IUR with the desktop renderer
+2. Inspect the returned instruction payload
+3. Verify the desktop-specific shape
+
+**Expected Outcome**:
+- Renderer returns desktop instruction data
+- Instructions preserve the screen structure
+- Desktop rendering succeeds without external packages
+
+#### SCN-068: Renderer Selection
+
+**Requirements**: REQ-RENDER-001
+
+**Preconditions**:
+- Renderer registry is initialized
+
+**Steps**:
+1. Resolve a LiveView request
+2. Resolve an HTTP request
+3. Apply an explicit renderer override
+
+**Expected Outcome**:
+- LiveView requests select the live renderer
+- HTML requests select the web renderer
+- Explicit overrides take precedence
+
+#### SCN-069: Renderer Fallback
+
+**Requirements**: REQ-RENDER-006
+
+**Preconditions**:
+- Renderer selection is configured
+- External renderer packages may be unavailable
+
+**Steps**:
+1. Select a renderer with adapter fallback enabled
+2. Force an unavailable renderer path
+3. Verify alternative renderer fallback and telemetry
+
+**Expected Outcome**:
+- Adapter fallback is surfaced explicitly
+- Alternative renderer fallback succeeds when configured
+- Fallback behavior is observable
+
+#### SCN-070: Asset Management
+
+**Requirements**: REQ-RENDER-008
+
+**Preconditions**:
+- Web renderer is configured to include assets
+
+**Steps**:
+1. Render a screen with CSS and JavaScript enabled
+2. Inspect the generated HTML head
+3. Verify asset URLs are present
+
+**Expected Outcome**:
+- CSS references are emitted
+- JavaScript references are emitted
+- Asset paths use the configured base URL
+
 ### Authorization Scenarios (SCN-081 to SCN-100)
 
 #### SCN-081: Screen Mount Authorization
@@ -570,6 +730,75 @@ Each scenario includes:
 **Expected Outcome**:
 - Both actions succeed
 - Roles are combined correctly
+
+#### SCN-086: Resource Ownership Enforcement
+
+**Requirements**: REQ-AUTH-006
+
+**Preconditions**:
+- Resource metadata includes ownership information
+
+**Steps**:
+1. Perform an operation as the owner
+2. Perform the same operation as a different user
+3. Repeat as an admin
+
+**Expected Outcome**:
+- Owner actions succeed
+- Non-owner actions are forbidden
+- Admin access bypasses ownership restrictions when allowed
+
+#### SCN-087: Authorization Context
+
+**Requirements**: REQ-AUTH-008
+
+**Preconditions**:
+- Authorization checks receive actor-aware context
+
+**Steps**:
+1. Execute an authorization check with actor context
+2. Execute a resource operation with the same actor
+3. Compare the authorization outcomes
+
+**Expected Outcome**:
+- Actor context propagates consistently
+- Authorization decisions reflect the supplied context
+- Resource and runtime checks agree on the result
+
+#### SCN-088: Authorization Error Handling
+
+**Requirements**: REQ-AUTH-009
+
+**Preconditions**:
+- Authorization denial path is reachable
+
+**Steps**:
+1. Trigger an unauthorized read, mount, or action
+2. Inspect the returned error data
+3. Verify user-facing error helpers
+
+**Expected Outcome**:
+- Forbidden operations return structured errors
+- Errors contain actionable metadata
+- User-facing helpers preserve the denial reason
+
+#### SCN-089: Authorization Caching
+
+**Requirements**: REQ-AUTH-010
+
+**Preconditions**:
+- Authorization runtime cache is initialized
+
+**Steps**:
+1. Cache an authorization decision
+2. Re-run the same check
+3. Invalidate the relevant cache entry
+4. Verify the cached result expires
+
+**Expected Outcome**:
+- Repeated checks can be served from cache
+- Invalidation clears affected cache entries
+- Expired cache entries are not reused
 
 ### Observability Scenarios (SCN-101 to SCN-120)
 
@@ -659,6 +888,59 @@ Each scenario includes:
 - Action events are emitted
 - Unmount event is emitted
 
+#### SCN-106: Data Privacy Redaction
+
+**Requirements**: REQ-OBS-012
+
+**Preconditions**:
+- Telemetry handler is attached
+
+**Steps**:
+1. Emit a telemetry event with sensitive metadata fields
+2. Observe the metadata received by the handler
+3. Compare the emitted and received payloads
+
+**Expected Outcome**:
+- Sensitive values are removed before handlers receive metadata
+- Non-sensitive metadata remains intact
+- Redaction does not change event delivery
+
+### Extension Scenarios (SCN-121 to SCN-140)
+
+#### SCN-121: Extension Registration
+
+**Requirements**: REQ-EXT-001, REQ-EXT-005
+
+**Preconditions**:
+- Extension registry is initialized
+
+**Steps**:
+1. Register a custom widget definition
+2. Register a custom layout definition
+3. Query the extension registry
+
+**Expected Outcome**:
+- Widget registration succeeds
+- Layout registration succeeds
+- Registry reports both extensions as available
+
+#### SCN-122: Extension Compilation
+
+**Requirements**: REQ-EXT-002, REQ-EXT-003
+
+**Preconditions**:
+- Custom widget or layout is registered
+
+**Steps**:
+1. Compile a custom widget
+2. Compile a custom layout
+3. Inspect the compiled output
+
+**Expected Outcome**:
+- Registered extensions compile successfully
+- Compiled output matches the extension contract
+- Extension lifecycle hooks execute without crashing compilation
+
 ## Scenario Index
 
 | SCN ID | Name | Requirements | Component |
@@ -673,11 +955,14 @@ Each scenario includes:
 | SCN-008 | Binding List Type | REQ-BIND-002 | UI.Binding |
 | SCN-009 | Binding Action Type | REQ-BIND-002, REQ-BIND-008 | UI.Binding |
 | SCN-010 | Source Resolution | REQ-BIND-003 | UI.Binding |
+| SCN-011 | Binding Transformation | REQ-BIND-005 | Runtime |
 | SCN-021 | Screen Mount | REQ-SCREEN-002 | Runtime |
 | SCN-022 | Screen Unmount | REQ-SCREEN-002 | Runtime |
 | SCN-023 | Screen Update | REQ-SCREEN-002 | Runtime |
 | SCN-024 | Session Isolation | REQ-SCREEN-006 | Runtime |
 | SCN-025 | Concurrent Sessions | REQ-SCREEN-006 | Runtime |
+| SCN-026 | Screen Data Binding | REQ-SCREEN-004, REQ-BIND-006, REQ-BIND-007 | Runtime |
+| SCN-027 | Screen Event Handling | REQ-SCREEN-007, REQ-BIND-008 | Runtime |
 | SCN-041 | Resource Compilation | REQ-COMP-001 | Compiler |
 | SCN-042 | Schema Validation | REQ-COMP-002 | Validator |
 | SCN-043 | IUR Generation | REQ-COMP-003 | IUR Generator |
@@ -685,24 +970,38 @@ Each scenario includes:
 | SCN-045 | Normalization | REQ-COMP-005 | Normalizer |
 | SCN-046 | Compiler Cache | REQ-COMP-007 | Cache |
 | SCN-047 | Cache Invalidation | REQ-COMP-007 | Cache |
+| SCN-048 | Compilation Error Reporting | REQ-COMP-008 | Compiler |
+| SCN-049 | Incremental Compilation | REQ-COMP-009 | Incremental Compiler |
 | SCN-061 | LiveView Rendering | REQ-RENDER-002 | LiveView Renderer |
 | SCN-062 | Static HTML Rendering | REQ-RENDER-003 | Static Renderer |
 | SCN-063 | Component Rendering | REQ-RENDER-004 | Renderer |
 | SCN-064 | Binding Rendering | REQ-RENDER-005 | Renderer |
 | SCN-065 | Layout Rendering | REQ-RENDER-007 | Renderer |
 | SCN-066 | Error Rendering | REQ-RENDER-006 | Renderer |
+| SCN-067 | Desktop Rendering | REQ-RENDER-003B | Desktop Renderer |
+| SCN-068 | Renderer Selection | REQ-RENDER-001 | Renderer Registry |
+| SCN-069 | Renderer Fallback | REQ-RENDER-006 | Renderer Selector |
+| SCN-070 | Asset Management | REQ-RENDER-008 | Web Renderer |
 | SCN-081 | Screen Mount Authorization | REQ-AUTH-002 | Authorization |
 | SCN-082 | Action Authorization | REQ-AUTH-003 | Authorization |
 | SCN-083 | Field-Level Authorization | REQ-AUTH-004 | Authorization |
 | SCN-084 | Binding Authorization | REQ-AUTH-005 | Authorization |
 | SCN-085 | Role-Based Access | REQ-AUTH-007 | Authorization |
+| SCN-086 | Resource Ownership Enforcement | REQ-AUTH-006 | Authorization |
+| SCN-087 | Authorization Context | REQ-AUTH-008 | Authorization |
+| SCN-088 | Authorization Error Handling | REQ-AUTH-009 | Authorization |
+| SCN-089 | Authorization Caching | REQ-AUTH-010 | Authorization |
 | SCN-101 | Event Emission | REQ-OBS-001, REQ-OBS-002 | Telemetry |
 | SCN-102 | Span Context | REQ-OBS-003 | Telemetry |
 | SCN-103 | Error Tracking | REQ-OBS-006 | Telemetry |
 | SCN-104 | Performance Monitoring | REQ-OBS-007 | Telemetry |
 | SCN-105 | Session Observability | REQ-OBS-008 | Telemetry |
+| SCN-106 | Data Privacy Redaction | REQ-OBS-012 | Telemetry |
+| SCN-121 | Extension Registration | REQ-EXT-001, REQ-EXT-005 | Extension Registry |
+| SCN-122 | Extension Compilation | REQ-EXT-002, REQ-EXT-003 | Extension Runtime |
 
 ## Related Specifications
 
 - [spec_conformance_matrix.md](spec_conformance_matrix.md)
+- [scenario_test_matrix.md](scenario_test_matrix.md)
 - All contract files (../contracts/*.md)

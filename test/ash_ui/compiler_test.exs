@@ -7,6 +7,8 @@ defmodule AshUI.CompilerTest do
   alias AshUI.Resources.Element
   alias AshUI.Resources.Binding
 
+  @moduletag :conformance
+
   describe "compile/2" do
     setup do
       {:ok, screen} =

@@ -7,6 +7,8 @@ defmodule AshUI.Authorization.ResourceAuthorizerTest do
   alias AshUI.Resources.Element
   alias AshUI.Resources.Screen
 
+  @moduletag :conformance
+
   defp build_admin(id \\ "admin-1"), do: %{id: id, role: :admin, active: true}
   defp build_user(id), do: %{id: id, role: :user, active: true}
 
@@ -22,7 +24,9 @@ defmodule AshUI.Authorization.ResourceAuthorizerTest do
           name: "screen-#{System.unique_integer([:positive])}",
           unified_dsl: %{"type" => "screen"},
           metadata: %{"owner_id" => "owner-1", "public" => false}
-        }, domain: Domain)
+        },
+        domain: Domain
+      )
 
     assert :ok = Integration.authorize_screen(screen, build_user("owner-1"))
 
@@ -40,7 +44,9 @@ defmodule AshUI.Authorization.ResourceAuthorizerTest do
           type: :text,
           props: %{"content" => "Restricted"},
           metadata: %{"owner_id" => "owner-1"}
-        }, domain: Domain)
+        },
+        domain: Domain
+      )
 
     assert {:ok, updated} =
              Ash.update(element, %{position: 1},
@@ -78,7 +84,9 @@ defmodule AshUI.Authorization.ResourceAuthorizerTest do
           target: "profile.name",
           binding_type: :value,
           metadata: %{"owner_id" => "owner-1"}
-        }, domain: Domain)
+        },
+        domain: Domain
+      )
 
     assert {:ok, updated} =
              Ash.update(binding, %{target: "profile.display_name"},

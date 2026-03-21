@@ -1,30 +1,20 @@
 defmodule AshUI.Compiler.Phase6IntegrationTest do
-  use ExUnit.Case, async: false
+  use AshUI.DataCase, async: false
 
   alias AshUI.Compiler
   alias AshUI.Compiler.Incremental
   alias AshUI.Compiler.Extensions
   alias AshUI.DSL.Builder
-  alias AshUI.DSL.Storage
 
-  # Mock resources
-  defp build_screen(opts \\ []) do
-    struct(AshUI.Resources.Screen,
-      id: Keyword.get(opts, :id, "screen-1"),
-      name: Keyword.get(opts, :name, "Test Screen"),
-      version: Keyword.get(opts, :version, 1),
-      layout: Keyword.get(opts, :layout, "vertical"),
-      route: Keyword.get(opts, :route, "/test"),
-      unified_dsl: Keyword.get(opts, :unified_dsl),
-      metadata: Keyword.get(opts, :metadata, %{})
-    )
-  end
+  @moduletag :conformance
 
   defp default_dsl do
-    Builder.row(children: [
-      Builder.text("Hello, World!"),
-      Builder.button("Click Me")
-    ])
+    Builder.row(
+      children: [
+        Builder.text("Hello, World!"),
+        Builder.button("Click Me")
+      ]
+    )
   end
 
   describe "Section 6.5.1 - DSL storage and retrieval scenarios" do
@@ -37,11 +27,16 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
     end
 
     test "DSL builder creates nested structure" do
-      dsl = Builder.column(children: [
-        Builder.row(children: [
-          Builder.text("Nested")
-        ])
-      ])
+      dsl =
+        Builder.column(
+          children: [
+            Builder.row(
+              children: [
+                Builder.text("Nested")
+              ]
+            )
+          ]
+        )
 
       assert dsl.type == "column"
       assert length(dsl.children) == 1
@@ -72,13 +67,17 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
 
     test "complex nested screen compiles successfully" do
       dsl =
-        Builder.row(children: [
-          Builder.column(children: [
-            Builder.text("Nested 1"),
-            Builder.text("Nested 2")
-          ]),
-          Builder.button("Submit")
-        ])
+        Builder.row(
+          children: [
+            Builder.column(
+              children: [
+                Builder.text("Nested 1"),
+                Builder.text("Nested 2")
+              ]
+            ),
+            Builder.button("Submit")
+          ]
+        )
 
       {:ok, screen} =
         AshUI.Domain.create(AshUI.Resources.Screen,
@@ -126,10 +125,10 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         )
 
       # First compilation
-      assert {:ok, iur1} = Compiler.compile(screen, use_cache: true)
+      assert {:ok, _iur1} = Compiler.compile(screen, use_cache: true)
 
       # Second compilation should hit cache
-      assert {:ok, iur2} = Compiler.compile(screen, use_cache: true)
+      assert {:ok, _iur2} = Compiler.compile(screen, use_cache: true)
 
       stats = Compiler.cache_stats()
       assert stats.hits >= 1
@@ -206,7 +205,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
           }
         )
 
-      {:ok, _binding} =
+      {:ok, binding} =
         AshUI.Domain.create(AshUI.Resources.Binding,
           attrs: %{
             source: %{"resource" => "Test", "field" => "value"},
@@ -223,7 +222,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       assert graph.element_to_screen[element.id] == screen.id
 
       # Check binding to element dependency
-      assert graph.binding_to_element[Integer.to_string(element.id)] == element.id
+      assert graph.binding_to_element[binding.id] == element.id
     end
 
     test "circular dependencies are detected" do
@@ -282,7 +281,9 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
           %{name: :columns, type: :integer, default: 3}
         ],
         validate: fn _ -> :ok end,
-        compile: fn props, children -> %{type: "custom_layout", props: props, children: children} end
+        compile: fn props, children ->
+          %{type: "custom_layout", props: props, children: children}
+        end
       }
 
       assert :ok = Extensions.register_layout("custom:scenario_layout", definition)
@@ -294,7 +295,9 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         module: CustomLayout,
         props: [],
         validate: fn _ -> :ok end,
-        compile: fn props, children -> %{type: "custom_layout", props: props, children: children} end
+        compile: fn props, children ->
+          %{type: "custom_layout", props: props, children: children}
+        end
       }
 
       Extensions.register_layout("custom:compile_layout", definition)
@@ -313,13 +316,18 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
     test "full DSL to IUR pipeline" do
       # Build DSL using builder
       dsl =
-        Builder.row(spacing: 16, children: [
-          Builder.column(children: [
-            Builder.text("Header", size: 24, color: "blue"),
-            Builder.text("Subtext", size: 14)
-          ]),
-          Builder.button("Action", on_click: "save")
-        ])
+        Builder.row(
+          spacing: 16,
+          children: [
+            Builder.column(
+              children: [
+                Builder.text("Header", size: 24, color: "blue"),
+                Builder.text("Subtext", size: 14)
+              ]
+            ),
+            Builder.button("Action", on_click: "save")
+          ]
+        )
 
       # Store in database
       {:ok, screen} =
@@ -383,7 +391,8 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       end
 
       stats = Compiler.cache_stats()
-      assert stats.hits > 5  # Most should hit cache
+      # Most should hit cache
+      assert stats.hits > 5
     end
   end
 end

@@ -6,6 +6,8 @@ defmodule AshUI.Runtime.ActionBindingTest do
   alias AshUI.Test.RuntimeFixtures
   alias AshUI.Test.User
 
+  @moduletag :conformance
+
   describe "execute_action/4" do
     setup do
       fixtures = RuntimeFixtures.seed!()
@@ -41,7 +43,12 @@ defmodule AshUI.Runtime.ActionBindingTest do
     end
 
     test "returns a formatted error for unauthorized actions", %{binding: binding} do
-      unauthorized_context = %{user_id: nil, params: %{}, assigns: %{}, ash_domains: [RuntimeDomain]}
+      unauthorized_context = %{
+        user_id: nil,
+        params: %{},
+        assigns: %{},
+        ash_domains: [RuntimeDomain]
+      }
 
       assert {:error, error} = ActionBinding.execute_action(binding, %{}, unauthorized_context)
       assert error.status == :error
@@ -71,9 +78,15 @@ defmodule AshUI.Runtime.ActionBindingTest do
       socket = RuntimeFixtures.socket(current_user: fixtures.actor)
 
       assert {:noreply, updated_socket} =
-               handler.(socket, %{"name" => "Handler User", "email" => "handler@example.com"}, %{})
+               handler.(
+                 socket,
+                 %{"name" => "Handler User", "email" => "handler@example.com"},
+                 %{}
+               )
 
-      assert get_in(updated_socket.assigns, [:ash_ui, :actions, "create-user", "result", :status]) == :ok
+      assert get_in(updated_socket.assigns, [:ash_ui, :actions, "create-user", "result", :status]) ==
+               :ok
+
       assert get_in(updated_socket.assigns, [:flash, :info]) == ["Created"]
     end
   end

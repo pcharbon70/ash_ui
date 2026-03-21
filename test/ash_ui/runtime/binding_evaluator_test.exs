@@ -4,6 +4,8 @@ defmodule AshUI.Runtime.BindingEvaluatorTest do
   alias AshUI.Runtime.BindingEvaluator
   alias AshUI.Test.RuntimeFixtures
 
+  @moduletag :conformance
+
   describe "evaluate/3" do
     setup do
       fixtures = RuntimeFixtures.seed!()

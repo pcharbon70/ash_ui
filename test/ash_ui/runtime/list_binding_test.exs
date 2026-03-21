@@ -4,6 +4,8 @@ defmodule AshUI.Runtime.ListBindingTest do
   alias AshUI.Runtime.ListBinding
   alias AshUI.Test.RuntimeFixtures
 
+  @moduletag :conformance
+
   describe "load_collection/3" do
     setup do
       fixtures = RuntimeFixtures.seed!()
@@ -33,7 +35,10 @@ defmodule AshUI.Runtime.ListBindingTest do
       assert result.has_prev == false
     end
 
-    test "handles empty pages past the end of the collection", %{binding: binding, context: context} do
+    test "handles empty pages past the end of the collection", %{
+      binding: binding,
+      context: context
+    } do
       assert {:ok, result} = ListBinding.load_collection(binding, context, page: 3, page_size: 2)
 
       assert result.items == []
@@ -65,14 +70,25 @@ defmodule AshUI.Runtime.ListBindingTest do
         binding_type: :list
       }
 
-      %{binding: binding, context: RuntimeFixtures.context(fixtures), socket: socket, fixtures: fixtures}
+      %{
+        binding: binding,
+        context: RuntimeFixtures.context(fixtures),
+        socket: socket,
+        fixtures: fixtures
+      }
     end
 
     test "handles insert changes", %{binding: binding, socket: socket, context: context} do
       change_data = %{"id" => "comment-123", "content" => "New comment"}
 
       assert {:ok, updated_socket, true} =
-               ListBinding.handle_collection_change(binding, :insert, change_data, socket, context)
+               ListBinding.handle_collection_change(
+                 binding,
+                 :insert,
+                 change_data,
+                 socket,
+                 context
+               )
 
       assert get_in(updated_socket.assigns, [:ash_ui, :list_changes, "comments-list"]) == [
                {:insert, change_data}
@@ -89,7 +105,13 @@ defmodule AshUI.Runtime.ListBindingTest do
       change_data = %{"id" => first_comment.id, "content" => "Updated"}
 
       assert {:ok, updated_socket, true} =
-               ListBinding.handle_collection_change(binding, :update, change_data, socket, context)
+               ListBinding.handle_collection_change(
+                 binding,
+                 :update,
+                 change_data,
+                 socket,
+                 context
+               )
 
       updated_items = get_in(updated_socket.assigns, [:ash_ui, :lists, "comments-list", "items"])
       assert Enum.any?(updated_items, &(&1.id == first_comment.id and &1.content == "Updated"))
@@ -105,7 +127,13 @@ defmodule AshUI.Runtime.ListBindingTest do
       change_data = %{"id" => first_comment.id}
 
       assert {:ok, updated_socket, true} =
-               ListBinding.handle_collection_change(binding, :delete, change_data, socket, context)
+               ListBinding.handle_collection_change(
+                 binding,
+                 :delete,
+                 change_data,
+                 socket,
+                 context
+               )
 
       updated_items = get_in(updated_socket.assigns, [:ash_ui, :lists, "comments-list", "items"])
 

@@ -1,6 +1,8 @@
 defmodule AshUI.Phase8IntegrationTest do
   use AshUI.DataCase, async: false
 
+  require Ash.Query
+
   alias AshUI.Authorization.Runtime
   alias AshUI.Compiler
   alias AshUI.DSL.Builder
@@ -12,6 +14,9 @@ defmodule AshUI.Phase8IntegrationTest do
   alias AshUI.Rendering.WebUIAdapter
   alias AshUI.Resources.Screen
   alias AshUI.Telemetry
+  alias AshUI.Test.RuntimeDomain
+  alias AshUI.Test.RuntimeFixtures
+  alias AshUI.Test.User
 
   @moduletag :integration
   @moduletag :conformance
@@ -21,7 +26,7 @@ defmodule AshUI.Phase8IntegrationTest do
     Compiler.init_cache()
     Runtime.init_cache()
     Telemetry.reset_metrics()
-    :ok
+    %{fixtures: RuntimeFixtures.seed!()}
   end
 
   describe "Section 8.6.1 - Full stack integration scenarios" do
@@ -35,7 +40,7 @@ defmodule AshUI.Phase8IntegrationTest do
       assert mounted_socket.assigns.ash_ui_user.role == :admin
     end
 
-    test "8.6.1.2 - data bindings work bidirectionally" do
+    test "8.6.1.2 - data bindings work bidirectionally", %{fixtures: fixtures} do
       socket =
         build_socket(
           ash_ui_user: build_admin(),
@@ -44,7 +49,7 @@ defmodule AshUI.Phase8IntegrationTest do
               id: "name-binding",
               binding_type: :value,
               target: "profile.name",
-              source: %{"resource" => "User", "field" => "name", "id" => "user-1"},
+              source: %{"resource" => "User", "field" => "name", "id" => fixtures.user.id},
               transform: %{"sanitize" => [%{"type" => "trim"}]}
             }
           }
@@ -58,9 +63,14 @@ defmodule AshUI.Phase8IntegrationTest do
 
       assert get_in(updated_socket.assigns, [:ash_ui, :bindings, "profile.name", "value"]) ==
                "Pascal"
+
+      query = Ash.Query.filter(User, id == ^fixtures.user.id)
+
+      assert {:ok, updated_user} = Ash.read_one(query, domain: RuntimeDomain)
+      assert updated_user.name == "Pascal"
     end
 
-    test "8.6.1.3 - actions execute with authorization" do
+    test "8.6.1.3 - actions execute with authorization", %{fixtures: fixtures} do
       socket =
         build_socket(
           ash_ui_user: build_admin(),
@@ -69,19 +79,31 @@ defmodule AshUI.Phase8IntegrationTest do
               id: "save-profile",
               binding_type: :action,
               target: "submit",
-              source: %{"resource" => "User", "action" => "save_profile"},
-              transform: %{"params" => %{"display_name" => {"event", "display_name"}}}
+              source: %{
+                "resource" => "User",
+                "action" => "update",
+                "id" => fixtures.user.id
+              },
+              transform: %{"params" => %{"name" => {"event", "display_name"}}}
             }
           }
         )
 
       assert {:reply, %{status: :ok}, updated_socket} =
                EventHandler.handle_action_event(
-                 %{"action_id" => "save-profile", "data" => %{"display_name" => "Pascal"}},
+                 %{
+                   "action_id" => "save-profile",
+                   "data" => %{"display_name" => "Updated Pascal"}
+                 },
                  socket
                )
 
       assert get_in(updated_socket.assigns, [:flash, :info]) == "Action completed successfully"
+
+      query = Ash.Query.filter(User, id == ^fixtures.user.id)
+
+      assert {:ok, updated_user} = Ash.read_one(query, domain: RuntimeDomain)
+      assert updated_user.name == "Updated Pascal"
     end
 
     test "8.6.1.4 - rendering works across all renderers" do
@@ -116,17 +138,42 @@ defmodule AshUI.Phase8IntegrationTest do
 
     test "8.6.2.2 - the traceability matrix is complete against the scenario catalog" do
       matrix_scns =
-        extract_ids(project_path("specs/conformance/spec_conformance_matrix.md"), ~r/SCN-[0-9A-Z]+/)
+        extract_table_ids(project_path("specs/conformance/spec_conformance_matrix.md"))
         |> MapSet.new()
 
       catalog_scns =
-        extract_ids(project_path("specs/conformance/scenario_catalog.md"), ~r/SCN-[0-9A-Z]+/)
+        extract_heading_ids(project_path("specs/conformance/scenario_catalog.md"))
         |> MapSet.new()
 
       assert MapSet.subset?(matrix_scns, catalog_scns)
     end
 
-    test "8.6.2.3 - conformance-tagged tests are present and targeted by the harness" do
+    test "8.6.2.3 - scenario test traceability is complete and targets conformance-tagged files" do
+      traceability_scns =
+        extract_table_ids(project_path("specs/conformance/scenario_test_matrix.md"))
+        |> MapSet.new()
+
+      catalog_scns =
+        extract_heading_ids(project_path("specs/conformance/scenario_catalog.md"))
+        |> MapSet.new()
+
+      assert MapSet.equal?(traceability_scns, catalog_scns)
+
+      traceability = File.read!(project_path("specs/conformance/scenario_test_matrix.md"))
+
+      test_files =
+        Regex.scan(~r/test\/ash_ui\/[A-Za-z0-9_\/\.]+\.exs/, traceability)
+        |> List.flatten()
+        |> Enum.uniq()
+
+      Enum.each(test_files, fn file ->
+        absolute_path = project_path(file)
+        assert File.exists?(absolute_path)
+        assert File.read!(absolute_path) =~ "@moduletag :conformance"
+      end)
+    end
+
+    test "8.6.2.4 - conformance-tagged tests are present and targeted by the harness" do
       conformance_files =
         run_shell!("rg -l '@(module)?tag.*conformance' test")
         |> String.split("\n", trim: true)
@@ -137,7 +184,7 @@ defmodule AshUI.Phase8IntegrationTest do
       assert String.contains?(harness, "mix test --only conformance")
     end
 
-    test "8.6.2.4 - conformance report can be generated" do
+    test "8.6.2.5 - conformance report can be generated" do
       report_dir = temp_dir("conformance-report")
 
       output =
@@ -149,6 +196,7 @@ defmodule AshUI.Phase8IntegrationTest do
       assert String.contains?(output, "Conformance report written")
       assert File.exists?(Path.join(report_dir, "report.md"))
       assert File.exists?(Path.join(report_dir, "report.json"))
+      assert File.read!(Path.join(report_dir, "report.md")) =~ "Scenario Test Matrix"
     end
   end
 
@@ -205,7 +253,9 @@ defmodule AshUI.Phase8IntegrationTest do
       socket = build_socket(current_user: build_admin())
       invalid_screen = %Screen{id: nil, name: nil}
 
-      assert {:error, :not_found} = Integration.mount_ui_screen(socket, :missing_phase8_screen, %{})
+      assert {:error, :not_found} =
+               Integration.mount_ui_screen(socket, :missing_phase8_screen, %{})
+
       assert {:error, :invalid_screen} = Integration.compile_screen(invalid_screen)
 
       assert {:noreply, error_socket} = EventHandler.handle_event("unknown_event", %{}, socket)
@@ -249,11 +299,7 @@ defmodule AshUI.Phase8IntegrationTest do
     end
   end
 
-  defp build_socket(assigns) do
-    %Phoenix.LiveView.Socket{
-      assigns: Enum.into(assigns, %{__changed__: %{}})
-    }
-  end
+  defp build_socket(assigns), do: RuntimeFixtures.socket(assigns)
 
   defp build_admin(id \\ "admin-1") do
     %{id: id, role: :admin, active: true}
@@ -261,7 +307,8 @@ defmodule AshUI.Phase8IntegrationTest do
 
   defp create_screen(name_atom) do
     {:ok, screen} =
-      Ash.create(Screen,
+      Ash.create(
+        Screen,
         %{
           name: Atom.to_string(name_atom),
           route: "/#{Atom.to_string(name_atom)}",
@@ -307,6 +354,22 @@ defmodule AshUI.Phase8IntegrationTest do
     |> File.read!()
     |> then(&Regex.scan(regex, &1))
     |> List.flatten()
+  end
+
+  defp extract_heading_ids(path) do
+    path
+    |> File.read!()
+    |> then(&Regex.scan(~r/^####\s+(SCN-[0-9A-Z]+):/m, &1, capture: :all_but_first))
+    |> List.flatten()
+    |> Enum.uniq()
+  end
+
+  defp extract_table_ids(path) do
+    path
+    |> File.read!()
+    |> then(&Regex.scan(~r/^\|\s*(SCN-[0-9A-Z]+)\s*\|/m, &1, capture: :all_but_first))
+    |> List.flatten()
+    |> Enum.uniq()
   end
 
   defp project_path(path) do

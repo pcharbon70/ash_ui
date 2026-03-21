@@ -8,6 +8,8 @@ defmodule AshUI.Authorization.Phase5IntegrationTest do
   alias AshUI.Authorization.BindingPolicy
   alias AshUI.AuthorizationError
 
+  @moduletag :conformance
+
   # Mock users
   defp build_admin(), do: %{id: "admin-1", role: :admin, active: true}
   defp build_user(id \\ "user-1"), do: %{id: id, role: :user, active: true}
@@ -214,7 +216,11 @@ defmodule AshUI.Authorization.Phase5IntegrationTest do
 
       # Cache with a timestamp
       cache_key = Runtime.build_cache_key(user, screen, :mount)
-      :ets.insert(:ash_ui_auth_cache, {cache_key, :authorized, System.system_time(:second) - 1000})
+
+      :ets.insert(
+        :ash_ui_auth_cache,
+        {cache_key, :authorized, System.system_time(:second) - 1000}
+      )
 
       # Should be expired (assuming default TTL of 300 seconds)
       # Since we only went back 1000 seconds, this depends on actual TTL
@@ -245,7 +251,10 @@ defmodule AshUI.Authorization.Phase5IntegrationTest do
 
       # Mount should fail
       assert {:forbidden, reason} = Runtime.check_mount_authorization(nil, screen)
-      assert AuthorizationError.requires_login?(AuthorizationError.unauthenticated(AshUI.Screen, :mount))
+
+      assert AuthorizationError.requires_login?(
+               AuthorizationError.unauthenticated(AshUI.Screen, :mount)
+             )
     end
 
     test "action execution authorization flow" do
