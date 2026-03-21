@@ -270,6 +270,7 @@ defmodule AshUI.LiveView.EventHandler do
     %{
       user_id: get_user_id(socket),
       user: socket.assigns[:ash_ui_user],
+      authorize?: true,
       params: socket.assigns[:ash_ui_params] || %{},
       assigns: socket.assigns,
       socket: socket,

@@ -37,24 +37,40 @@ defmodule AshUI.Authorization.ScreenPolicy do
   end
 
   @doc """
+  Check if user can read a specific screen.
+  """
+  def can_read?(user, screen) do
+    cond do
+      Policies.runtime_authorization_bypass?() -> true
+      not Policies.resource_active?(screen) -> false
+      not Policies.user_active(user) -> false
+      Policies.user_role(user, :admin) -> true
+      not Policies.role_allowed?(user, screen) -> false
+      Policies.screen_owner(user, screen) -> true
+      Policies.public_resource?(screen) -> true
+      Policies.unrestricted_resource?(screen) -> true
+      true -> false
+    end
+  end
+
+  @doc """
   Check if user can mount a specific screen.
   """
   def can_mount?(user, screen) do
+    can_read?(user, screen)
+  end
+
+  @doc """
+  Check if user can manage a specific screen.
+  """
+  def can_manage?(user, screen) do
     cond do
       Policies.runtime_authorization_bypass?() -> true
-
       not Policies.user_active(user) -> false
-
-      # Admins can mount any screen
       Policies.user_role(user, :admin) -> true
-
-      # Public screens can be mounted by active users
-      Map.get(screen, :public, false) -> true
-
-      # Owners can mount their screens
+      not Policies.role_allowed?(user, screen) -> false
       Policies.screen_owner(user, screen) -> true
-
-      # Default deny
+      Policies.unrestricted_resource?(screen) -> true
       true -> false
     end
   end

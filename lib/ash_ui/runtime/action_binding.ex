@@ -233,6 +233,7 @@ defmodule AshUI.Runtime.ActionBinding do
     %{
       user_id: user_id,
       user: user,
+      authorize?: true,
       params: params,
       assigns: socket.assigns
     }

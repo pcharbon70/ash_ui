@@ -10,7 +10,6 @@ defmodule AshUI.Authorization.Runtime do
 
   alias AshUI.Authorization.Policies
   alias AshUI.Authorization.ScreenPolicy
-  alias AshUI.Authorization.ElementPolicy
   alias AshUI.Authorization.BindingPolicy
   alias AshUI.Telemetry
 
@@ -100,6 +99,7 @@ defmodule AshUI.Authorization.Runtime do
     else
       {:error, :no_user} ->
         emit_auth_telemetry(:action_no_user, context)
+
         {:forbidden,
          %{reason: :unauthenticated, message: "You must be logged in", redirect: :login}}
 
@@ -142,6 +142,7 @@ defmodule AshUI.Authorization.Runtime do
 
     with :ok <- emit_auth_telemetry(:read_attempt, context),
          :ok <- check_user_present(user),
+         :ok <- check_user_active(user),
          :ok <- check_data_source_accessible(user, binding),
          :ok <- check_policy(user, binding, :read) do
       emit_auth_telemetry(:read_success, context)
@@ -175,6 +176,7 @@ defmodule AshUI.Authorization.Runtime do
 
     with :ok <- emit_auth_telemetry(:write_attempt, context),
          :ok <- check_user_present(user),
+         :ok <- check_user_active(user),
          :ok <- check_data_source_writable(user, binding),
          :ok <- check_policy(user, binding, :update) do
       emit_auth_telemetry(:write_success, context)
@@ -290,7 +292,7 @@ defmodule AshUI.Authorization.Runtime do
       Runtime.invalidate_resource_cache(screen)
   """
   @spec invalidate_resource_cache(term()) :: :ok
-  def invalidate_resource_cache(resource) do
+  def invalidate_resource_cache(_resource) do
     # In production, would selectively invalidate by resource
     :ets.delete_all_objects(:ash_ui_auth_cache)
     :ok
@@ -390,7 +392,7 @@ defmodule AshUI.Authorization.Runtime do
     end
   end
 
-  defp check_action_allowed(user, action, params) do
+  defp check_action_allowed(user, _action, _params) do
     # Check if user role allows this action
     if Policies.user_role(user, :admin) do
       :ok
@@ -427,8 +429,28 @@ defmodule AshUI.Authorization.Runtime do
   end
 
   defp check_policy(user, resource, action) do
-    # In production, would use Ash.Policy.Authorizer
-    :ok
+    case Policies.allows_record_action?(user, resource, action) do
+      true ->
+        :ok
+
+      false ->
+        {:error, :policy_forbidden}
+
+      :unknown ->
+        case policy_subject(resource, action) do
+          {:ok, subject, policy_action, opts} ->
+            if Ash.can?({subject, policy_action}, user, Keyword.put(opts, :maybe_is, false)) do
+              :ok
+            else
+              {:error, :policy_forbidden}
+            end
+
+          :skip ->
+            :ok
+        end
+    end
+  rescue
+    _ -> :ok
   end
 
   defp get_resource_id(%{id: id}), do: id
@@ -437,8 +459,54 @@ defmodule AshUI.Authorization.Runtime do
   defp format_action_error(reason) do
     case reason do
       :forbidden -> "You don't have permission to perform this action"
+      :policy_forbidden -> "This request is blocked by the configured resource policy"
       :invalid_params -> "Invalid parameters provided"
       _ -> "Action not allowed"
     end
+  end
+
+  defp policy_subject(%{__struct__: resource} = record, action) do
+    if ash_resource?(resource) do
+      {:ok, record, normalize_policy_action(resource, action), policy_opts(resource)}
+    else
+      :skip
+    end
+  end
+
+  defp policy_subject(resource, action) when is_atom(resource) do
+    if ash_resource?(resource) do
+      {:ok, resource, normalize_policy_action(resource, action), policy_opts(resource)}
+    else
+      :skip
+    end
+  end
+
+  defp policy_subject(_resource, _action), do: :skip
+
+  defp normalize_policy_action(resource, :mount) do
+    case Enum.any?(Ash.Resource.Info.actions(resource), &(&1.name == :mount)) do
+      true -> :mount
+      false -> :read
+    end
+  end
+
+  defp normalize_policy_action(resource, action) do
+    case Enum.find(Ash.Resource.Info.actions(resource), fn existing ->
+           existing.name == action
+         end) do
+      nil -> action
+      existing -> existing.name
+    end
+  end
+
+  defp policy_opts(_resource) do
+    []
+  end
+
+  defp ash_resource?(module) do
+    Ash.Resource.Info.attributes(module)
+    true
+  rescue
+    _ -> false
   end
 end

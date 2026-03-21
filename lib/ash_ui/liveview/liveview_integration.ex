@@ -10,8 +10,9 @@ defmodule AshUI.LiveView.Integration do
   require Ash.Query
 
   alias AshUI.Compiler
+  alias AshUI.Authorization.BindingPolicy
   alias AshUI.Domain
-  alias AshUI.Authorization.ScreenPolicy
+  alias AshUI.Authorization.Runtime
   alias AshUI.Resources.Screen
   alias AshUI.Resources.Binding
   alias AshUI.Runtime.BindingEvaluator
@@ -76,7 +77,10 @@ defmodule AshUI.LiveView.Integration do
   """
   @spec authorize_screen(Screen.t(), term()) :: :ok | {:error, :unauthorized}
   def authorize_screen(%Screen{} = screen, user) do
-    if ScreenPolicy.can_mount?(user, screen), do: :ok, else: {:error, :unauthorized}
+    case Runtime.check_mount_authorization(user, screen) do
+      :authorized -> :ok
+      _ -> {:error, :unauthorized}
+    end
   end
 
   @doc """
@@ -113,7 +117,7 @@ defmodule AshUI.LiveView.Integration do
     context = build_evaluation_context(socket, user, params)
 
     screen
-    |> load_screen_bindings()
+    |> load_screen_bindings(user)
     |> evaluate_batch_bindings(context)
   end
 
@@ -152,7 +156,7 @@ defmodule AshUI.LiveView.Integration do
   end
 
   defp load_screen_by_primary_key(screen_id, user) do
-    case Ash.get(Screen, screen_id, actor: user, authorize?: true) do
+    case Ash.get(Screen, screen_id, action: :mount, actor: user, domain: Domain, authorize?: true) do
       {:ok, screen} -> {:ok, screen}
       {:error, reason} -> {:error, reason}
     end
@@ -178,10 +182,16 @@ defmodule AshUI.LiveView.Integration do
     %{
       user_id: get_user_id(user),
       user: user,
+      authorize?: true,
       params: params,
       assigns: socket.assigns,
       socket: socket,
-      ash_domains: Map.get(socket.assigns, :ash_ui_domains, Application.get_env(:ash_ui, :ash_domains, [Domain]))
+      ash_domains:
+        Map.get(
+          socket.assigns,
+          :ash_ui_domains,
+          Application.get_env(:ash_ui, :ash_domains, [Domain])
+        )
     }
   end
 
@@ -194,15 +204,20 @@ defmodule AshUI.LiveView.Integration do
     end
   end
 
-  defp load_screen_bindings(%Screen{} = screen) do
+  defp load_screen_bindings(%Screen{} = screen, user) do
     query =
       Binding
       |> Ash.Query.new()
       |> Ash.Query.filter(screen_id == ^screen.id)
 
-    case Ash.read(query, authorize?: true) do
-      {:ok, bindings} -> bindings
-      {:error, _} -> []
+    case Ash.read(query, actor: user, domain: Domain, authorize?: true) do
+      {:ok, bindings} ->
+        bindings
+        |> Enum.map(&Map.put(&1, :screen, screen))
+        |> Enum.filter(&binding_readable?(&1, user))
+
+      {:error, _} ->
+        []
     end
   rescue
     _ -> []
@@ -230,7 +245,10 @@ defmodule AshUI.LiveView.Integration do
     |> Phoenix.Component.assign(:ash_ui_iur, iur)
     |> Phoenix.Component.assign(:ash_ui_bindings, bindings)
     |> Phoenix.Component.assign(:ash_ui_params, params)
-    |> Phoenix.Component.assign(:ash_ui_domains, Application.get_env(:ash_ui, :ash_domains, [Domain]))
+    |> Phoenix.Component.assign(
+      :ash_ui_domains,
+      Application.get_env(:ash_ui, :ash_domains, [Domain])
+    )
     |> Phoenix.Component.assign(:ash_ui_user, user)
     |> Phoenix.Component.assign(:ash_ui_loaded_at, DateTime.utc_now())
     |> sync_runtime_binding_assigns(bindings)
@@ -305,6 +323,14 @@ defmodule AshUI.LiveView.Integration do
         end
       end)
 
-    Phoenix.Component.assign(socket, :ash_ui, Map.put(ash_ui, :bindings, updated_runtime_bindings))
+    Phoenix.Component.assign(
+      socket,
+      :ash_ui,
+      Map.put(ash_ui, :bindings, updated_runtime_bindings)
+    )
+  end
+
+  defp binding_readable?(binding, user) do
+    BindingPolicy.can_read?(user, binding)
   end
 end

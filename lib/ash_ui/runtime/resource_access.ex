@@ -3,6 +3,8 @@ defmodule AshUI.Runtime.ResourceAccess do
 
   require Ash.Query
 
+  alias AshUI.Authorization.Policies
+
   @type context :: map()
   @type resolved :: %{
           resource: module(),
@@ -32,11 +34,17 @@ defmodule AshUI.Runtime.ResourceAccess do
   def read_relationship(source, relationship_path, context, opts \\ []) do
     with {:ok, resolved} <- resolve(source_resource(source), context),
          {:ok, record} <- optional_record(source, context, Keyword.put(opts, :resolved, resolved)) do
-      navigate(record, resolved.resource, String.split(relationship_path, ".", trim: true), resolved)
+      navigate(
+        record,
+        resolved.resource,
+        String.split(relationship_path, ".", trim: true),
+        resolved
+      )
     end
   end
 
-  @spec read_collection(map(), context(), keyword()) :: {:ok, %{items: list(), total: non_neg_integer()}} | {:error, term()}
+  @spec read_collection(map(), context(), keyword()) ::
+          {:ok, %{items: list(), total: non_neg_integer()}} | {:error, term()}
   def read_collection(source, context, opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     page_size = Keyword.get(opts, :page_size, 20)
@@ -46,7 +54,10 @@ defmodule AshUI.Runtime.ResourceAccess do
          {:ok, items} <- load_collection_items(source, resolved, context) do
       filtered_items = apply_in_memory_filters(items, filters)
       total = length(filtered_items)
-      paged_items = filtered_items |> Enum.drop(max(page - 1, 0) * page_size) |> Enum.take(page_size)
+
+      paged_items =
+        filtered_items |> Enum.drop(max(page - 1, 0) * page_size) |> Enum.take(page_size)
+
       {:ok, %{items: paged_items, total: total}}
     end
   end
@@ -77,13 +88,15 @@ defmodule AshUI.Runtime.ResourceAccess do
           Ash.create(resolved.resource, normalized_params, create_opts(resolved, action, opts))
 
         :update ->
-          with {:ok, record} <- required_record(source, context, Keyword.put(opts, :resolved, resolved)) do
+          with {:ok, record} <-
+                 required_record(source, context, Keyword.put(opts, :resolved, resolved)) do
             update_params = drop_primary_key(normalized_params, resolved.resource)
             Ash.update(record, update_params, action_opts(resolved, action, opts))
           end
 
         :destroy ->
-          with {:ok, record} <- required_record(source, context, Keyword.put(opts, :resolved, resolved)) do
+          with {:ok, record} <-
+                 required_record(source, context, Keyword.put(opts, :resolved, resolved)) do
             Ash.destroy(record, action_opts(resolved, action, opts))
           end
 
@@ -128,13 +141,26 @@ defmodule AshUI.Runtime.ResourceAccess do
         case record_id(source, resolved.resource, context) do
           nil ->
             with {:ok, records} <- read_records(resolved, parent_filters),
-                 {:ok, values} <- navigate(records, resolved.resource, String.split(relationship_path, ".", trim: true), resolved) do
+                 {:ok, values} <-
+                   navigate(
+                     records,
+                     resolved.resource,
+                     String.split(relationship_path, ".", trim: true),
+                     resolved
+                   ) do
               {:ok, List.wrap(values) |> List.flatten()}
             end
 
           _id ->
-            with {:ok, record} <- required_record(source, context, resolved: resolved, filters: %{}),
-                 {:ok, values} <- navigate(record, resolved.resource, String.split(relationship_path, ".", trim: true), resolved) do
+            with {:ok, record} <-
+                   required_record(source, context, resolved: resolved, filters: %{}),
+                 {:ok, values} <-
+                   navigate(
+                     record,
+                     resolved.resource,
+                     String.split(relationship_path, ".", trim: true),
+                     resolved
+                   ) do
               {:ok, List.wrap(values) |> List.flatten()}
             end
         end
@@ -150,8 +176,13 @@ defmodule AshUI.Runtime.ResourceAccess do
   defp required_record(source, context, opts) do
     with {:ok, record} <- optional_record(source, context, opts) do
       case record do
-        nil -> {:error, {:resource_not_found, source_resource(source), record_id(source, opts[:resolved].resource, context)}}
-        record -> {:ok, record}
+        nil ->
+          {:error,
+           {:resource_not_found, source_resource(source),
+            record_id(source, opts[:resolved].resource, context)}}
+
+        record ->
+          {:ok, record}
       end
     end
   end
@@ -161,6 +192,7 @@ defmodule AshUI.Runtime.ResourceAccess do
     |> Ash.Query.new()
     |> maybe_filter(filters, resolved.resource)
     |> Ash.read_one(ash_opts(resolved))
+    |> authorize_record_result(resolved)
   end
 
   defp read_records(resolved, filters) do
@@ -168,6 +200,7 @@ defmodule AshUI.Runtime.ResourceAccess do
     |> Ash.Query.new()
     |> maybe_filter(filters, resolved.resource)
     |> Ash.read(ash_opts(resolved))
+    |> authorize_records_result(resolved)
   end
 
   defp maybe_filter(query, filters, _resource) when filters in [%{}, [], nil], do: query
@@ -214,7 +247,7 @@ defmodule AshUI.Runtime.ResourceAccess do
     case resolve_relationship(resource, part) do
       {:ok, relationship} ->
         with {:ok, loaded} <- Ash.load(value, relationship.name, ash_opts(resolved)),
-             next <- Map.get(loaded, relationship.name) do
+             {:ok, next} <- maybe_authorize_loaded(Map.get(loaded, relationship.name), resolved) do
           navigate(next, relationship.destination, rest, resolved)
         end
 
@@ -320,7 +353,8 @@ defmodule AshUI.Runtime.ResourceAccess do
           ArgumentError -> nil
         end
 
-      Map.get(params, key) || Map.get(assigns, key) || if(atom_key, do: Map.get(assigns, atom_key))
+      Map.get(params, key) || Map.get(assigns, key) ||
+        if(atom_key, do: Map.get(assigns, atom_key))
     end)
   end
 
@@ -403,7 +437,9 @@ defmodule AshUI.Runtime.ResourceAccess do
   defp fetch_value(data, key) when is_map(data) do
     case Map.get(data, key) do
       nil ->
-        case Enum.find(Map.keys(data), fn existing_key -> to_string(existing_key) == to_string(key) end) do
+        case Enum.find(Map.keys(data), fn existing_key ->
+               to_string(existing_key) == to_string(key)
+             end) do
           nil -> nil
           existing_key -> Map.get(data, existing_key)
         end
@@ -446,7 +482,9 @@ defmodule AshUI.Runtime.ResourceAccess do
         {:ok, build_resolved(domain, resource, context)}
 
       _ ->
-        {:error, {:ambiguous_resource, resource_ref, Enum.map(matches, fn {_domain, resource} -> resource end)}}
+        {:error,
+         {:ambiguous_resource, resource_ref,
+          Enum.map(matches, fn {_domain, resource} -> resource end)}}
     end
   end
 
@@ -471,12 +509,71 @@ defmodule AshUI.Runtime.ResourceAccess do
   end
 
   defp build_resolved(domain, resource, context) do
+    actor = actor(context)
+
     %{
       resource: resource,
       domain: domain,
-      actor: actor(context),
+      actor: actor,
       tenant: Map.get(context, :tenant),
-      authorize?: Map.get(context, :authorize?, false)
+      authorize?: Map.get(context, :authorize?, not is_nil(actor))
     }
+  end
+
+  defp authorize_record_result({:ok, record}, resolved) do
+    case authorize_record(record, resolved, :read) do
+      :ok -> {:ok, record}
+      {:error, :unauthorized} -> {:ok, nil}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp authorize_record_result(other, _resolved), do: other
+
+  defp authorize_records_result({:ok, records}, resolved) when is_list(records) do
+    {:ok, Enum.filter(records, &authorized_record?(&1, resolved, :read))}
+  end
+
+  defp authorize_records_result(other, _resolved), do: other
+
+  defp maybe_authorize_loaded(value, resolved) do
+    {:ok, prune_unauthorized(value, resolved)}
+  end
+
+  defp prune_unauthorized(values, resolved) when is_list(values) do
+    Enum.filter(values, &authorized_record?(&1, resolved, :read))
+  end
+
+  defp prune_unauthorized(nil, _resolved), do: nil
+
+  defp prune_unauthorized(value, resolved) do
+    if authorized_record?(value, resolved, :read), do: value, else: nil
+  end
+
+  defp authorize_record(record, resolved, action) do
+    if authorized_record?(record, resolved, action) do
+      :ok
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  defp authorized_record?(nil, _resolved, _action), do: true
+  defp authorized_record?(_record, %{authorize?: false}, _action), do: true
+  defp authorized_record?(_record, %{actor: nil}, _action), do: true
+
+  defp authorized_record?(record, resolved, action) do
+    case Policies.allows_record_action?(resolved.actor, record, action) do
+      true ->
+        true
+
+      false ->
+        false
+
+      :unknown ->
+        Ash.can?({record, action}, resolved.actor, maybe_is: false)
+    end
+  rescue
+    _ -> true
   end
 end
