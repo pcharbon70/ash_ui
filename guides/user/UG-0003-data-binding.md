@@ -62,7 +62,7 @@ Use `:value` when a field should be read into UI state and potentially written b
 
 ```elixir
 {:ok, _binding} =
-  AshUI.Domain.create(AshUI.Resources.Binding,
+  AshUI.Data.create(AshUI.Resources.Binding,
     attrs: %{
       screen_id: screen.id,
       element_id: name_input.id,
@@ -90,7 +90,7 @@ Use `:list` when the element expects a collection.
 
 ```elixir
 {:ok, _binding} =
-  AshUI.Domain.create(AshUI.Resources.Binding,
+  AshUI.Data.create(AshUI.Resources.Binding,
     attrs: %{
       screen_id: screen.id,
       element_id: audit_list.id,
@@ -109,7 +109,7 @@ Use `:action` when the UI should trigger an Ash-side operation.
 
 ```elixir
 {:ok, _binding} =
-  AshUI.Domain.create(AshUI.Resources.Binding,
+  AshUI.Data.create(AshUI.Resources.Binding,
     attrs: %{
       screen_id: screen.id,
       element_id: save_button.id,

@@ -12,7 +12,7 @@ defmodule AshUI.CompilerTest do
   describe "compile/2" do
     setup do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "compiler_test_screen",
             unified_dsl: %{"type" => "screen"},
@@ -23,7 +23,7 @@ defmodule AshUI.CompilerTest do
 
       # Create test elements
       {:ok, element1} =
-        AshUI.Domain.create(Element,
+        AshUI.Data.create(Element,
           attrs: %{
             type: :text,
             props: %{"content" => "Hello"},
@@ -33,7 +33,7 @@ defmodule AshUI.CompilerTest do
         )
 
       {:ok, element2} =
-        AshUI.Domain.create(Element,
+        AshUI.Data.create(Element,
           attrs: %{
             type: :button,
             props: %{"label" => "Click me"},
@@ -44,7 +44,7 @@ defmodule AshUI.CompilerTest do
 
       # Create test binding
       {:ok, _binding} =
-        AshUI.Domain.create(Binding,
+        AshUI.Data.create(Binding,
           attrs: %{
             source: %{"resource" => "Test", "field" => "value"},
             target: "test_target",
@@ -67,7 +67,7 @@ defmodule AshUI.CompilerTest do
       assert iur.attributes["route"] == "/compiler-test"
     end
 
-    test "compiles elements as IUR children", %{screen: screen, elements: elements} do
+    test "compiles elements as IUR children", %{screen: screen} do
       assert {:ok, %IUR{} = iur} = Compiler.compile(screen)
 
       assert length(iur.children) == 2
@@ -103,7 +103,7 @@ defmodule AshUI.CompilerTest do
   describe "compile/2 with options" do
     setup do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "options_test_screen",
             unified_dsl: %{"type" => "screen"},
@@ -152,7 +152,7 @@ defmodule AshUI.CompilerTest do
       }
 
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "dsl_test_screen",
             unified_dsl: dsl,
@@ -178,7 +178,7 @@ defmodule AshUI.CompilerTest do
       }
 
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "invalid_dsl_screen",
             unified_dsl: invalid_dsl,
@@ -206,7 +206,7 @@ defmodule AshUI.CompilerTest do
       }
 
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "cache_test_screen",
             unified_dsl: dsl,
@@ -216,6 +216,7 @@ defmodule AshUI.CompilerTest do
 
       assert {:ok, iur1} = Compiler.compile(screen, use_cache: true)
       assert {:ok, iur2} = Compiler.compile(screen, use_cache: true)
+      assert iur1 == iur2
 
       # Should get same result
       stats = Compiler.cache_stats()
@@ -232,7 +233,7 @@ defmodule AshUI.CompilerTest do
       }
 
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "no_cache_screen",
             unified_dsl: dsl,
@@ -257,7 +258,7 @@ defmodule AshUI.CompilerTest do
       }
 
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "invalidate_screen",
             unified_dsl: dsl,
@@ -300,12 +301,12 @@ defmodule AshUI.CompilerTest do
       dsl2 = %{type: "button", props: %{}, children: [], signals: [], metadata: %{}}
 
       {:ok, screen1} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{name: "batch_screen_1", unified_dsl: dsl1, layout: :row}
         )
 
       {:ok, screen2} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{name: "batch_screen_2", unified_dsl: dsl2, layout: :row}
         )
 

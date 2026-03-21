@@ -15,7 +15,7 @@ defmodule AshUI.DSLIntegrationTest do
         route: "/dsl-test"
       }
 
-      assert {:ok, screen} = AshUI.Domain.create(Screen, attrs: attrs)
+      assert {:ok, screen} = AshUI.Data.create(Screen, attrs: attrs)
       assert screen.layout == :row
       assert screen.route == "/dsl-test"
       assert is_map(screen.unified_dsl)
@@ -28,7 +28,7 @@ defmodule AshUI.DSLIntegrationTest do
         metadata: %{"custom" => "value", "priority" => 1}
       }
 
-      assert {:ok, screen} = AshUI.Domain.create(Screen, attrs: attrs)
+      assert {:ok, screen} = AshUI.Data.create(Screen, attrs: attrs)
       assert screen.metadata == %{"custom" => "value", "priority" => 1}
     end
   end
@@ -36,7 +36,7 @@ defmodule AshUI.DSLIntegrationTest do
   describe "ui_element DSL extension" do
     setup do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "element_dsl_test",
             unified_dsl: %{"type" => "screen"},
@@ -76,7 +76,7 @@ defmodule AshUI.DSLIntegrationTest do
           position: 1
         }
 
-        assert {:ok, _element} = AshUI.Domain.create(Element, attrs: attrs)
+        assert {:ok, _element} = AshUI.Data.create(Element, attrs: attrs)
       end)
     end
 
@@ -89,7 +89,7 @@ defmodule AshUI.DSLIntegrationTest do
         position: 1
       }
 
-      assert {:ok, element} = AshUI.Domain.create(Element, attrs: attrs)
+      assert {:ok, element} = AshUI.Data.create(Element, attrs: attrs)
       assert element.props == %{"label" => "Click me", "disabled" => false}
       assert element.variants == [:primary, :large]
     end
@@ -98,7 +98,7 @@ defmodule AshUI.DSLIntegrationTest do
   describe "ui_binding DSL extension" do
     setup do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: "binding_dsl_test",
             unified_dsl: %{"type" => "screen"},
@@ -107,7 +107,7 @@ defmodule AshUI.DSLIntegrationTest do
         )
 
       {:ok, element} =
-        AshUI.Domain.create(Element,
+        AshUI.Data.create(Element,
           attrs: %{
             type: :textinput,
             props: %{},
@@ -134,7 +134,7 @@ defmodule AshUI.DSLIntegrationTest do
           screen_id: screen.id
         }
 
-        assert {:ok, _binding} = AshUI.Domain.create(Binding, attrs: attrs)
+        assert {:ok, _binding} = AshUI.Data.create(Binding, attrs: attrs)
       end)
     end
 
@@ -148,7 +148,7 @@ defmodule AshUI.DSLIntegrationTest do
         screen_id: screen.id
       }
 
-      assert {:ok, binding} = AshUI.Domain.create(Binding, attrs: attrs)
+      assert {:ok, binding} = AshUI.Data.create(Binding, attrs: attrs)
       assert binding.transform == %{"function" => "uppercase", "args" => []}
     end
   end
@@ -167,7 +167,7 @@ defmodule AshUI.DSLIntegrationTest do
       }
 
       # Should fail due to nil foreign keys, not invalid type
-      assert {:error, _error} = AshUI.Domain.create(Binding, attrs: attrs)
+      assert {:error, _error} = AshUI.Data.create(Binding, attrs: attrs)
     end
   end
 end

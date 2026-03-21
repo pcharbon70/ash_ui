@@ -51,7 +51,7 @@ If you previously modeled screens as custom resources in your app, migrate the u
 
 ```elixir
 alias AshUI.DSL.Builder
-alias AshUI.Domain
+alias AshUI.Data, as: Domain
 alias AshUI.Resources.Screen
 
 {:ok, _screen} =

@@ -153,7 +153,7 @@ defmodule AshUI.Rendering.Validation do
     end
   end
 
-  defp collect_child_errors(errors, children, parent_iur) do
+  defp collect_child_errors(errors, children, _parent_iur) do
     Enum.reduce(children, errors, fn child, acc ->
       case validate_child(child) do
         :ok -> acc

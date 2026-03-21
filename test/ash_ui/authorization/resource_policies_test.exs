@@ -12,7 +12,7 @@ defmodule AshUI.Authorization.ResourcePoliciesTest do
   defp build_guest(), do: %{id: nil, role: :guest, active: true}
 
   # Mock resources
-  defp build_screen(opts \\ []) do
+  defp build_screen(opts) do
     Enum.into(opts, %{
       id: "screen-1",
       name: "Test Screen",

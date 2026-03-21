@@ -54,7 +54,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       dsl = Builder.text("Simple Screen")
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "simple_screen",
             unified_dsl: Builder.to_store(dsl),
@@ -80,7 +80,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         )
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "complex_screen",
             unified_dsl: Builder.to_store(dsl),
@@ -101,7 +101,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       }
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "invalid_screen",
             unified_dsl: invalid_dsl,
@@ -116,7 +116,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       dsl = Builder.text("Cached Screen")
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "cached_screen",
             unified_dsl: Builder.to_store(dsl),
@@ -138,7 +138,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
   describe "Section 6.5.3 - Incremental compilation scenarios" do
     test "element change triggers screen recompile" do
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "incremental_screen",
             unified_dsl: Builder.to_store(default_dsl()),
@@ -147,7 +147,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         )
 
       {:ok, element} =
-        AshUI.Domain.create(AshUI.Resources.Element,
+        AshUI.Data.create(AshUI.Resources.Element,
           attrs: %{
             type: :text,
             props: %{"content" => "Initial"},
@@ -167,7 +167,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       Compiler.clear_cache()
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "cache_test_screen",
             unified_dsl: Builder.to_store(default_dsl()),
@@ -187,7 +187,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
 
     test "dependency tracking works" do
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "dependency_screen",
             unified_dsl: Builder.to_store(default_dsl()),
@@ -196,7 +196,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         )
 
       {:ok, element} =
-        AshUI.Domain.create(AshUI.Resources.Element,
+        AshUI.Data.create(AshUI.Resources.Element,
           attrs: %{
             type: :text,
             props: %{"content" => "Test"},
@@ -206,7 +206,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
         )
 
       {:ok, binding} =
-        AshUI.Domain.create(AshUI.Resources.Binding,
+        AshUI.Data.create(AshUI.Resources.Binding,
           attrs: %{
             source: %{"resource" => "Test", "field" => "value"},
             target: "test_target",
@@ -331,7 +331,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
 
       # Store in database
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "full_pipeline_screen",
             unified_dsl: Builder.to_store(dsl),
@@ -358,7 +358,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       }
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "error_screen",
             unified_dsl: invalid_dsl,
@@ -377,7 +377,7 @@ defmodule AshUI.Compiler.Phase6IntegrationTest do
       dsl = Builder.text("Performance Test")
 
       {:ok, screen} =
-        AshUI.Domain.create(AshUI.Resources.Screen,
+        AshUI.Data.create(AshUI.Resources.Screen,
           attrs: %{
             name: "perf_screen",
             unified_dsl: Builder.to_store(dsl),

@@ -46,15 +46,14 @@ defmodule AshUI.DSL.Storage do
   """
   @spec default() :: unified_dsl()
   def default do
+    timestamp = DateTime.utc_now() |> DateTime.to_iso8601()
+
     %{
       type: "fragment",
       props: %{},
       children: [],
       signals: [],
-      metadata: %{
-        version: "1.0.0",
-        created_at: DateTime.utc_now() |> DateTime.to_iso8601()
-      }
+      metadata: normalize_metadata_keys(%{version: "1.0.0", created_at: timestamp})
     }
   end
 
@@ -120,10 +119,14 @@ defmodule AshUI.DSL.Storage do
   """
   @spec widget_types(unified_dsl()) :: [String.t()]
   def widget_types(dsl) do
-    types = [dsl.type]
+    types =
+      case dsl_type(dsl) do
+        nil -> []
+        type -> [type]
+      end
 
     child_types =
-      Enum.flat_map(dsl.children || [], fn child ->
+      Enum.flat_map(dsl_children(dsl), fn child ->
         widget_types(child)
       end)
 
@@ -140,10 +143,10 @@ defmodule AshUI.DSL.Storage do
   """
   @spec signal_references(unified_dsl()) :: [signal()]
   def signal_references(dsl) do
-    local_signals = dsl.signals || []
+    local_signals = dsl_signals(dsl)
 
     child_signals =
-      Enum.flat_map(dsl.children || [], fn child ->
+      Enum.flat_map(dsl_children(dsl), fn child ->
         signal_references(child)
       end)
 
@@ -163,7 +166,7 @@ defmodule AshUI.DSL.Storage do
   @spec put_metadata(unified_dsl(), map()) :: unified_dsl()
   def put_metadata(dsl, metadata) do
     Map.update(dsl, :metadata, metadata, fn existing ->
-      Map.merge(existing, metadata)
+      Map.merge(existing, normalize_metadata_keys(metadata))
     end)
   end
 
@@ -175,8 +178,9 @@ defmodule AshUI.DSL.Storage do
       metadata = AshUI.DSL.Storage.get_metadata(dsl)
   """
   @spec get_metadata(unified_dsl()) :: map()
-  def get_metadata(%{metadata: metadata}), do: metadata
-  def get_metadata(_), do: %{}
+  def get_metadata(dsl) when is_map(dsl) do
+    Map.get(dsl, :metadata) || Map.get(dsl, "metadata") || %{}
+  end
 
   @doc """
   Increments the DSL version.
@@ -200,7 +204,7 @@ defmodule AshUI.DSL.Storage do
 
     missing =
       Enum.reject(required_fields, fn field ->
-        Map.has_key?(dsl, field)
+        Map.has_key?(dsl, field) or Map.has_key?(dsl, Atom.to_string(field))
       end)
 
     case missing do
@@ -237,14 +241,14 @@ defmodule AshUI.DSL.Storage do
   end
 
   defp validate_no_circular_refs(errors, dsl, path) do
-    current_type = Map.get(dsl, :type)
+    current_type = dsl_type(dsl)
 
     if current_type in path do
       ["Circular reference detected: #{Enum.join(path ++ [current_type], " -> ")}" | errors]
     else
       new_path = path ++ [current_type]
 
-      Enum.reduce(dsl.children || [], errors, fn child, acc ->
+      Enum.reduce(dsl_children(dsl), errors, fn child, acc ->
         validate_no_circular_refs(acc, child, new_path)
       end)
     end
@@ -252,11 +256,27 @@ defmodule AshUI.DSL.Storage do
 
   defp valid_signal_structure?(signal) do
     is_map(signal) and
-      Map.has_key?(signal, :type) and
-      Map.has_key?(signal, :target)
+      (Map.has_key?(signal, :type) or Map.has_key?(signal, "type")) and
+      (Map.has_key?(signal, :target) or Map.has_key?(signal, "target"))
   end
 
   defp get_next_version do
     "1.0.#{System.system_time(:second)}"
+  end
+
+  defp dsl_type(dsl), do: Map.get(dsl, :type) || Map.get(dsl, "type")
+  defp dsl_children(dsl), do: Map.get(dsl, :children) || Map.get(dsl, "children") || []
+  defp dsl_signals(dsl), do: Map.get(dsl, :signals) || Map.get(dsl, "signals") || []
+
+  defp normalize_metadata_keys(metadata) when is_map(metadata) do
+    Enum.reduce(metadata, metadata, fn
+      {:version, value}, acc -> Map.put(acc, "version", value)
+      {"version", value}, acc -> Map.put(acc, :version, value)
+      {:created_at, value}, acc -> Map.put(acc, "created_at", value)
+      {"created_at", value}, acc -> Map.put(acc, :created_at, value)
+      {:updated_at, value}, acc -> Map.put(acc, "updated_at", value)
+      {"updated_at", value}, acc -> Map.put(acc, :updated_at, value)
+      _, acc -> acc
+    end)
   end
 end

@@ -9,7 +9,7 @@ defmodule AshUI.Compiler.IncrementalTest do
   describe "build_dependencies/1" do
     setup do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: unique_name("incremental_test_screen"),
             unified_dsl: %{"type" => "screen"},
@@ -19,7 +19,7 @@ defmodule AshUI.Compiler.IncrementalTest do
 
       # Create elements
       {:ok, element1} =
-        AshUI.Domain.create(Element,
+        AshUI.Data.create(Element,
           attrs: %{
             type: :text,
             props: %{"content" => "Text 1"},
@@ -29,7 +29,7 @@ defmodule AshUI.Compiler.IncrementalTest do
         )
 
       {:ok, element2} =
-        AshUI.Domain.create(Element,
+        AshUI.Data.create(Element,
           attrs: %{
             type: :button,
             props: %{"label" => "Button"},
@@ -40,7 +40,7 @@ defmodule AshUI.Compiler.IncrementalTest do
 
       # Create binding
       {:ok, _binding} =
-        AshUI.Domain.create(Binding,
+        AshUI.Data.create(Binding,
           attrs: %{
             source: %{"resource" => "Test", "field" => "value"},
             target: "test_target",
@@ -87,7 +87,7 @@ defmodule AshUI.Compiler.IncrementalTest do
   describe "affects_screen?/4" do
     setup do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: unique_name("affects_test_screen"),
             unified_dsl: %{"type" => "screen"},
@@ -96,7 +96,7 @@ defmodule AshUI.Compiler.IncrementalTest do
         )
 
       {:ok, element} =
-        AshUI.Domain.create(Element,
+        AshUI.Data.create(Element,
           attrs: %{
             type: :text,
             props: %{"content" => "Test"},
@@ -126,7 +126,7 @@ defmodule AshUI.Compiler.IncrementalTest do
   describe "get_dependents/3" do
     setup do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: unique_name("dependents_test_screen"),
             unified_dsl: %{"type" => "screen"},
@@ -135,7 +135,7 @@ defmodule AshUI.Compiler.IncrementalTest do
         )
 
       {:ok, element} =
-        AshUI.Domain.create(Element,
+        AshUI.Data.create(Element,
           attrs: %{
             type: :text,
             props: %{"content" => "Test"},
@@ -145,7 +145,7 @@ defmodule AshUI.Compiler.IncrementalTest do
         )
 
       {:ok, _binding} =
-        AshUI.Domain.create(Binding,
+        AshUI.Data.create(Binding,
           attrs: %{
             source: %{"resource" => "Test", "field" => "value"},
             target: "test_target",
@@ -197,7 +197,7 @@ defmodule AshUI.Compiler.IncrementalTest do
   describe "recompile_on_change/4" do
     setup do
       {:ok, screen} =
-        AshUI.Domain.create(Screen,
+        AshUI.Data.create(Screen,
           attrs: %{
             name: unique_name("recompile_test_screen"),
             unified_dsl: %{"type" => "screen"},
