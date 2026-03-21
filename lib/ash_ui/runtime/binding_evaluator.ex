@@ -7,6 +7,7 @@ defmodule AshUI.Runtime.BindingEvaluator do
   """
 
   alias AshUI.Resources.Binding
+  alias AshUI.Runtime.ResourceAccess
   alias AshUI.Telemetry
 
   @type context :: %{
@@ -82,17 +83,16 @@ defmodule AshUI.Runtime.BindingEvaluator do
   end
 
   # Resolve field or relationship from resource
-  defp resolve_field_or_relationship(%{"resource" => resource} = source, context, opts) do
+  defp resolve_field_or_relationship(source, context, opts) do
     field = Map.get(source, "field")
     relationship = Map.get(source, "relationship")
-    id = Map.get(source, "id")
 
     cond do
       field ->
-        resolve_field(resource, field, id, context, opts)
+        resolve_field(source, field, context, opts)
 
       relationship ->
-        resolve_relationship(resource, relationship, context, opts)
+        resolve_relationship(source, relationship, context, opts)
 
       true ->
         {:error, {:missing_field_or_relationship, source}}
@@ -100,35 +100,11 @@ defmodule AshUI.Runtime.BindingEvaluator do
   end
 
   # Resolve a single field from a resource
-  defp resolve_field(resource_name, field, id, context, _opts) do
-    # Build Ash query to read the resource
-    # In production, this would use the actual Ash domain and resources
-    # For now, return a placeholder
-    {:ok, resource} = load_resource(resource_name, id, context)
-    value = get_field(resource, field)
-    {:ok, value}
-  end
+  defp resolve_field(source, field, context, _opts),
+    do: ResourceAccess.read_field(source, field, context)
 
-  # Resolve a relationship (e.g., user.profile.name)
-  defp resolve_relationship(resource_name, relationship, context, _opts) do
-    parts = String.split(relationship, ".")
-
-    {:ok, resource} = load_resource(resource_name, nil, context)
-    navigate_relationship(resource, parts, context)
-  end
-
-  # Navigate through nested relationships
-  defp navigate_relationship(nil, _parts, _context), do: {:ok, nil}
-
-  defp navigate_relationship(resource, [part | rest], context) do
-    value = get_field(resource, part)
-
-    if rest == [] do
-      {:ok, value}
-    else
-      navigate_relationship(value, rest, context)
-    end
-  end
+  defp resolve_relationship(source, relationship, context, _opts),
+    do: ResourceAccess.read_relationship(source, relationship, context)
 
   # Resolve an action source
   defp resolve_action(source, action_name, _context, _opts) do
@@ -144,43 +120,9 @@ defmodule AshUI.Runtime.BindingEvaluator do
      }}
   end
 
-  # Load a resource by name and ID
-  defp load_resource(_resource_name, _id, _context) do
-    # Placeholder: In production, this would call Ash.Domain.get/3
-    # For now, return mock data
-    {:ok,
-     %{
-       "id" => "mock-id",
-       "name" => "Mock Resource",
-       "type" => "mock"
-     }}
-  end
-
-  # Get a field from a resource (map or struct)
-  defp get_field(resource, field) when is_map(resource) do
-    key = String.to_existing_atom(field)
-
-    case Map.get(resource, key) do
-      nil -> Map.get(resource, field)
-      value -> value
-    end
-  rescue
-    ArgumentError ->
-      Map.get(resource, field)
-  end
-
-  defp get_field(_resource, _field), do: nil
-
   # Apply transformations to the resolved value
   defp apply_transformations(value, transform, _context) do
-    transforms =
-      case transform do
-        nil -> []
-        %{} = map when map_size(map) == 0 -> []
-        %{} = map -> [map]
-        list when is_list(list) -> list
-        _ -> []
-      end
+    transforms = List.wrap(transform)
 
     transformed =
       Enum.reduce(transforms, value, fn transform, acc ->
@@ -238,6 +180,9 @@ defmodule AshUI.Runtime.BindingEvaluator do
   # Format a value (placeholder implementation)
   defp format_value(value) when is_binary(value), do: value
   defp format_value(value) when is_number(value), do: to_string(value)
+  defp format_value(%DateTime{} = value), do: DateTime.to_iso8601(value)
+  defp format_value(%NaiveDateTime{} = value), do: NaiveDateTime.to_iso8601(value)
+  defp format_value(%Date{} = value), do: Date.to_iso8601(value)
   defp format_value(value), do: inspect(value)
 
   @doc """

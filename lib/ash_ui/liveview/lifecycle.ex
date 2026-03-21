@@ -380,7 +380,22 @@ defmodule AshUI.LiveView.Lifecycle do
       end
 
     if needs_refresh do
-      UpdateIntegration.refresh_bindings(socket)
+      refreshed_socket =
+        case UpdateIntegration.refresh_bindings(socket) do
+          {:noreply, refreshed_socket} -> refreshed_socket
+        end
+
+      update_in(refreshed_socket.assigns[:ash_ui_session_state], fn
+        nil -> nil
+        session_state -> Map.put(session_state, :bindings_need_refresh, false)
+      end)
+      |> then(fn session_state ->
+        if is_nil(session_state) do
+          refreshed_socket
+        else
+          Phoenix.Component.assign(refreshed_socket, :ash_ui_session_state, session_state)
+        end
+      end)
     else
       socket
     end

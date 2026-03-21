@@ -4,17 +4,18 @@ defmodule AshUI.Rendering.RegistryTest do
   alias AshUI.Rendering.Registry
 
   describe "Section 7.1.3 - Renderer Registry" do
-    test "list_renderers returns all registered renderers" do
+    test "list_renderers returns all registered renderers with fallback state" do
       renderers = Registry.list_renderers()
 
       assert is_list(renderers)
-      assert length(renderers) > 0
+      assert length(renderers) == 3
 
-      # Check structure
       renderer = hd(renderers)
       assert Map.has_key?(renderer, :type)
       assert Map.has_key?(renderer, :module)
       assert Map.has_key?(renderer, :available)
+      assert Map.has_key?(renderer, :renderable)
+      assert Map.has_key?(renderer, :mode)
       assert Map.has_key?(renderer, :description)
     end
 
@@ -42,6 +43,20 @@ defmodule AshUI.Rendering.RegistryTest do
       assert desktop_renderer.type == :desktop
     end
 
+    test "renderer_info distinguishes external availability from renderability" do
+      assert {:ok, info} = Registry.renderer_info(:liveview)
+      assert info.type == :liveview
+      assert is_boolean(info.available)
+      assert is_boolean(info.renderable)
+      assert info.mode in [:external, :adapter_fallback, :unavailable]
+
+      if info.available do
+        assert info.mode == :external
+      else
+        assert info.mode == :adapter_fallback
+      end
+    end
+
     test "get_renderer returns module for liveview" do
       assert {:ok, module} = Registry.get_renderer(:liveview)
       assert is_atom(module)
@@ -61,14 +76,38 @@ defmodule AshUI.Rendering.RegistryTest do
       assert {:error, :not_found} = Registry.get_renderer(:unknown)
     end
 
-    test "renderer_available? checks availability" do
-      # Since renderer packages may not be installed, we check the function works
+    test "get_renderer can require an external renderer" do
+      assert {:ok, info} = Registry.renderer_info(:desktop, allow_adapter_fallback: false)
+
+      if info.available do
+        assert {:ok, _module} = Registry.get_renderer(:desktop, allow_adapter_fallback: false)
+        assert info.mode == :external
+      else
+        assert {:error, :not_available} =
+                 Registry.get_renderer(:desktop, allow_adapter_fallback: false)
+
+        assert info.mode == :unavailable
+        refute info.renderable
+      end
+    end
+
+    test "renderer_available? checks external availability only" do
       result = Registry.renderer_available?(:liveview)
       assert is_boolean(result)
     end
 
+    test "renderer_renderable? checks current fallback policy" do
+      assert Registry.renderer_renderable?(:liveview)
+      assert Registry.renderer_renderable?(:html)
+      assert Registry.renderer_renderable?(:desktop)
+    end
+
     test "renderer_available? returns false for unknown type" do
       assert Registry.renderer_available?(:unknown) == false
+    end
+
+    test "renderer_renderable? returns false for unknown type" do
+      assert Registry.renderer_renderable?(:unknown) == false
     end
 
     test "refresh updates renderer availability" do
@@ -76,17 +115,9 @@ defmodule AshUI.Rendering.RegistryTest do
     end
 
     test "default_renderer returns configured renderer or fallback" do
-      result = Registry.default_renderer()
-
-      case result do
-        {:ok, type, module} ->
-          assert type in [:liveview, :html, :desktop]
-          assert is_atom(module)
-
-        {:error, :no_renderer} ->
-          # Acceptable when no renderers are available
-          :ok
-      end
+      assert {:ok, type, module} = Registry.default_renderer()
+      assert type in [:liveview, :html, :desktop]
+      assert is_atom(module)
     end
   end
 
@@ -105,11 +136,17 @@ defmodule AshUI.Rendering.RegistryTest do
       assert is_boolean(auto_detect)
     end
 
+    test "reads allow_adapter_fallback setting from config" do
+      configured = Application.get_env(:ash_ui, :rendering, [])
+      allow_adapter_fallback = Keyword.get(configured, :allow_adapter_fallback, true)
+
+      assert is_boolean(allow_adapter_fallback)
+    end
+
     test "reads fallback_renderer from config" do
       configured = Application.get_env(:ash_ui, :rendering, [])
       fallback = Keyword.get(configured, :fallback_renderer)
 
-      # Fallback is optional
       assert fallback == nil or fallback in [:liveview, :html, :desktop]
     end
   end

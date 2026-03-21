@@ -8,19 +8,23 @@ defmodule AshUI.Authorization.Phase5IntegrationTest do
   alias AshUI.Authorization.BindingPolicy
   alias AshUI.AuthorizationError
 
+  @moduletag :conformance
+
   # Mock users
   defp build_admin(), do: %{id: "admin-1", role: :admin, active: true}
   defp build_user(id \\ "user-1"), do: %{id: id, role: :user, active: true}
   defp build_inactive(), do: %{id: "user-2", role: :user, active: false}
+  defp build_guest(), do: %{id: nil, role: :guest, active: true}
+
   # Mock socket
-  defp build_socket(assigns) do
+  defp build_socket(assigns \\ %{}) do
     %Phoenix.LiveView.Socket{
       assigns: Enum.into(assigns, %{__changed__: %{}})
     }
   end
 
   # Mock resources
-  defp build_screen(opts) do
+  defp build_screen(opts \\ []) do
     Enum.into(opts, %{
       id: "screen-1",
       name: "Test Screen",
@@ -108,7 +112,7 @@ defmodule AshUI.Authorization.Phase5IntegrationTest do
 
       assert {:forbidden, reason} = Runtime.check_action_authorization(user, :update, %{})
       assert reason.reason == :inactive
-      assert is_binary(reason.message)
+      assert reason.message != nil
     end
 
     test "partial authorization allows some fields" do
@@ -146,10 +150,12 @@ defmodule AshUI.Authorization.Phase5IntegrationTest do
 
       # Redacted value should be placeholder
       redacted = BindingPolicy.redacted_value(binding)
-      assert Enum.member?(["[PROTECTED]", []], redacted)
+      assert redacted == "[PROTECTED]" or redacted == []
     end
 
     test "cross-resource authorization works" do
+      user = build_user()
+
       # Check cross-resource policy
       assert Policies.can_read_source(%{source: %{"resource" => "User"}}) == true
       assert Policies.can_write_source(%{source: %{"resource" => "User"}}) == true
@@ -210,7 +216,11 @@ defmodule AshUI.Authorization.Phase5IntegrationTest do
 
       # Cache with a timestamp
       cache_key = Runtime.build_cache_key(user, screen, :mount)
-      :ets.insert(:ash_ui_auth_cache, {cache_key, :authorized, System.system_time(:second) - 1000})
+
+      :ets.insert(
+        :ash_ui_auth_cache,
+        {cache_key, :authorized, System.system_time(:second) - 1000}
+      )
 
       # Should be expired (assuming default TTL of 300 seconds)
       # Since we only went back 1000 seconds, this depends on actual TTL
@@ -240,8 +250,11 @@ defmodule AshUI.Authorization.Phase5IntegrationTest do
       assert {:error, :no_user} = Runtime.extract_user(socket)
 
       # Mount should fail
-      assert {:forbidden, _reason} = Runtime.check_mount_authorization(nil, screen)
-      assert AuthorizationError.requires_login?(AuthorizationError.unauthenticated(AshUI.Screen, :mount))
+      assert {:forbidden, reason} = Runtime.check_mount_authorization(nil, screen)
+
+      assert AuthorizationError.requires_login?(
+               AuthorizationError.unauthenticated(AshUI.Screen, :mount)
+             )
     end
 
     test "action execution authorization flow" do
@@ -294,7 +307,7 @@ defmodule AshUI.Authorization.Phase5IntegrationTest do
       error = AuthorizationError.forbidden(AshUI.Screen, :mount)
       page = AuthorizationError.custom_error_page(error, AshUI.Screen)
 
-      assert is_binary(page.help_url)
+      assert page.help_url != nil
       assert String.contains?(page.help_url, "/help/")
     end
   end

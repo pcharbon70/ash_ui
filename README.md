@@ -106,9 +106,9 @@ Key starting points:
 - [DG-0001: Architecture Overview](/Users/Pascal/code/ash/ash_ui/guides/developer/DG-0001-architecture-overview.md)
 - [Example: basic dashboard](/Users/Pascal/code/ash/ash_ui/examples/basic_dashboard/README.md)
 
-## Current Phase
+## Current Status
 
-The project is in Phase 8, focused on governance gates and release readiness. CI, conformance coverage, observability, and documentation are now first-class parts of the repo instead of placeholders.
+Phase 8 governance work is complete, but the repo is still closing feature gaps in earlier phases. The current implementation is strongest in resource storage, compilation, runtime wiring, observability, and governance, while real Ash-backed binding execution and full external renderer integration remain open in reopened Phase 1, 3, 4, 5, and 7 workstreams.
 
 ## Development Notes
 

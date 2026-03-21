@@ -1,261 +1,180 @@
 # Binding Contract (REQ-BIND-*)
 
-This contract defines the normative requirements for UI.Binding semantics in the Ash UI framework.
+This contract defines the normative requirements for binding semantics in Ash UI.
 
 ## Purpose
 
-Defines the requirements for data bindings that connect UI elements to Ash resources, enabling reactive UI updates and event handling.
+Bindings connect persisted UI definitions to Ash-side data, collections, and actions. They are evaluated at runtime and translated into renderer-facing state and events.
 
 ## Control Plane
 
-**Owner**: `AshUI.Framework` (Framework Control Plane)
+**Owner**: `AshUI.Framework`
 
 ## Dependencies
 
-- REQ-RES-*: Resource definitions
-- REQ-SCREEN-*: Screen context
-- REQ-COMP-*: Compilation contracts
+- REQ-RES-*: resource definitions
+- REQ-SCREEN-*: screen runtime context
+- REQ-COMP-*: compilation and validation
 
 ## Requirements
 
 ### REQ-BIND-001: Binding Definition
 
-All bindings MUST be defined as UI.Binding resources.
+All bindings MUST be persisted as `AshUI.Resources.Binding` records.
 
 ```elixir
-defmodule AshUI.Bindings.UserProfile do
-  use Ash.Resource,
-    domain: AshUI.Domain,
-    data_layer: AshPostgres.DataLayer
-
-  attributes do
-    uuid_primary_key :id
-    attribute :source, :string
-    attribute :target, :string
-    attribute :binding_type, :atom, constraints: [one_of: [:value, :list, :action]]
-    attribute :transform, :map, default: %{}
-  end
-
-  relationships do
-    belongs_to :element, AshUI.Resources.Element
-    belongs_to :screen, AshUI.Resources.Screen
-  end
+attributes do
+  uuid_primary_key :id
+  attribute :source, :map, allow_nil?: false, default: %{}
+  attribute :target, :string, allow_nil?: false
+  attribute :binding_type, :atom, constraints: [one_of: [:value, :list, :action]]
+  attribute :transform, :map, default: %{}
+  attribute :metadata, :map, default: %{}
 end
 ```
 
 **Acceptance Criteria**:
-- AC-001: Bindings use `use Ash.Resource`
-- AC-002: Bindings specify source and target paths
-- AC-003: Bindings specify binding type
-- AC-004: Bindings are associated with elements and screens
+- AC-001: Bindings use `Ash.Resource`
+- AC-002: Bindings persist structured `source` and `target` values
+- AC-003: Bindings declare a supported `binding_type`
+- AC-004: Bindings are associated with a screen and optionally an element
 
 ### REQ-BIND-002: Binding Types
 
 Bindings MUST support three fundamental types.
 
-**Binding Types**:
-
-1. **`:value`** - Single value binding
-   - Binds an element property to a single resource attribute
-   - Updates propagate bidirectionally
-
-2. **`:list`** - Collection binding
-   - Binds an element to a collection of resources
-   - Updates propagate from resource to element only
-
-3. **`:action`** - Action binding
-   - Binds an element event to a resource action
-   - Triggers the action when the element event fires
+1. `:value`
+2. `:list`
+3. `:action`
 
 **Acceptance Criteria**:
-- AC-001: Bindings declare a valid binding_type
-- AC-002: Unknown binding types are rejected
-- AC-003: Binding type semantics are enforced
+- AC-001: Unknown binding types are rejected
+- AC-002: Each type has distinct runtime semantics
+- AC-003: Type-specific validation is documented
 
 ### REQ-BIND-003: Source Resolution
 
-Bindings MUST resolve source paths to Ash resources.
+Bindings MUST resolve a structured `source` map into Ash-side reads, collections, or actions.
 
-**Source Path Format**: `<Domain>.<Resource>.<Attribute|Action>`
-
-**Examples**:
-- `MyApp.Accounts.User.name` - Attribute binding
-- `MyApp.Accounts.User.toggle_active` - Action binding
-- `MyApp.Accounts.Post.[author.comments]` - Nested collection
+**Supported Shapes**:
+- value source: `%{"resource" => "User", "field" => "name", "id" => "user-1"}`
+- list source: `%{"resource" => "AuditLog", "relationship" => "entries"}`
+- action source: `%{"resource" => "Profile", "action" => "save"}`
 
 **Acceptance Criteria**:
-- AC-001: Sources are validated at compilation time
-- AC-002: Invalid sources produce compilation errors
-- AC-003: Nested paths are fully resolved
-- AC-004: Circular dependencies are detected
+- AC-001: Source maps are validated before evaluation
+- AC-002: Invalid source shapes produce clear errors
+- AC-003: Relationship and nested traversal semantics are defined
+- AC-004: Source resolution honors authorization context
 
 ### REQ-BIND-004: Target Binding
 
-Bindings MUST bind to valid element target properties.
+Bindings MUST bind to renderer-facing targets understood by the runtime and adapters.
 
-**Target Property Format**: `element.<property>`
-
-**Common Target Properties**:
-- `element.value` - Display value
-- `element.placeholder` - Placeholder text
-- `element.disabled` - Disabled state
-- `element.onClick` - Click handler
+**Common Targets**:
+- `value`
+- `items`
+- `submit`
+- `content`
 
 **Acceptance Criteria**:
-- AC-001: Targets are validated against element schemas
-- AC-002: Invalid targets produce compilation errors
-- AC-003: Target types match source types (or are coercible)
-- AC-004: Multiple bindings to the same target are merged
+- AC-001: Targets are validated against the bound element or runtime flow
+- AC-002: Invalid targets produce descriptive errors
+- AC-003: Target coercion rules are documented where allowed
+- AC-004: Target names remain stable across renderer adapters
 
 ### REQ-BIND-005: Transformation
 
-Bindings MAY include transformation rules.
+Bindings MAY include ordered transformation rules.
 
-**Transformation Types**:
-- `format` - String formatting (e.g., date formatting)
-- `compute` - Computed values (e.g., full name from first/last)
-- `validate` - Validation rules (e.g., min/max length)
-- `default` - Default values when source is nil
+**Common Transform Types**:
+- `format`
+- `compute`
+- `validate`
+- `default`
 
 **Acceptance Criteria**:
-- AC-001: Transformations are declared in the `transform` map
-- AC-002: Transformations are applied in order
-- AC-003: Transformations don't violate type constraints
-- AC-004: Transformation errors are surfaced
+- AC-001: Transformations are declared in persisted binding data
+- AC-002: Transformations run in a defined order
+- AC-003: Transformation failures surface to the runtime
+- AC-004: Transformations do not silently violate type expectations
 
 ### REQ-BIND-006: Reactivity
 
-Bindings MUST trigger reactive updates when source data changes.
+Bindings MUST support re-evaluation when their source data changes.
 
 **Acceptance Criteria**:
 - AC-001: Source changes trigger binding re-evaluation
-- AC-002: Re-evaluation updates element state
-- AC-003: Update propagation is batched for performance
-- AC-004: Stale bindings don't prevent new updates
+- AC-002: Re-evaluation updates screen or element state
+- AC-003: Update propagation can be batched
+- AC-004: Failed re-evaluations do not permanently stall new updates
 
 ### REQ-BIND-007: Bidirectional Updates
 
-`:value` bindings MUST support bidirectional updates.
+`:value` bindings MUST support the UI-to-resource write path.
 
 **Acceptance Criteria**:
-- AC-001: Element changes update source resources
-- AC-002: Source changes update element state
-- AC-003: Update cycles are prevented
-- AC-004: Conflict resolution is defined
+- AC-001: User input can write back to the bound resource
+- AC-002: Authorization is checked before writes
+- AC-003: Validation and conflict failures are surfaced clearly
+- AC-004: Successful writes update runtime state
 
 ### REQ-BIND-008: Action Execution
 
-`:action` bindings MUST execute resource actions when triggered.
+`:action` bindings MUST execute Ash-side actions when triggered.
 
 **Acceptance Criteria**:
-- AC-001: Action bindings receive element event data
-- AC-002: Actions are executed with proper authorization
-- AC-003: Action results trigger UI updates
+- AC-001: Event payloads are mapped into action params
+- AC-002: Authorization is checked before execution
+- AC-003: Action results can update UI state
 - AC-004: Action errors are surfaced to the user
 
 ### REQ-BIND-009: Validation
 
-Bindings MUST validate both configuration and runtime values.
+Bindings MUST validate persisted configuration and runtime input.
 
 **Acceptance Criteria**:
-- AC-001: Required binding attributes are validated
-- AC-002: Source and target paths are valid
-- AC-003: Transformation rules are valid
-- AC-004: Runtime validation errors are user-friendly
+- AC-001: Required binding attributes are enforced
+- AC-002: Source and target shapes are validated
+- AC-003: Transformation definitions are validated
+- AC-004: Runtime validation errors remain user-friendly
 
 ### REQ-BIND-010: Observability
 
-Bindings MUST emit telemetry events for binding operations.
+Bindings MUST emit telemetry events for evaluation, update, and error flows.
 
 **Acceptance Criteria**:
-- AC-001: Binding evaluation events include source and target
-- AC-002: Update events include old and new values
+- AC-001: Evaluation events include binding identity and target
+- AC-002: Update events include result context
 - AC-003: Error events include binding context
-- AC-004: Events follow the standard telemetry schema
+- AC-004: Events follow the shared telemetry schema
 
-## Binding Data Flow
+## Implementation Note
 
-```mermaid
-flowchart LR
-    subgraph Source["Ash Resource"]
-        Attr["Attribute/Action"]
-    end
-
-    subgraph Binding["UI.Binding"]
-        Resolve["Resolve Source"]
-        Transform["Apply Transform"]
-        Validate["Validate Target"]
-        Bind["Bind to Target"]
-    end
-
-    subgraph Element["UI Element"]
-        Prop["Target Property"]
-    end
-
-    subgraph UI["User Interface"]
-        Display["Display Value"]
-        Input["User Input"]
-    end
-
-    Attr --> Resolve
-    Resolve --> Transform
-    Transform --> Validate
-    Validate --> Bind
-    Bind --> Prop
-    Prop --> Display
-    Input --> Prop
-    Prop -.->|"Bidirectional"| Attr
-
-    classDef source fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef binding fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef element fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef ui fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
-
-    class Attr source
-    class Resolve,Transform,Validate,Bind binding
-    class Prop element
-    class Display,Input ui
-```
-
-## Binding Lifecycle
-
-```mermaid
-stateDiagram-v2
-    [*] --> defined: Binding Created
-    defined --> validated: Validation Pass
-    defined --> error: Validation Fail
-    validated --> bound: Element Mounted
-    bound --> active: Source Available
-    active --> updating: Source Changed
-    updating --> active: Update Complete
-    active --> error: Update Failure
-    active --> unbound: Element Unmounted
-    unbound --> [*]
-    error --> [*]
-```
+The repository currently exposes the binding APIs and telemetry surface described here, but some read, write, list, and action paths are still backed by placeholder implementations. This contract describes the intended real Ash-backed behavior that the reopened Phase 3 and Phase 4 work will complete.
 
 ## Traceability
 
-| Requirement | ADR | Component Spec | Scenarios |
-|---|---|---|---|
-| REQ-BIND-001 | ADR-0001 | resources/ui_binding.md | SCN-201, SCN-202 |
-| REQ-BIND-002 | - | resources/ui_binding.md | SCN-203, SCN-204 |
-| REQ-BIND-003 | ADR-0003 | compilation/resolver.md | SCN-205, SCN-206 |
-| REQ-BIND-004 | - | compilation/validator.md | SCN-207 |
-| REQ-BIND-005 | ADR-0004 | compilation/transform.md | SCN-208, SCN-209 |
-| REQ-BIND-006 | ADR-0005 | runtime/reactive.md | SCN-210, SCN-211 |
-| REQ-BIND-007 | ADR-0005 | runtime/reactive.md | SCN-212 |
-| REQ-BIND-008 | ADR-0006 | runtime/actions.md | SCN-213, SCN-214 |
-| REQ-BIND-009 | - | compilation/validator.md | SCN-215 |
-| REQ-BIND-010 | - | observability_contract.md | SCN-216 |
+| Requirement | Component Spec | Scenarios |
+|---|---|---|
+| REQ-BIND-001 | resources/ui_binding.md | SCN-006 |
+| REQ-BIND-002 | resources/ui_binding.md | SCN-007, SCN-008, SCN-009 |
+| REQ-BIND-003 | resources/ui_binding.md | SCN-010 |
+| REQ-BIND-004 | resources/ui_binding.md | SCN-006 |
+| REQ-BIND-005 | resources/ui_binding.md | SCN-010 |
+| REQ-BIND-006 | phase-03-data-binding-and-signal-mapping.md | SCN-007 |
+| REQ-BIND-007 | phase-03-data-binding-and-signal-mapping.md | SCN-007 |
+| REQ-BIND-008 | phase-03-data-binding-and-signal-mapping.md | SCN-009 |
+| REQ-BIND-009 | compilation_contract.md | SCN-042 |
+| REQ-BIND-010 | observability_contract.md | SCN-101 |
 
 ## Conformance
 
-See [conformance/spec_conformance_matrix.md](../conformance/spec_conformance_matrix.md) for complete scenario mappings.
+See [spec_conformance_matrix.md](../conformance/spec_conformance_matrix.md) for the current scenario coverage baseline.
 
 ## Related Specifications
 
-- [topology.md](../topology.md)
 - [resource_contract.md](resource_contract.md)
 - [screen_contract.md](screen_contract.md)
-- [compilation_contract.md](compilation_contract.md)
+- [../resources/ui_binding.md](../resources/ui_binding.md)
+- [../planning/phase-03-data-binding-and-signal-mapping.md](../planning/phase-03-data-binding-and-signal-mapping.md)

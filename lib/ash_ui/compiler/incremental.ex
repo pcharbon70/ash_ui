@@ -6,12 +6,11 @@ defmodule AshUI.Compiler.Incremental do
   affected resources when things change.
   """
 
+  require Ash.Query
   require Logger
-  import Ecto.Query
 
   alias AshUI.Compiler
   alias AshUI.Domain
-  alias AshUI.Repo
   alias AshUI.Resources.Screen
   alias AshUI.Resources.Element
   alias AshUI.Resources.Binding
@@ -42,11 +41,9 @@ defmodule AshUI.Compiler.Incremental do
     # Load elements and build relationships
     with {:ok, elements} <- load_screen_elements(screen),
          graph <- build_element_dependencies(graph, screen, elements),
-         graph <- build_binding_dependencies(graph, elements) do
-      case detect_circular_dependencies(graph) do
-        :ok -> {:ok, graph}
-        {:error, cycles} -> {:error, cycles}
-      end
+         graph <- build_binding_dependencies(graph, elements),
+         :ok <- detect_circular_dependencies(graph) do
+      {:ok, graph}
     end
   end
 
@@ -213,13 +210,16 @@ defmodule AshUI.Compiler.Incremental do
   end
 
   defp load_screen_elements(%Screen{id: screen_id}) do
-    elements =
+    query =
       Element
-      |> where([element], element.screen_id == ^screen_id)
-      |> order_by([element], asc: element.position)
-      |> Repo.all()
+      |> Ash.Query.new()
+      |> Ash.Query.filter(screen_id == ^screen_id)
+      |> Ash.Query.sort(position: :asc)
 
-    {:ok, elements}
+    case Ash.read(query, domain: Domain) do
+      {:ok, elements} -> {:ok, elements}
+      {:error, _} -> {:ok, []}
+    end
   end
 
   defp build_element_dependencies(graph, screen, elements) do
@@ -259,9 +259,15 @@ defmodule AshUI.Compiler.Incremental do
   end
 
   defp get_element_bindings(%Element{id: element_id}) do
-    Binding
-    |> where([binding], binding.element_id == ^element_id)
-    |> Repo.all()
+    query =
+      Binding
+      |> Ash.Query.new()
+      |> Ash.Query.filter(element_id == ^element_id)
+
+    case Ash.read(query, domain: Domain) do
+      {:ok, bindings} -> bindings
+      {:error, _} -> []
+    end
   end
 
   defp find_cycles(graph) do

@@ -6,6 +6,7 @@ cd "$ROOT"
 
 MATRIX="specs/conformance/spec_conformance_matrix.md"
 SCENARIO_CATALOG="specs/conformance/scenario_catalog.md"
+SCENARIO_TEST_MATRIX="specs/conformance/scenario_test_matrix.md"
 
 failures=0
 
@@ -21,6 +22,11 @@ fi
 
 if [[ ! -f "$SCENARIO_CATALOG" ]]; then
   echo "ERROR: missing scenario catalog: $SCENARIO_CATALOG"
+  exit 1
+fi
+
+if [[ ! -f "$SCENARIO_TEST_MATRIX" ]]; then
+  echo "ERROR: missing scenario test matrix: $SCENARIO_TEST_MATRIX"
   exit 1
 fi
 
@@ -93,6 +99,14 @@ while IFS= read -r scn; do
     fail "matrix references unknown scenario: $scn"
   fi
 done < <(rg --no-filename -o 'SCN-[0-9A-Z]+' "$MATRIX" | sort -u || true)
+
+echo "Checking scenario test matrix SCN references..."
+while IFS= read -r scn; do
+  [[ -z "$scn" ]] && continue
+  if ! grep -Fxq "$scn" <<<"$KNOWN_SCENARIOS"; then
+    fail "scenario test matrix references unknown scenario: $scn"
+  fi
+done < <(rg --no-filename -o 'SCN-[0-9A-Z]+' "$SCENARIO_TEST_MATRIX" | sort -u || true)
 
 if [[ "$failures" -ne 0 ]]; then
   echo "Specs governance validation failed."

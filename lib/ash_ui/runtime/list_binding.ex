@@ -6,6 +6,8 @@ defmodule AshUI.Runtime.ListBinding do
   of Ash resources to UI elements like lists and tables.
   """
 
+  alias AshUI.Runtime.ResourceAccess
+
   @type context :: %{
           user_id: String.t() | nil,
           params: map(),
@@ -44,7 +46,7 @@ defmodule AshUI.Runtime.ListBinding do
   """
   @spec load_collection(map(), context(), keyword()) :: {:ok, list_result()} | {:error, term()}
   def load_collection(binding, context, opts \\ []) do
-    source = binding_source(binding)
+    source = Map.get(binding, :source) || Map.get(binding, "source") || %{}
     resource = Map.get(source, "resource")
     relationship = Map.get(source, "relationship")
 
@@ -84,7 +86,7 @@ defmodule AshUI.Runtime.ListBinding do
   @spec subscribe_collection(map(), map(), context()) :: {:ok, map()}
   def subscribe_collection(binding, socket, _context) do
     subscription_id = collection_subscription_id(binding)
-    source = binding_source(binding)
+    source = Map.get(binding, :source) || Map.get(binding, "source") || %{}
 
     # Track collection subscription
     subscriptions = get_in(socket.assigns, [:ash_ui, :list_subscriptions]) || %{}
@@ -97,7 +99,7 @@ defmodule AshUI.Runtime.ListBinding do
     }
 
     updated_subscriptions = Map.put(subscriptions, subscription_id, subscription)
-    updated_socket = put_in(socket.assigns, [:ash_ui, :list_subscriptions], updated_subscriptions)
+    updated_socket = %{socket | assigns: put_in(socket.assigns, [:ash_ui, :list_subscriptions], updated_subscriptions)}
 
     {:ok, updated_socket}
   end
@@ -143,7 +145,7 @@ defmodule AshUI.Runtime.ListBinding do
   """
   @spec format_collection(list_result(), map(), context()) :: {:ok, [map()]} | {:error, term()}
   def format_collection(list_result, binding, context) do
-    transform = Map.get(binding, :transform) || Map.get(binding, "transform") || %{}
+    transform = binding.transform || %{}
     items = list_result.items
 
     formatted =
@@ -156,149 +158,79 @@ defmodule AshUI.Runtime.ListBinding do
 
   # Private functions
 
-  defp load_resource_collection(resource, relationship, page, page_size, filters, _context) do
-    # In production, this would use Ash.Query to load the collection
-    # For now, return mock data
-    mock_load_collection(resource, relationship, page, page_size, filters)
-  end
+  defp load_resource_collection(resource, relationship, page, page_size, filters, context) do
+    source =
+      %{}
+      |> Map.put("resource", resource)
+      |> maybe_put("relationship", relationship)
 
-  defp mock_load_collection(resource, relationship, page, page_size, _filters) do
-    total = 100
-    start_index = (page - 1) * page_size + 1
-
-    # Generate mock collection data
-    items =
-      if start_index > total do
-        []
-      else
-        end_index = min(start_index + page_size - 1, total)
-
-        Enum.map(start_index..end_index, fn index ->
-          %{
-            "id" => "#{resource}-#{relationship}-#{index}",
-            "type" => relationship,
-            "index" => index
-          }
-        end)
-      end
-
-    {:ok,
-     %{
-        "items" => items,
-        "total" => total,
-        "page" => page
-     }}
+    ResourceAccess.read_collection(
+      source,
+      context,
+      page: page,
+      page_size: page_size,
+      filters: filters
+    )
   end
 
   defp get_total_count(collection) do
-    Map.get(collection, "total", length(Map.get(collection, "items", [])))
+    Map.get(collection, :total) || Map.get(collection, "total") || length(extract_items(collection))
   end
 
   defp extract_items(collection) do
-    Map.get(collection, "items", [])
+    Map.get(collection, :items) || Map.get(collection, "items", [])
   end
 
   defp handle_insert(binding, change_data, socket, _context) do
     # For insert, we may want to prepend to the list or refresh
-    target = Map.get(binding, :target) || Map.get(binding, "target")
+    target = binding.target || Map.get(binding, "target")
 
     # Store change for UI update
-    changes =
-      get_in(socket.assigns, [
-        Access.key(:ash_ui, %{}),
-        Access.key(:list_changes, %{}),
-        Access.key(target, [])
-      ])
-
+    changes = get_in(socket.assigns, [:ash_ui, :list_changes, target]) || []
     updated_changes = [{:insert, change_data} | changes]
-    updated_assigns =
-      put_in(socket.assigns, [
-        Access.key(:ash_ui, %{}),
-        Access.key(:list_changes, %{}),
-        Access.key(target, [])
-      ], updated_changes)
-
-    updated_socket = %{socket | assigns: updated_assigns}
+    updated_socket =
+      put_assign_path(socket, [:ash_ui, :list_changes, target], updated_changes)
 
     {:ok, updated_socket, true}
   end
 
   defp handle_update(binding, change_data, socket, _context) do
     # For update, find the item and update it
-    target = Map.get(binding, :target) || Map.get(binding, "target")
-    item_id = Map.get(change_data, "id")
+    target = binding.target || Map.get(binding, "target")
+    item_id = item_value(change_data, "id")
 
     # Update the item in the cached list
-    items =
-      get_in(socket.assigns, [
-        Access.key(:ash_ui, %{}),
-        Access.key(:lists, %{}),
-        Access.key(target, %{}),
-        Access.key("items", [])
-      ])
+    items = get_in(socket.assigns, [:ash_ui, :lists, target, "items"]) || []
 
     updated_items =
       Enum.map(items, fn item ->
-        if Map.get(item, "id") == item_id do
-          Map.merge(item, change_data)
+        if item_value(item, "id") == item_id do
+          merge_item_change(item, change_data)
         else
           item
         end
       end)
 
-    updated_assigns =
-      put_in(socket.assigns, [
-        Access.key(:ash_ui, %{}),
-        Access.key(:lists, %{}),
-        Access.key(target, %{}),
-        Access.key("items", [])
-      ], updated_items)
-
-    updated_socket = %{socket | assigns: updated_assigns}
+    updated_socket = put_assign_path(socket, [:ash_ui, :lists, target, "items"], updated_items)
 
     {:ok, updated_socket, true}
   end
 
   defp handle_delete(binding, change_data, socket, _context) do
     # For delete, remove the item from the list
-    target = Map.get(binding, :target) || Map.get(binding, "target")
-    item_id = Map.get(change_data, "id")
+    target = binding.target || Map.get(binding, "target")
+    item_id = item_value(change_data, "id")
 
-    items =
-      get_in(socket.assigns, [
-        Access.key(:ash_ui, %{}),
-        Access.key(:lists, %{}),
-        Access.key(target, %{}),
-        Access.key("items", [])
-      ])
+    items = get_in(socket.assigns, [:ash_ui, :lists, target, "items"]) || []
 
-    updated_items = Enum.reject(items, fn item -> Map.get(item, "id") == item_id end)
-    current_total =
-      get_in(socket.assigns, [
-        Access.key(:ash_ui, %{}),
-        Access.key(:lists, %{}),
-        Access.key(target, %{}),
-        Access.key("total", 0)
-      ])
+    updated_items = Enum.reject(items, fn item -> item_value(item, "id") == item_id end)
 
-    updated_total = max(current_total - 1, 0)
+    updated_socket = put_assign_path(socket, [:ash_ui, :lists, target, "items"], updated_items)
 
-    updated_assigns =
-      socket.assigns
-      |> put_in([
-        Access.key(:ash_ui, %{}),
-        Access.key(:lists, %{}),
-        Access.key(target, %{}),
-        Access.key("items", [])
-      ], updated_items)
-      |> put_in([
-        Access.key(:ash_ui, %{}),
-        Access.key(:lists, %{}),
-        Access.key(target, %{}),
-        Access.key("total", 0)
-      ], updated_total)
-
-    updated_socket = %{socket | assigns: updated_assigns}
+    # Update total count
+    current_total = get_in(socket.assigns, [:ash_ui, :lists, target, "total"]) || 0
+    updated_socket =
+      put_assign_path(updated_socket, [:ash_ui, :lists, target, "total"], max(current_total - 1, 0))
 
     {:ok, updated_socket, true}
   end
@@ -348,14 +280,71 @@ defmodule AshUI.Runtime.ListBinding do
     Map.get(binding, :id) || Map.get(binding, "id")
   end
 
-  defp binding_source(binding) do
-    Map.get(binding, :source) || Map.get(binding, "source") || %{}
-  end
-
   defp collection_subscription_id(binding) do
-    source = binding_source(binding)
-    resource = Map.get(source, "resource")
-    relationship = Map.get(source, "relationship")
+    source = Map.get(binding, :source) || Map.get(binding, "source") || %{}
+    resource = Map.get(source, :resource) || Map.get(source, "resource")
+    relationship = Map.get(source, :relationship) || Map.get(source, "relationship")
     "list_#{resource}_#{relationship}"
   end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp put_assign_path(socket, path, value) do
+    updated_assigns =
+      put_in(
+        socket.assigns,
+        Enum.map(path, fn
+          key when is_atom(key) -> Access.key(key, %{})
+          key -> Access.key(key, %{})
+        end),
+        value
+      )
+
+    %{socket | assigns: updated_assigns}
+  end
+
+  defp item_value(item, key) when is_map(item) do
+    Map.get(item, key) ||
+      Map.get(item, to_string(key)) ||
+      map_get_existing_atom(item, key)
+  end
+
+  defp item_value(_item, _key), do: nil
+
+  defp map_get_existing_atom(map, key) do
+    atom_key =
+      try do
+        key |> to_string() |> String.to_existing_atom()
+      rescue
+        ArgumentError -> nil
+      end
+
+    if atom_key, do: Map.get(map, atom_key)
+  end
+
+  defp merge_item_change(%{__struct__: _} = item, change_data) do
+    Enum.reduce(change_data, item, fn {key, value}, acc ->
+      atom_key =
+        cond do
+          is_atom(key) ->
+            key
+
+          true ->
+            try do
+              String.to_existing_atom(to_string(key))
+            rescue
+              ArgumentError -> nil
+            end
+        end
+
+      if atom_key && Map.has_key?(acc, atom_key) do
+        Map.put(acc, atom_key, value)
+      else
+        acc
+      end
+    end)
+  end
+
+  defp merge_item_change(item, change_data) when is_map(item), do: Map.merge(item, change_data)
 end

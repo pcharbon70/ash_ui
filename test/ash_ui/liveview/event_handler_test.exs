@@ -109,7 +109,11 @@ defmodule AshUI.LiveView.EventHandlerTest do
       socket =
         build_socket(
           ash_ui_bindings: %{
-            action1: %{id: "action1", source: %{"resource" => "User", "action" => "create"}}
+            action1: %{
+              id: "action1",
+              target: "action1",
+              source: %{"resource" => "User", "action" => "create"}
+            }
           },
           ash_ui_user: build_user()
         )
@@ -123,7 +127,13 @@ defmodule AshUI.LiveView.EventHandlerTest do
     test "returns error for unauthorized actions" do
       socket =
         build_socket(
-          ash_ui_bindings: %{},
+          ash_ui_bindings: %{
+            restricted_action: %{
+              id: "restricted_action",
+              target: "restricted_action",
+              source: %{"resource" => "User", "action" => "create"}
+            }
+          },
           ash_ui_user: nil
         )
 

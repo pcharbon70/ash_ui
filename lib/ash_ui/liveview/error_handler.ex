@@ -80,7 +80,6 @@ defmodule AshUI.LiveView.ErrorHandler do
     # Store error in binding state for UI to handle
     updated_socket = store_binding_error(socket, binding, error_info)
 
-    # Return error placeholder value
     {:error, reason, updated_socket}
   end
 
@@ -156,15 +155,10 @@ defmodule AshUI.LiveView.ErrorHandler do
   @spec handle_runtime_error(Exception.t(), list(), Phoenix.LiveView.Socket.t()) ::
           Phoenix.LiveView.Socket.t()
   def handle_runtime_error(exception, stacktrace, socket) do
-    error_info = %{
-      type: :runtime,
-      reason: exception,
-      message: Exception.message(exception),
-      timestamp: DateTime.utc_now(),
-      context:
-        base_context(socket)
-        |> Map.put(:stacktrace, format_stacktrace(stacktrace))
-    }
+    error_info =
+      build_error_info(:runtime, exception, socket, %{
+        stacktrace: format_stacktrace(stacktrace)
+      })
 
     # Log runtime error
     log_runtime_error(error_info)
@@ -321,19 +315,35 @@ defmodule AshUI.LiveView.ErrorHandler do
   # Private functions
 
   defp build_error_info(type, reason, socket, extra_context \\ %{}) do
-    context = Map.merge(base_context(socket), normalize_context(extra_context))
+    extra_context =
+      case extra_context do
+        extra when is_list(extra) -> Enum.into(extra, %{})
+        extra when is_map(extra) -> extra
+      end
+
+    base_context = %{
+      screen_id: get_screen_id(socket),
+      user_id: get_user_id(socket),
+      session_id: get_session_id(socket)
+    }
 
     %{
       type: type,
       reason: reason,
       message: format_error_message(reason),
       timestamp: DateTime.utc_now(),
-      context: context
+      context: Map.merge(base_context, extra_context)
     }
   end
 
   defp format_error_message(reason) when is_binary(reason), do: reason
   defp format_error_message(reason), do: inspect(reason)
+
+  defp format_stacktrace(stacktrace) do
+    Exception.format_stacktrace(stacktrace)
+  rescue
+    FunctionClauseError -> inspect(stacktrace)
+  end
 
   defp get_screen_id(socket) do
     case socket.assigns[:ash_ui_screen] do
@@ -399,8 +409,6 @@ defmodule AshUI.LiveView.ErrorHandler do
   end
 
   defp emit_error_telemetry(error_info) do
-    context = error_info.context || %{}
-
     Telemetry.execute(
       [:ash_ui, :error, error_info.type],
       %{count: 1},
@@ -408,8 +416,8 @@ defmodule AshUI.LiveView.ErrorHandler do
         error: inspect(error_info.reason),
         reason: inspect(error_info.reason),
         resource_type: :screen,
-        screen_id: Map.get(context, :screen_id) || Map.get(context, "screen_id"),
-        user_id: Map.get(context, :user_id) || Map.get(context, "user_id"),
+        screen_id: error_info.context.screen_id,
+        user_id: error_info.context.user_id,
         status: :error
       }
     )
@@ -432,7 +440,7 @@ defmodule AshUI.LiveView.ErrorHandler do
 
   defp store_binding_error(socket, binding, error_info) do
     binding_errors = Map.get(socket.assigns, :ash_ui_binding_errors, %{})
-    binding_id = Map.get(binding, :id) || Map.get(binding, "id") || "unknown_binding"
+    binding_id = Map.get(binding, :id) || Map.get(binding, "id")
     updated = Map.put(binding_errors, binding_id, error_info)
     Phoenix.Component.assign(socket, :ash_ui_binding_errors, updated)
   end
@@ -455,7 +463,7 @@ defmodule AshUI.LiveView.ErrorHandler do
       {:ok, result} ->
         {:ok, result}
 
-      {:error, _reason} ->
+      {:error, _reason} = _error ->
         delay = min((base_delay * :math.pow(2, attempt)) |> trunc(), max_delay)
         Process.sleep(delay)
         retry_with_backoff(operation, attempt + 1, max_attempts, base_delay, max_delay)
@@ -478,26 +486,4 @@ defmodule AshUI.LiveView.ErrorHandler do
   end
 
   defp default_fallback(_), do: :error
-
-  defp base_context(socket) do
-    %{
-      screen_id: get_screen_id(socket),
-      user_id: get_user_id(socket),
-      session_id: get_session_id(socket)
-    }
-  end
-
-  defp normalize_context(extra_context) when is_list(extra_context), do: Map.new(extra_context)
-  defp normalize_context(extra_context) when is_map(extra_context), do: extra_context
-  defp normalize_context(_extra_context), do: %{}
-
-  defp format_stacktrace(stacktrace) when is_list(stacktrace) do
-    try do
-      Exception.format_stacktrace(stacktrace)
-    rescue
-      _ -> inspect(stacktrace)
-    end
-  end
-
-  defp format_stacktrace(stacktrace), do: inspect(stacktrace)
 end

@@ -5,6 +5,7 @@ defmodule AshUI.Resources.Screen do
 
   use Ash.Resource,
     domain: AshUI.Domain,
+    authorizers: [Ash.Policy.Authorizer],
     data_layer: AshPostgres.DataLayer
 
   postgres do
@@ -42,6 +43,10 @@ defmodule AshUI.Resources.Screen do
   actions do
     defaults [:read]
 
+    read :mount do
+      get? true
+    end
+
     create :create do
       primary? true
       accept [:name, :unified_dsl, :layout, :route, :metadata, :active, :version]
@@ -59,11 +64,25 @@ defmodule AshUI.Resources.Screen do
     end
   end
 
-  # Note: Policy DSL requires Ash.Policy.Authorizer extension
-  # This will be added when authorization policies are fully implemented
-  # policies do
-  #   policy action(:read) do
-  #     authorize_if expr(active == true)
-  #   end
-  # end
+  policies do
+    bypass actor_absent() do
+      authorize_if always()
+    end
+
+    bypass actor_attribute_equals(:role, :admin) do
+      authorize_if always()
+    end
+
+    policy action([:read, :mount]) do
+      authorize_if {AshUI.Authorization.Checks.ScreenAccess, mode: :read}
+    end
+
+    policy action(:create) do
+      authorize_if {AshUI.Authorization.Checks.ScreenAccess, mode: :manage}
+    end
+
+    policy action([:update, :destroy]) do
+      authorize_if {AshUI.Authorization.Checks.ScreenAccess, mode: :manage}
+    end
+  end
 end

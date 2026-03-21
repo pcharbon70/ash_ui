@@ -7,6 +7,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
   """
 
   alias AshUI.Runtime.BindingEvaluator
+  alias AshUI.Runtime.ResourceAccess
   alias AshUI.Resources.Binding
   alias AshUI.Telemetry
 
@@ -90,8 +91,6 @@ defmodule AshUI.Runtime.BidirectionalBinding do
   def subscribe_binding(binding, socket, _context) do
     # Track subscription for this binding
     subscription_id = subscription_id(binding)
-    source = Map.get(binding, :source) || Map.get(binding, "source") || %{}
-    target = Map.get(binding, :target) || Map.get(binding, "target")
 
     # In production, this would subscribe to Ash.Notifier
     # For now, track in socket assigns
@@ -100,18 +99,12 @@ defmodule AshUI.Runtime.BidirectionalBinding do
     updated_subscriptions =
       Map.put(subscriptions, subscription_id, %{
         binding_id: get_binding_id(binding),
-        source: source,
-        target: target,
+        source: binding.source,
+        target: binding.target,
         subscribed_at: System.system_time(:millisecond)
       })
 
-    updated_assigns =
-      put_in(socket.assigns, [
-        Access.key(:ash_ui, %{}),
-        Access.key(:subscriptions, %{})
-      ], updated_subscriptions)
-
-    updated_socket = %{socket | assigns: updated_assigns}
+    updated_socket = %{socket | assigns: put_in(socket.assigns, [:ash_ui, :subscriptions], updated_subscriptions)}
 
     {:ok, updated_socket}
   end
@@ -232,21 +225,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
   # Update Ash resource with new value
   defp update_resource(binding, value, context) do
     source = Map.get(binding, :source) || Map.get(binding, "source") || %{}
-    resource = Map.get(source, "resource")
-    field = Map.get(source, "field")
-    id = get_resource_id(source, context)
-
-    # In production, this would call Ash.Domain.update/3
-    # For now, return a mock result
-    mock_update_result(resource, id, field, value)
-  end
-
-  defp get_resource_id(source, context) do
-    Map.get(source, "id") || Map.get(context, :resource_id)
-  end
-
-  defp mock_update_result(_resource, _id, _field, value) do
-    {:ok, %{status: :ok, value: value}}
+    ResourceAccess.write_field(source, value, context)
   end
 
   # Helper functions for socket management
@@ -261,10 +240,13 @@ defmodule AshUI.Runtime.BidirectionalBinding do
         "updated_at" => System.system_time(:millisecond)
       })
 
-    %{
-      socket
-      | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
-    }
+    socket =
+      %{
+        socket
+        | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
+      }
+
+    update_binding_state(socket, binding, %{value: value, error: nil})
   end
 
   defp get_binding_value(socket, binding) do
@@ -282,12 +264,22 @@ defmodule AshUI.Runtime.BidirectionalBinding do
     ash_ui = Map.get(socket.assigns, :ash_ui, %{})
     bindings = Map.get(ash_ui, :bindings, %{})
     binding_state = Map.get(bindings, target, %{})
-    updated_bindings = Map.put(bindings, target, Map.put(binding_state, "error", error))
+    updated_bindings =
+      Map.put(
+        bindings,
+        target,
+        binding_state
+        |> Map.put("error", error)
+        |> Map.put("updated_at", System.system_time(:millisecond))
+      )
 
-    %{
-      socket
-      | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
-    }
+    socket =
+      %{
+        socket
+        | assigns: Map.put(socket.assigns, :ash_ui, Map.put(ash_ui, :bindings, updated_bindings))
+      }
+
+    update_binding_state(socket, binding, %{error: error})
   end
 
   defp get_binding_id(%Binding{id: id}), do: id
@@ -296,6 +288,46 @@ defmodule AshUI.Runtime.BidirectionalBinding do
   defp subscription_id(binding) do
     "#{get_binding_id(binding)}_#{System.system_time(:millisecond)}"
   end
+
+  defp update_binding_state(socket, binding, attrs) do
+    binding_id = get_binding_id(binding)
+    bindings = Map.get(socket.assigns, :ash_ui_bindings, %{})
+    atom_binding_id = maybe_to_existing_atom(binding_id)
+
+    existing_binding =
+      Map.get(bindings, binding_id) ||
+        (atom_binding_id && Map.get(bindings, atom_binding_id))
+
+    if is_map(existing_binding) do
+      updated_binding =
+        existing_binding
+        |> Map.merge(attrs)
+        |> Map.put(:updated_at, System.system_time(:millisecond))
+
+      updated_bindings =
+        bindings
+        |> Map.put(binding_id, updated_binding)
+        |> maybe_put(atom_binding_id, updated_binding)
+
+      %{socket | assigns: Map.put(socket.assigns, :ash_ui_bindings, updated_bindings)}
+    else
+      socket
+    end
+  end
+
+  defp maybe_put(map, nil, _value), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp maybe_to_existing_atom(value) when is_binary(value) do
+    try do
+      String.to_existing_atom(value)
+    rescue
+      ArgumentError -> nil
+    end
+  end
+
+  defp maybe_to_existing_atom(value) when is_atom(value), do: value
+  defp maybe_to_existing_atom(_value), do: nil
 
   defp emit_binding_update_telemetry(binding, context, started_at, result) do
     duration = System.monotonic_time() - started_at

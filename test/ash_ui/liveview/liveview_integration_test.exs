@@ -2,7 +2,9 @@ defmodule AshUI.LiveView.IntegrationTest do
   use AshUI.DataCase, async: false
 
   alias AshUI.LiveView.Integration
+  alias AshUI.Resources.Binding
   alias AshUI.Resources.Screen
+  alias AshUI.Test.RuntimeFixtures
 
   # Mock socket for testing
   defp build_socket(assigns \\ %{}) do
@@ -25,6 +27,7 @@ defmodule AshUI.LiveView.IntegrationTest do
     %Screen{
       id: id,
       name: "Test Screen",
+      metadata: %{},
       elements: []
     }
   end
@@ -42,7 +45,8 @@ defmodule AshUI.LiveView.IntegrationTest do
       AshUI.Data.create(Screen,
         attrs: %{
           name: "restricted_screen",
-          unified_dsl: %{"type" => "screen"}
+          unified_dsl: %{"type" => "screen"},
+          metadata: %{"owner_id" => "admin-1", "public" => false}
         }
       )
 
@@ -80,7 +84,13 @@ defmodule AshUI.LiveView.IntegrationTest do
     end
 
     test "returns error for unauthorized user" do
-      screen = build_screen("restricted-screen")
+      screen = %Screen{
+        id: "restricted-screen",
+        name: "Restricted Screen",
+        metadata: %{"owner_id" => "admin-1", "public" => false},
+        elements: []
+      }
+
       unauthorized_user = build_user("unauthorized-user")
 
       assert {:error, :unauthorized} = Integration.authorize_screen(screen, unauthorized_user)
@@ -123,6 +133,45 @@ defmodule AshUI.LiveView.IntegrationTest do
 
       assert {:ok, bindings} = Integration.evaluate_bindings(screen, socket, user, params)
       assert bindings == %{}
+    end
+
+    test "filters out bindings the user cannot read" do
+      {:ok, screen} =
+        Ash.create(
+          Screen,
+          %{
+            name: "bindings_screen_#{System.unique_integer([:positive])}",
+            unified_dsl: %{"type" => "screen"},
+            metadata: %{"public" => true}
+          }, domain: AshUI.Domain)
+
+      {:ok, public_binding} =
+        Ash.create(
+          Binding,
+          %{
+            screen_id: screen.id,
+            source: %{"resource" => "User", "action" => "create"},
+            target: "create-user",
+            binding_type: :action
+          }, domain: AshUI.Domain)
+
+      {:ok, restricted_binding} =
+        Ash.create(
+          Binding,
+          %{
+            screen_id: screen.id,
+            source: %{"resource" => "User", "action" => "create"},
+            target: "admin-only",
+            binding_type: :action,
+            metadata: %{"required_roles" => ["admin"]}
+          }, domain: AshUI.Domain)
+
+      socket = RuntimeFixtures.socket()
+      user = build_user()
+
+      assert {:ok, bindings} = Integration.evaluate_bindings(screen, socket, user, %{})
+      assert Map.has_key?(bindings, public_binding.id)
+      refute Map.has_key?(bindings, restricted_binding.id)
     end
   end
 

@@ -1,200 +1,194 @@
 # Resource Contract (REQ-RES-*)
 
-This contract defines the normative requirements for Ash Resource definitions in the Ash UI framework.
+This contract defines the normative requirements for Ash UI resource definitions.
 
 ## Purpose
 
-Defines the requirements for UI resource definitions (UI.Element, UI.Screen, UI.Binding) within the Ash Framework, ensuring consistent structure, validation, and behavior across all UI components.
+Ash UI stores durable UI state as Ash resources. This contract covers the resource-backed model implemented in this repository: `AshUI.Resources.Screen`, `AshUI.Resources.Element`, and `AshUI.Resources.Binding`.
 
 ## Control Plane
 
-**Owner**: `AshUI.Framework` (Framework Control Plane)
+**Owner**: `AshUI.Framework`
 
 ## Dependencies
 
-- Ash Framework (Core, API, JsonApi)
-- Ecto
+- Ash Framework
+- AshPostgres
 - Phoenix LiveView
 
 ## Requirements
 
 ### REQ-RES-001: Resource Definition
 
-All UI resources MUST be defined using Ash DSL extensions.
-
-```elixir
-defmodule AshUI.Resources.Element do
-  use Ash.Resource,
-    domain: AshUI.Domain,
-    data_layer: AshPostgres.DataLayer
-
-  attributes do
-    uuid_primary_key :id
-    attribute :type, :atom, constraints: [one_of: [:button, :input, :text, ...]]
-    attribute :props, :map, default: %{}
-  end
-end
-```
+All core UI resources MUST be defined using `Ash.Resource`, registered in `AshUI.Domain`, and backed by a persistent data layer.
 
 **Acceptance Criteria**:
-- AC-001: All resources use `use Ash.Resource`
-- AC-002: All resources specify a domain
-- AC-003: All resources specify a data layer
+- AC-001: Resources use `use Ash.Resource`
+- AC-002: Resources specify `domain: AshUI.Domain`
+- AC-003: Resources specify a persistent data layer
 
 ### REQ-RES-002: Type Safety
 
-All resource attributes MUST have explicitly defined types.
-
-**Rationale**: Type safety prevents runtime errors and enables compile-time validation.
+All persisted attributes MUST have explicit Ash types and constraints where needed.
 
 **Acceptance Criteria**:
-- AC-001: Every attribute has a defined type
-- AC-002: Complex types use Ash.Type modules
-- AC-003: Constraints are specified where applicable
+- AC-001: Every persisted attribute declares a type
+- AC-002: Enum-like fields use constraints or documented value sets
+- AC-003: Complex fields such as `props`, `metadata`, and `unified_dsl` use structured map types
 
 ### REQ-RES-003: Relationship Definition
 
-Resource relationships MUST use standard Ash relationship DSL.
+Resource relationships MUST use standard Ash relationship DSL and reflect the screen/element/binding hierarchy.
 
 **Acceptance Criteria**:
-- AC-001: Relationships use `has_one`, `has_many`, or `belongs_to`
-- AC-002: Relationship names are plural for collections
-- AC-003: Foreign key attributes are explicitly defined
+- AC-001: `Screen` has relationships to `Element` and `Binding`
+- AC-002: `Element` belongs to `Screen` and has relationships to `Binding`
+- AC-003: Foreign-key ownership is explicit in the resource definitions
 
 ### REQ-RES-004: Action Definition
 
-Resources MUST define standard Ash actions.
+Resources MUST expose baseline CRUD actions appropriate to their role in the system.
 
 **Acceptance Criteria**:
-- AC-001: Primary read action is named `:read`
-- AC-002: Primary create action is named `:create`
-- AC-003: Primary update action is named `:update`
-- AC-004: Primary destroy action is named `:destroy`
+- AC-001: `Screen`, `Element`, and `Binding` expose `:read`
+- AC-002: Mutable resources expose primary `:create` and `:update`
+- AC-003: Destructive operations are explicit and documented
+- AC-004: Supplemental read actions and filtered reads are allowed
 
 ### REQ-RES-005: Validation
 
-Resources MUST define validation rules using Ash validations.
+Resources MUST validate required attributes and structural invariants before persistence.
 
 **Acceptance Criteria**:
-- AC-001: Required attributes have `allow_nil?: false`
-- AC-002: Custom validations use `validate` or `change`
-- AC-003: Validation errors include user-friendly messages
+- AC-001: Required attributes use `allow_nil?: false`
+- AC-002: Resource-specific invariants are enforced through changes or validation helpers
+- AC-003: Invalid data returns descriptive Ash errors
 
-### REQ-RES-006: Authorization
+### REQ-RES-006: Authorization Boundary
 
-All resource actions MUST be authorizable through Ash Policies.
-
-**Acceptance Criteria**:
-- AC-001: Resources define `authorizers: [Ash.Policy.Authorizer]`
-- AC-002: Policies exist for all actions
-- AC-003: Policy failures result in clear error messages
-
-### REQ-RES-007: Metadata
-
-Resources MUST include standard metadata attributes.
+Resources MUST participate in the authorization model, either through resource-level Ash policies or an explicit runtime authorization boundary.
 
 **Acceptance Criteria**:
-- AC-001: Resources have `created_at` timestamp
-- AC-002: Resources have `updated_at` timestamp
-- AC-003: Resources have `version` attribute for optimistic locking
+- AC-001: Access to screens, elements, and bindings is not implicitly unrestricted in production flows
+- AC-002: The active authorization path is documented
+- AC-003: Policy or runtime authorization failures are surfaced clearly
+
+**Implementation Note**:
+The current repository primarily enforces authorization through runtime helpers. Full resource-level `Ash.Policy.Authorizer` wiring is still being completed.
+
+### REQ-RES-007: Metadata and Versioning
+
+Resources MUST include timestamps and version metadata needed for cache invalidation and rollout safety.
+
+**Acceptance Criteria**:
+- AC-001: Resources have created and updated timestamps
+- AC-002: Resources expose a `version` attribute
+- AC-003: Version changes are available to compilation and rollout logic
 
 ### REQ-RES-008: Extensions
 
-Resources MAY include extensions for additional behavior.
+Resources MAY expose extension points or companion helpers so the compiler and runtime can layer behavior on top of persisted records.
 
 **Acceptance Criteria**:
-- AC-001: Extensions are declared in the resource DSL
-- AC-002: Extension behavior is documented
-- AC-003: Extensions don't violate core resource contracts
+- AC-001: Extension behavior is documented when present
+- AC-002: Extension hooks do not break the core resource schema
+- AC-003: Custom behavior respects the same validation and authorization boundaries
 
 ## Resource Types
 
-### UI.Element (REQ-RES-ELEMENT)
+### UI.Element
 
-Atomic UI component with no children.
-
-**Attributes**:
-- `id`: UUID primary key
-- `type`: Atom (component type identifier)
-- `props`: Map (component properties)
-- `variants`: List of atom (variant identifiers)
-- `metadata`: Map (additional metadata)
-
-**Actions**:
-- `read`: Query elements
-- `create`: Create new element
-- `update`: Update element properties
-- `destroy`: Remove element
-
-**Relationships**:
-- `belongs_to :screen` - Parent screen
-- `has_many :bindings` - Associated bindings
-
-### UI.Screen (REQ-RES-SCREEN)
-
-Composable UI container representing a page or view.
+Atomic renderer-facing component or layout node stored as a record.
 
 **Attributes**:
 - `id`: UUID primary key
-- `name`: String (screen identifier)
-- `layout`: Atom (layout type)
-- `metadata`: Map (screen metadata)
-- `lifecycle_state`: Atom (state tracking)
+- `type`: atom component identifier
+- `props`: renderer-facing properties map
+- `variants`: list of atoms
+- `position`: integer ordering value
+- `metadata`: map
+- `active`: boolean
+- `version`: integer
 
 **Actions**:
-- `read`: Query screens
-- `create`: Create new screen
-- `update`: Update screen definition
-- `destroy`: Remove screen
-- `mount`: Lifecycle action for screen initialization
-- `unmount`: Lifecycle action for screen cleanup
+- `read`
+- `create`
+- `update`
+- `destroy`
 
 **Relationships**:
-- `has_many :elements` - Child elements
-- `has_many :bindings` - Associated bindings
+- `belongs_to :screen`
+- `has_many :bindings`
 
-### UI.Binding (REQ-RES-BINDING)
+### UI.Screen
 
-Data binding connecting UI elements to Ash resources.
+Top-level screen record that stores the durable `unified_dsl` tree and screen metadata.
 
 **Attributes**:
 - `id`: UUID primary key
-- `source`: String (resource path)
-- `target`: String (element property)
-- `binding_type`: Atom (:value, :list, :action)
-- `transform`: Map (transformation rules)
+- `name`: unique screen identifier
+- `unified_dsl`: persisted screen tree
+- `layout`: layout hint
+- `route`: optional route
+- `metadata`: map
+- `active`: boolean
+- `version`: integer
 
 **Actions**:
-- `read`: Query bindings
-- `create`: Create new binding
-- `update`: Update binding configuration
-- `destroy`: Remove binding
-- `evaluate`: Evaluate binding against resource data
+- `read`
+- `create`
+- `update`
+- `destroy`
 
 **Relationships**:
-- `belongs_to :element` - Associated element
-- `belongs_to :screen` - Parent screen
+- `has_many :elements`
+- `has_many :bindings`
+
+### UI.Binding
+
+Binding record connecting runtime UI targets to Ash-side data or actions.
+
+**Attributes**:
+- `id`: UUID primary key
+- `source`: structured map describing resource, field, relationship, or action
+- `target`: renderer-facing target string such as `value`, `items`, or `submit`
+- `binding_type`: atom in `[:value, :list, :action]`
+- `transform`: map or ordered transform configuration
+- `metadata`: map
+- `active`: boolean
+- `version`: integer
+
+**Actions**:
+- `read`
+- `create`
+- `update`
+- `destroy`
+- filtered read actions are allowed
+
+**Relationships**:
+- `belongs_to :element`
+- `belongs_to :screen`
 
 ## Traceability
 
 | Requirement | ADR | Component Spec | Scenarios |
 |---|---|---|---|
-| REQ-RES-001 | ADR-0001 | resources/ui_element.md | SCN-001, SCN-002 |
-| REQ-RES-002 | ADR-0001 | resources/ui_element.md | SCN-003 |
-| REQ-RES-003 | ADR-0002 | resources/ui_screen.md | SCN-004, SCN-005 |
-| REQ-RES-004 | - | resources/ui_binding.md | SCN-006 |
+| REQ-RES-001 | ADR-0001 | resources/ui_element.md, resources/ui_screen.md, resources/ui_binding.md | SCN-001, SCN-004, SCN-006 |
+| REQ-RES-002 | ADR-0001 | resources/ui_element.md, resources/ui_screen.md, resources/ui_binding.md | SCN-002 |
+| REQ-RES-003 | ADR-0001 | resources/ui_element.md, resources/ui_screen.md, resources/ui_binding.md | SCN-003, SCN-005 |
+| REQ-RES-004 | ADR-0001 | resources/ui_screen.md, resources/ui_binding.md | SCN-004, SCN-006 |
 | REQ-RES-005 | - | compilation/validator.md | SCN-007 |
-| REQ-RES-006 | ADR-0003 | authorization_contract.md | SCN-008, SCN-009 |
-| REQ-RES-007 | - | - | SCN-010 |
-| REQ-RES-008 | ADR-0004 | extension_contract.md | SCN-011 |
+| REQ-RES-006 | ADR-0001 | authorization_contract.md | SCN-081, SCN-084 |
+| REQ-RES-007 | ADR-0001 | resources/ui_screen.md, resources/ui_element.md, resources/ui_binding.md | SCN-010 |
+| REQ-RES-008 | - | - | - |
 
 ## Conformance
 
-See [conformance/spec_conformance_matrix.md](../conformance/spec_conformance_matrix.md) for complete scenario mappings.
+See [spec_conformance_matrix.md](../conformance/spec_conformance_matrix.md) for the current coverage baseline.
 
 ## Related Specifications
 
 - [topology.md](../topology.md)
 - [screen_contract.md](screen_contract.md)
 - [binding_contract.md](binding_contract.md)
-- [compilation_contract.md](compilation_contract.md)
+- [../resources/README.md](../resources/README.md)

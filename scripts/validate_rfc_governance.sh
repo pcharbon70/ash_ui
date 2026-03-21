@@ -68,7 +68,7 @@ echo "Checking RFC files..."
 RFC_COUNT=0
 for rfc in rfcs/RFC-*.md; do
   if [[ -f "$rfc" ]]; then
-    ((RFC_COUNT++))
+    ((RFC_COUNT += 1))
     rfc_name="$(basename "$rfc")"
     echo "  Found: $rfc_name"
 

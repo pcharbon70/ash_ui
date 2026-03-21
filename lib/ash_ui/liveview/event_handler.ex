@@ -73,6 +73,11 @@ defmodule AshUI.LiveView.EventHandler do
          {:ok, socket} <- write_value(binding, value, socket, context) do
       {:noreply, socket}
     else
+      {:error, reason, error_socket} ->
+        Logger.error("Value change failed: #{inspect(reason)}")
+        socket = assign_flash(error_socket, :error, "Update failed: #{inspect(reason)}")
+        {:noreply, socket}
+
       {:error, reason} ->
         Logger.error("Value change failed: #{inspect(reason)}")
         socket = assign_flash(socket, :error, "Update failed: #{inspect(reason)}")
@@ -95,10 +100,9 @@ defmodule AshUI.LiveView.EventHandler do
   def handle_action_event(event_params, socket) do
     action_id = Map.get(event_params, "action_id")
     event_data = Map.get(event_params, "data", %{})
-    context = build_event_context(socket)
 
-    with :ok <- authorize_action_context(context),
-         {:ok, binding} <- find_action_binding(action_id, socket),
+    with {:ok, binding} <- find_action_binding(action_id, socket),
+         context <- build_event_context(socket),
          {:ok, result} <- execute_action(binding, event_data, socket, context),
          socket <- handle_action_result(result, socket) do
       {:reply, %{status: :ok}, socket}
@@ -183,7 +187,7 @@ defmodule AshUI.LiveView.EventHandler do
   """
   @spec validate_event_data(map(), String.t()) :: :ok | {:error, term()}
   def validate_event_data(event_data, expected_type) do
-    with :ok <- validate_required_fields(event_data, expected_type),
+    with :ok <- validate_required_fields(event_data),
          :ok <- validate_event_type(event_data, expected_type) do
       :ok
     end
@@ -266,14 +270,13 @@ defmodule AshUI.LiveView.EventHandler do
     %{
       user_id: get_user_id(socket),
       user: socket.assigns[:ash_ui_user],
+      authorize?: true,
       params: socket.assigns[:ash_ui_params] || %{},
       assigns: socket.assigns,
-      socket: socket
+      socket: socket,
+      ash_domains: Map.get(socket.assigns, :ash_ui_domains, Application.get_env(:ash_ui, :ash_domains, [AshUI.Domain]))
     }
   end
-
-  defp authorize_action_context(%{user_id: nil}), do: {:error, :unauthorized}
-  defp authorize_action_context(_context), do: :ok
 
   defp get_user_id(socket) do
     case socket.assigns[:ash_ui_user] do
@@ -285,13 +288,14 @@ defmodule AshUI.LiveView.EventHandler do
   defp write_value(binding, value, socket, context) do
     case BidirectionalBinding.write_binding(binding, value, socket, context) do
       {:ok, updated_socket, _result} -> {:ok, updated_socket}
-      {:error, reason, _error_socket} -> {:error, reason}
+      {:error, reason, error_socket} -> {:error, reason, error_socket}
     end
   end
 
   defp execute_action(binding, event_data, _socket, context) do
     case ActionBinding.execute_action(binding, event_data, context) do
       {:ok, result} -> {:ok, result}
+      {:error, %{errors: [%{"message" => "Unauthorized"} | _]}} -> {:error, :unauthorized}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -314,13 +318,8 @@ defmodule AshUI.LiveView.EventHandler do
     %{socket | assigns: Map.put(socket.assigns, :flash, updated_flash)}
   end
 
-  defp validate_required_fields(event_data, expected_type) do
-    required =
-      case expected_type do
-        "change" -> ["target", "data"]
-        _ -> ["target"]
-      end
-
+  defp validate_required_fields(event_data) do
+    required = ["target", "data"]
     missing = Enum.reject(required, &Map.has_key?(event_data, &1))
 
     if missing == [] do

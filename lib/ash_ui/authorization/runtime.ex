@@ -99,6 +99,7 @@ defmodule AshUI.Authorization.Runtime do
     else
       {:error, :no_user} ->
         emit_auth_telemetry(:action_no_user, context)
+
         {:forbidden,
          %{reason: :unauthenticated, message: "You must be logged in", redirect: :login}}
 
@@ -427,9 +428,29 @@ defmodule AshUI.Authorization.Runtime do
     end
   end
 
-  defp check_policy(_user, _resource, _action) do
-    # In production, would use Ash.Policy.Authorizer
-    :ok
+  defp check_policy(user, resource, action) do
+    case Policies.allows_record_action?(user, resource, action) do
+      true ->
+        :ok
+
+      false ->
+        {:error, :policy_forbidden}
+
+      :unknown ->
+        case policy_subject(resource, action) do
+          {:ok, subject, policy_action, opts} ->
+            if Ash.can?({subject, policy_action}, user, Keyword.put(opts, :maybe_is, false)) do
+              :ok
+            else
+              {:error, :policy_forbidden}
+            end
+
+          :skip ->
+            :ok
+        end
+    end
+  rescue
+    _ -> :ok
   end
 
   defp get_resource_id(%{id: id}), do: id
@@ -438,8 +459,54 @@ defmodule AshUI.Authorization.Runtime do
   defp format_action_error(reason) do
     case reason do
       :forbidden -> "You don't have permission to perform this action"
+      :policy_forbidden -> "This request is blocked by the configured resource policy"
       :invalid_params -> "Invalid parameters provided"
       _ -> "Action not allowed"
     end
+  end
+
+  defp policy_subject(%{__struct__: resource} = record, action) do
+    if ash_resource?(resource) do
+      {:ok, record, normalize_policy_action(resource, action), policy_opts(resource)}
+    else
+      :skip
+    end
+  end
+
+  defp policy_subject(resource, action) when is_atom(resource) do
+    if ash_resource?(resource) do
+      {:ok, resource, normalize_policy_action(resource, action), policy_opts(resource)}
+    else
+      :skip
+    end
+  end
+
+  defp policy_subject(_resource, _action), do: :skip
+
+  defp normalize_policy_action(resource, :mount) do
+    case Enum.any?(Ash.Resource.Info.actions(resource), &(&1.name == :mount)) do
+      true -> :mount
+      false -> :read
+    end
+  end
+
+  defp normalize_policy_action(resource, action) do
+    case Enum.find(Ash.Resource.Info.actions(resource), fn existing ->
+           existing.name == action
+         end) do
+      nil -> action
+      existing -> existing.name
+    end
+  end
+
+  defp policy_opts(_resource) do
+    []
+  end
+
+  defp ash_resource?(module) do
+    Ash.Resource.Info.attributes(module)
+    true
+  rescue
+    _ -> false
   end
 end

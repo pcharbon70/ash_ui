@@ -1,7 +1,15 @@
 defmodule AshUI.Rendering.Phase7IntegrationTest do
   use ExUnit.Case, async: true
 
-  alias AshUI.Rendering.{LiveUIAdapter, WebUIAdapter, DesktopUIAdapter, Selector, IURAdapter}
+  alias AshUI.Rendering.{
+    DesktopUIAdapter,
+    IURAdapter,
+    LiveUIAdapter,
+    Registry,
+    Selector,
+    WebUIAdapter
+  }
+
   alias AshUI.Compilation.IUR
 
   @moduletag :integration
@@ -167,7 +175,9 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
         "metadata" => %{}
       }
 
-      assert {:ok, html} = WebUIAdapter.render(canonical_iur, elm_enabled: true, elm_module: "App")
+      assert {:ok, html} =
+               WebUIAdapter.render(canonical_iur, elm_enabled: true, elm_module: "App")
+
       assert String.contains?(html, "elm-app")
       assert String.contains?(html, "Elm")
     end
@@ -209,71 +219,63 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
 
   describe "Section 7.6.3 - Renderer selection scenarios" do
     test "7.6.3.1 - Verify LiveView request uses live_ui" do
-      request = %{
-        headers: %{"accepts" => "text/vnd.phoenix.live-view"}
-      }
+      request = %{headers: %{"accepts" => "text/vnd.phoenix.live-view"}}
 
       assert {:ok, :liveview, module} = Selector.select_for_request(request)
-      assert module == AshUI.Rendering.LiveUIAdapter
+      assert {:ok, info} = Registry.renderer_info(:liveview)
+      assert module == info.module
     end
 
     test "7.6.3.2 - Verify HTTP request uses web_ui" do
-      request = %{
-        headers: %{"accept" => "text/html"}
-      }
+      request = %{headers: %{"accept" => "text/html"}}
 
       assert {:ok, :html, module} = Selector.select_for_request(request)
-      assert module == AshUI.Rendering.WebUIAdapter
+      assert {:ok, info} = Registry.renderer_info(:html)
+      assert module == info.module
     end
 
     test "7.6.3.3 - Verify explicit override is respected" do
-      request = %{
-        headers: %{"accept" => "text/html"}
-      }
+      request = %{headers: %{"accept" => "text/html"}}
 
-      # Override to desktop despite being an HTTP request
       assert {:ok, :desktop, module} = Selector.select_for_request(request, renderer: :desktop)
-      assert module == AshUI.Rendering.DesktopUIAdapter
+      assert {:ok, info} = Registry.renderer_info(:desktop)
+      assert module == info.module
     end
 
     test "7.6.3.4 - Verify unavailable renderer type returns error" do
-      # This tests the error handling path - though with fallback adapters
-      # all standard renderers are available, we test the mechanism
-      request = %{
-        headers: %{"accept" => "text/html"}
-      }
+      request = %{headers: %{"accept" => "text/html"}}
 
-      # Test with an invalid renderer type
       assert {:error, _} = Selector.select_for_request(request, renderer: :invalid_type)
     end
   end
 
   describe "Section 7.6.4 - Cross-renderer scenarios" do
     setup do
-      {:ok, sample_iur: %{
-        "type" => "screen",
-        "id" => "screen-1",
-        "name" => "test_screen",
-        "layout" => "column",
-        "children" => [
-          %{
-            "type" => "text",
-            "id" => "text-1",
-            "props" => %{"content" => "Hello World"},
-            "children" => [],
-            "metadata" => %{}
-          },
-          %{
-            "type" => "button",
-            "id" => "button-1",
-            "props" => %{"label" => "Click"},
-            "children" => [],
-            "metadata" => %{}
-          }
-        ],
-        "bindings" => [],
-        "metadata" => %{}
-      }}
+      {:ok,
+       sample_iur: %{
+         "type" => "screen",
+         "id" => "screen-1",
+         "name" => "test_screen",
+         "layout" => "column",
+         "children" => [
+           %{
+             "type" => "text",
+             "id" => "text-1",
+             "props" => %{"content" => "Hello World"},
+             "children" => [],
+             "metadata" => %{}
+           },
+           %{
+             "type" => "button",
+             "id" => "button-1",
+             "props" => %{"label" => "Click"},
+             "children" => [],
+             "metadata" => %{}
+           }
+         ],
+         "bindings" => [],
+         "metadata" => %{}
+       }}
     end
 
     test "7.6.4.1 - Verify same IUR renders on all renderers", %{sample_iur: iur} do
@@ -300,19 +302,16 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
     end
 
     test "7.6.4.3 - Verify fallback behavior works" do
-      request = %{
-        headers: %{"accept" => "text/html"}
-      }
+      request = %{headers: %{"accept" => "text/html"}}
+      assert {:ok, info} = Registry.renderer_info(:html)
 
-      # Primary selection should work
-      assert {:ok, :html, _, false} = Selector.select_with_fallback(request)
+      assert {:ok, :html, module, fallback_used} = Selector.select_with_fallback(request)
+      assert module == info.module
+      assert fallback_used == (info.mode == :adapter_fallback)
     end
 
     test "7.6.4.4 - Verify renderer switching works" do
-      # Same request can be rendered with different renderers
-      request = %{
-        headers: %{"accept" => "text/html"}
-      }
+      request = %{headers: %{"accept" => "text/html"}}
 
       assert {:ok, :html, _} = Selector.select_for_request(request)
       assert {:ok, :liveview, _} = Selector.select_for_request(request, renderer: :liveview)
@@ -323,16 +322,17 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
   describe "Section 7.6 - End-to-end rendering pipeline" do
     test "Ash IUR converts to canonical and renders through LiveUI" do
       # Create a simple screen IUR without nested children
-      ash_iur = struct(IUR,
-        id: "test-id",
-        type: :screen,
-        name: "test_screen",
-        attributes: %{"layout" => "column"},
-        children: [],
-        bindings: [],
-        metadata: %{},
-        version: 1
-      )
+      ash_iur =
+        struct(IUR,
+          id: "test-id",
+          type: :screen,
+          name: "test_screen",
+          attributes: %{"layout" => "column"},
+          children: [],
+          bindings: [],
+          metadata: %{},
+          version: 1
+        )
 
       assert {:ok, canonical} = IURAdapter.to_canonical(ash_iur)
       assert {:ok, heex} = LiveUIAdapter.render(canonical)
@@ -341,16 +341,17 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
     end
 
     test "Ash IUR converts to canonical and renders through WebUI" do
-      ash_iur = struct(IUR,
-        id: "test-id",
-        type: :screen,
-        name: "test_screen",
-        attributes: %{"layout" => "column"},
-        children: [],
-        bindings: [],
-        metadata: %{},
-        version: 1
-      )
+      ash_iur =
+        struct(IUR,
+          id: "test-id",
+          type: :screen,
+          name: "test_screen",
+          attributes: %{"layout" => "column"},
+          children: [],
+          bindings: [],
+          metadata: %{},
+          version: 1
+        )
 
       assert {:ok, canonical} = IURAdapter.to_canonical(ash_iur)
       assert {:ok, html} = WebUIAdapter.render(canonical)
@@ -358,16 +359,17 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
     end
 
     test "Ash IUR converts to canonical and renders through DesktopUI" do
-      ash_iur = struct(IUR,
-        id: "test-id",
-        type: :screen,
-        name: "test_screen",
-        attributes: %{"layout" => "column"},
-        children: [],
-        bindings: [],
-        metadata: %{},
-        version: 1
-      )
+      ash_iur =
+        struct(IUR,
+          id: "test-id",
+          type: :screen,
+          name: "test_screen",
+          attributes: %{"layout" => "column"},
+          children: [],
+          bindings: [],
+          metadata: %{},
+          version: 1
+        )
 
       assert {:ok, canonical} = IURAdapter.to_canonical(ash_iur)
       assert {:ok, instructions} = DesktopUIAdapter.render(canonical)
@@ -376,16 +378,17 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
     end
 
     test "Direct rendering methods work for all adapters" do
-      ash_iur = struct(IUR,
-        id: "test-id",
-        type: :screen,
-        name: "test_screen",
-        attributes: %{"layout" => "column"},
-        children: [],
-        bindings: [],
-        metadata: %{},
-        version: 1
-      )
+      ash_iur =
+        struct(IUR,
+          id: "test-id",
+          type: :screen,
+          name: "test_screen",
+          attributes: %{"layout" => "column"},
+          children: [],
+          bindings: [],
+          metadata: %{},
+          version: 1
+        )
 
       assert {:ok, _heex} = LiveUIAdapter.render_ash_iur(ash_iur)
       assert {:ok, _html} = WebUIAdapter.render_ash_iur(ash_iur)
@@ -398,8 +401,8 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
       renderers = AshUI.Rendering.Registry.list_renderers()
 
       assert Enum.any?(renderers, fn r ->
-        r.type == :liveview or r.type == :html or r.type == :desktop
-      end)
+               r.type == :liveview or r.type == :html or r.type == :desktop
+             end)
     end
 
     test "Each renderer can be retrieved individually" do
@@ -409,9 +412,15 @@ defmodule AshUI.Rendering.Phase7IntegrationTest do
     end
 
     test "Renderer availability can be checked" do
-      assert AshUI.Rendering.Registry.renderer_available?(:liveview)
-      assert AshUI.Rendering.Registry.renderer_available?(:html)
-      assert AshUI.Rendering.Registry.renderer_available?(:desktop)
+      assert is_boolean(AshUI.Rendering.Registry.renderer_available?(:liveview))
+      assert is_boolean(AshUI.Rendering.Registry.renderer_available?(:html))
+      assert is_boolean(AshUI.Rendering.Registry.renderer_available?(:desktop))
+    end
+
+    test "Renderer renderability can be checked independently of external packages" do
+      assert AshUI.Rendering.Registry.renderer_renderable?(:liveview)
+      assert AshUI.Rendering.Registry.renderer_renderable?(:html)
+      assert AshUI.Rendering.Registry.renderer_renderable?(:desktop)
     end
 
     test "Default renderer is available" do

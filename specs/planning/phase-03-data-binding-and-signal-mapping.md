@@ -15,8 +15,10 @@ Back to index: [README](./README.md)
 - Bidirectional bindings support read and write operations
 - Action bindings trigger Ash actions on UI events
 
-[X] 3 Phase 3 - Data Binding and Signal Mapping
+[ ] 3 Phase 3 - Data Binding and Signal Mapping
   Implement reactive data binding from Ash resources to UI elements through unified-ui signal format.
+
+  Status note: the runtime APIs, data structures, and much of the surrounding test coverage exist, but several source-resolution, write, list, and action paths are still backed by placeholders instead of real Ash calls.
 
   [X] 3.1 Section - Binding Evaluation
     Implement runtime evaluation of bindings against Ash resource data.
@@ -29,13 +31,13 @@ Back to index: [README](./README.md)
       [X] 3.1.1.3 Subtask - Return `{:ok, value}` or `{:error, reason}`
       [X] 3.1.1.4 Subtask - Cache evaluated values for performance
 
-    [X] 3.1.2 Task - Implement source path resolution
-      Resolve binding source paths to Ash resource attributes.
+    [ ] 3.1.2 Task - Implement source resolution against real Ash resources
+      Resolve structured binding sources to Ash resource attributes and relationships.
 
-      [X] 3.1.2.1 Subtask - Parse source path (Domain.Resource.Attribute)
-      [X] 3.1.2.2 Subtask - Load resource using `Ash.get/3` with proper authorization
-      [X] 3.1.2.3 Subtask - Extract attribute value from loaded resource
-      [X] 3.1.2.4 Subtask - Handle relationship traversal (e.g., `user.profile.name`)
+      [X] 3.1.2.1 Subtask - Parse structured binding sources
+      [ ] 3.1.2.2 Subtask - Load resource using real Ash reads with proper authorization
+      [ ] 3.1.2.3 Subtask - Extract attribute value from loaded resource
+      [ ] 3.1.2.4 Subtask - Handle relationship traversal against loaded data
 
     [X] 3.1.3 Task - Implement transformation application
       Apply transformation rules to resolved values.
@@ -45,7 +47,7 @@ Back to index: [README](./README.md)
       [X] 3.1.3.3 Subtask - Apply `default` transformations when source is nil
       [X] 3.1.3.4 Subtask - Apply `validate` transformations and return errors
 
-  [X] 3.2 Section - Bidirectional Value Bindings
+  [ ] 3.2 Section - Bidirectional Value Bindings
     Implement two-way data binding for `:value` type bindings.
 
     [X] 3.2.1 Task - Implement read direction
@@ -56,15 +58,15 @@ Back to index: [README](./README.md)
       [X] 3.2.1.3 Subtask - Update LiveView assigns on value change
       [X] 3.2.1.4 Subtask - Handle loading and error states
 
-    [X] 3.2.2 Task - Implement write direction
+    [ ] 3.2.2 Task - Implement write direction
       Flow data from UI elements to Ash resources.
 
       [X] 3.2.2.1 Subtask - Capture user input events from LiveView
       [X] 3.2.2.2 Subtask - Validate input data before writing
-      [X] 3.2.2.3 Subtask - Call `Ash.update/3` with new value
-      [X] 3.2.2.4 Subtask - Handle update errors and display to user
+      [ ] 3.2.2.3 Subtask - Call real Ash update actions with new value
+      [ ] 3.2.2.4 Subtask - Handle update errors and display to user
 
-    [X] 3.2.3 Task - Implement conflict resolution
+    [ ] 3.2.3 Task - Implement conflict resolution
       Handle concurrent updates to shared data.
 
       [X] 3.2.3.1 Subtask - Detect stale data with optimistic locking
@@ -72,18 +74,18 @@ Back to index: [README](./README.md)
       [X] 3.2.3.3 Subtask - Present conflict UI to user for resolution
       [X] 3.2.3.4 Subtask - Emit conflict telemetry events
 
-  [X] 3.3 Section - List Bindings
+  [ ] 3.3 Section - List Bindings
     Implement collection binding for `:list` type bindings.
 
-    [X] 3.3.1 Task - Implement collection loading
+    [ ] 3.3.1 Task - Implement collection loading
       Load and bind collections of resources to UI elements.
 
       [X] 3.3.1.1 Subtask - Resolve collection source path
-      [X] 3.3.1.2 Subtask - Use `Ash.read/2` to load collection
-      [X] 3.3.1.3 Subtask - Apply pagination and filtering
+      [ ] 3.3.1.2 Subtask - Use real Ash reads to load collection
+      [ ] 3.3.1.3 Subtask - Apply pagination and filtering
       [X] 3.3.1.4 Subtask - Handle empty collections
 
-    [X] 3.3.2 Task - Implement collection reactivity
+    [ ] 3.3.2 Task - Implement collection reactivity
       Update UI when collection data changes.
 
       [X] 3.3.2.1 Subtask - Subscribe to collection changes
@@ -91,16 +93,16 @@ Back to index: [README](./README.md)
       [X] 3.3.2.3 Subtask - Handle insert, update, delete operations
       [X] 3.3.2.4 Subtask - Maintain scroll position during updates
 
-  [X] 3.4 Section - Action Bindings
+  [ ] 3.4 Section - Action Bindings
     Implement event-driven binding for `:action` type bindings.
 
-    [X] 3.4.1 Task - Implement action execution
+    [ ] 3.4.1 Task - Implement action execution
       Execute Ash actions in response to UI events.
 
-      [X] 3.4.1.1 Subtask - Parse action source (Domain.Resource.action_name)
-      [X] 3.4.1.2 Subtask - Call `Ash.action/3` with event data
-      [X] 3.4.1.3 Subtask - Check authorization before execution
-      [X] 3.4.1.4 Subtask - Return action result to UI
+      [X] 3.4.1.1 Subtask - Parse action source
+      [ ] 3.4.1.2 Subtask - Call real Ash actions with event data
+      [ ] 3.4.1.3 Subtask - Check authorization before execution
+      [ ] 3.4.1.4 Subtask - Return action result to UI
 
     [X] 3.4.2 Task - Implement action event wiring
       Connect UI events to action bindings.
@@ -129,7 +131,7 @@ Back to index: [README](./README.md)
       [X] 3.5.2.3 Subtask - Include required CloudEvents fields (id, source, type)
       [X] 3.5.2.4 Subtask - Add signal metadata for tracing
 
-  [X] 3.6 Section - Phase 3 Integration Tests
+  [ ] 3.6 Section - Phase 3 Integration Tests
     Validate binding evaluation and reactivity end-to-end.
 
     [X] 3.6.1 Task - Value binding integration scenarios

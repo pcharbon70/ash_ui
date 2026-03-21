@@ -33,6 +33,7 @@ defmodule AshUI.MixProject do
       {:jason, "~> 1.4"},
       {:postgrex, ">= 0.0.0"},
       {:ecto_sql, "~> 3.10"},
+      {:simple_sat, "~> 0.1"},
       {:telemetry, "~> 1.0"},
       {:uuid, "~> 1.1"}
       # Note: Renderer packages (unified_iur, live_ui, web_ui, desktop_ui) will be added

@@ -9,6 +9,7 @@ defmodule AshUI.LiveView.Hooks do
   require Logger
 
   alias AshUI.LiveView.Integration
+  alias AshUI.LiveView.UpdateIntegration
 
   @doc """
   on_mount hook for initializing Ash UI screens.
@@ -102,7 +103,7 @@ defmodule AshUI.LiveView.Hooks do
   """
   def on_unmount(socket) do
     # Unsubscribe from all Ash resource notifications
-    cleanup_subscriptions(socket)
+    UpdateIntegration.cleanup_subscriptions(socket)
 
     # Emit unmount telemetry
     screen_id = get_screen_id(socket)
@@ -182,12 +183,7 @@ defmodule AshUI.LiveView.Hooks do
       end
   """
   def cleanup_session(socket) do
-    # Clean up any session-specific state
-    subscriptions = Map.get(socket.assigns, :ash_ui_subscriptions, [])
-
-    Enum.each(subscriptions, fn sub ->
-      unsubscribe_from_resource(sub)
-    end)
+    UpdateIntegration.cleanup_subscriptions(socket)
 
     socket
     |> Phoenix.Component.assign(:ash_ui_subscriptions, [])
@@ -218,19 +214,5 @@ defmodule AshUI.LiveView.Hooks do
 
   defp assign_error(socket, reason) do
     Phoenix.Component.assign(socket, :ash_ui_error, reason)
-  end
-
-  defp cleanup_subscriptions(socket) do
-    subscriptions = Map.get(socket.assigns, :ash_ui_subscriptions, [])
-
-    Enum.each(subscriptions, fn sub ->
-      unsubscribe_from_resource(sub)
-    end)
-  end
-
-  defp unsubscribe_from_resource(_subscription) do
-    # Unsubscribe from Ash.Notifier
-    # In production, would call Ash.Notifier.unsubscribe/1
-    :ok
   end
 end

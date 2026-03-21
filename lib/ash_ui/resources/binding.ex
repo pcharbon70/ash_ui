@@ -7,6 +7,7 @@ defmodule AshUI.Resources.Binding do
 
   use Ash.Resource,
     domain: AshUI.Domain,
+    authorizers: [Ash.Policy.Authorizer],
     data_layer: AshPostgres.DataLayer
 
   postgres do
@@ -58,11 +59,21 @@ defmodule AshUI.Resources.Binding do
     end
   end
 
-  # Note: Policy DSL requires Ash.Policy.Authorizer extension
-  # This will be added when authorization policies are fully implemented
-  # policies do
-  #   policy action(:read) do
-  #     authorize_if expr(active == true)
-  #   end
-  # end
+  policies do
+    bypass actor_absent() do
+      authorize_if always()
+    end
+
+    bypass actor_attribute_equals(:role, :admin) do
+      authorize_if always()
+    end
+
+    policy action_type(:read) do
+      authorize_if {AshUI.Authorization.Checks.BindingAccess, mode: :read}
+    end
+
+    policy action([:create, :update, :destroy]) do
+      authorize_if {AshUI.Authorization.Checks.BindingAccess, mode: :manage}
+    end
+  end
 end

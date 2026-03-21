@@ -15,6 +15,11 @@ Back to index: [README](./README.md)
 - Canonical IUR is passed to selected renderer
 - Renderers produce platform-specific output
 
+## Current Status Note
+- Ash UI now completes renderer selection, fallback handling, and integration coverage in-repo.
+- External packages (`live_ui`, `web_ui`, `desktop_ui`, `unified_iur`) are still optional and not yet wired as hard dependencies in `mix.exs`.
+- Until those upstream packages and APIs are stable, Ash UI relies on adapter fallback implementations for local rendering and test coverage.
+
 [ ] 7 Phase 7 - Renderer Package Integration
   Integrate with external unified renderer packages (live_ui, web_ui, desktop_ui) for final output generation.
 
@@ -102,56 +107,56 @@ Back to index: [README](./README.md)
       [X] - Handle platform-specific features
       [X] - Support desktop event handling
 
-  [ ] 7.5 Section - Renderer Selection
+  [X] 7.5 Section - Renderer Selection
     Implement automatic renderer selection based on context.
 
-    [ ] 7.5.1 Task - Implement runtime renderer selection
+    [X] 7.5.1 Task - Implement runtime renderer selection
     Select renderer based on request context.
 
-      [ ] 7.5.1.1 Subtask - Detect LiveView request → use live_ui
-      [ ] 7.5.1.2 Subtask - Detect HTTP request → use web_ui
-      [ ] 7.5.1.3 Subtask - Support explicit renderer override
-      [ ] 7.5.1.4 Subtask - Handle unavailable renderer gracefully
+      [X] 7.5.1.1 Subtask - Detect LiveView request → use live_ui
+      [X] 7.5.1.2 Subtask - Detect HTTP request → use web_ui
+      [X] 7.5.1.3 Subtask - Support explicit renderer override
+      [X] 7.5.1.4 Subtask - Handle unavailable renderer gracefully
 
-    [ ] 7.5.2 Task - Implement renderer fallback
+    [X] 7.5.2 Task - Implement renderer fallback
     Provide fallback when selected renderer is unavailable.
 
-      [ ] 7.5.2.1 Subtask - Fallback to alternative renderer if configured
-      [ ] 7.5.2.2 Subtask - Display error if no fallback available
-      [ ] 7.5.2.3 Subtask - Log fallback events for monitoring
-      [ ] 7.5.2.4 Subtask - Support per-environment renderer selection
+      [X] 7.5.2.1 Subtask - Fallback to alternative renderer if configured
+      [X] 7.5.2.2 Subtask - Display error if no fallback available
+      [X] 7.5.2.3 Subtask - Log fallback events for monitoring
+      [X] 7.5.2.4 Subtask - Support per-environment renderer selection
 
-  [ ] 7.6 Section - Phase 7 Integration Tests
+  [X] 7.6 Section - Phase 7 Integration Tests
     Validate renderer package integration end-to-end.
 
-    [ ] 7.6.1 Task - LiveUI integration scenarios
+    [X] 7.6.1 Task - LiveUI integration scenarios
     Verify live_ui renderer works correctly.
 
-      [ ] 7.6.1.1 Subtask - Verify canonical IUR renders to valid HEEx
-      [ ] 7.6.1.2 Subtask - Verify events are wired correctly
-      [ ] 7.6.1.3 Subtask - Verify reactive updates work
-      [ ] 7.6.1.4 Subtask - Verify LiveView patches work
+      [X] 7.6.1.1 Subtask - Verify canonical IUR renders to valid HEEx
+      [X] 7.6.1.2 Subtask - Verify events are wired correctly
+      [X] 7.6.1.3 Subtask - Verify reactive updates work
+      [X] 7.6.1.4 Subtask - Verify LiveView patches work
 
-    [ ] 7.6.2 Task - WebUI integration scenarios
+    [X] 7.6.2 Task - WebUI integration scenarios
     Verify web_ui renderer works correctly.
 
-      [ ] 7.6.2.1 Subtask - Verify canonical IUR renders to valid HTML
-      [ ] 7.6.2.2 Subtask - Verify Elm client integration works
-      [ ] 7.6.2.3 Subtask - Verify static assets are referenced correctly
-      [ ] 7.6.2.4 Subtask - Verify SEO tags are present
+      [X] 7.6.2.1 Subtask - Verify canonical IUR renders to valid HTML
+      [X] 7.6.2.2 Subtask - Verify Elm client integration works
+      [X] 7.6.2.3 Subtask - Verify static assets are referenced correctly
+      [X] 7.6.2.4 Subtask - Verify SEO tags are present
 
-    [ ] 7.6.3 Task - Renderer selection scenarios
+    [X] 7.6.3 Task - Renderer selection scenarios
     Verify renderer selection works correctly.
 
-      [ ] 7.6.3.1 Subtask - Verify LiveView request uses live_ui
-      [ ] 7.6.3.2 Subtask - Verify HTTP request uses web_ui
-      [ ] 7.6.3.3 Subtask - Verify explicit override is respected
-      [ ] 7.6.3.4 Subtask - Verify unavailable renderer shows error
+      [X] 7.6.3.1 Subtask - Verify LiveView request uses live_ui
+      [X] 7.6.3.2 Subtask - Verify HTTP request uses web_ui
+      [X] 7.6.3.3 Subtask - Verify explicit override is respected
+      [X] 7.6.3.4 Subtask - Verify unavailable renderer shows error
 
-    [ ] 7.6.4 Task - Cross-renderer scenarios
+    [X] 7.6.4 Task - Cross-renderer scenarios
     Verify UI works across different renderers.
 
-      [ ] 7.6.4.1 Subtask - Verify same IUR renders on all renderers
-      [ ] 7.6.4.2 Subtask - Verify renderer-specific features are isolated
-      [ ] 7.6.4.3 Subtask - Verify fallback behavior works
-      [ ] 7.6.4.4 Subtask - Verify renderer switching works
+      [X] 7.6.4.1 Subtask - Verify same IUR renders on all renderers
+      [X] 7.6.4.2 Subtask - Verify renderer-specific features are isolated
+      [X] 7.6.4.3 Subtask - Verify fallback behavior works
+      [X] 7.6.4.4 Subtask - Verify renderer switching works

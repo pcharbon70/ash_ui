@@ -2,67 +2,68 @@ defmodule AshUI.Runtime.BindingEvaluatorTest do
   use ExUnit.Case, async: true
 
   alias AshUI.Runtime.BindingEvaluator
+  alias AshUI.Test.RuntimeFixtures
+
+  @moduletag :conformance
 
   describe "evaluate/3" do
     setup do
-      context = %{
-        user_id: "user-123",
-        params: %{"screen_id" => "screen-1"},
-        assigns: %{}
-      }
+      fixtures = RuntimeFixtures.seed!()
+      context = RuntimeFixtures.context(fixtures)
 
-      %{context: context}
+      %{fixtures: fixtures, context: context}
     end
 
-    test "evaluates field binding successfully", %{context: context} do
+    test "evaluates field binding successfully", %{fixtures: fixtures, context: context} do
       binding = %{
-        source: %{"resource" => "User", "field" => "name"},
+        source: %{"resource" => "User", "field" => "name", "id" => fixtures.user.id},
         target: "input-name",
         binding_type: :value
       }
 
-      assert {:ok, value} = BindingEvaluator.evaluate(binding, context)
-      assert is_map(value) or is_binary(value)
+      assert {:ok, "Pascal"} = BindingEvaluator.evaluate(binding, context)
     end
 
-    test "applies default transformation", %{context: context} do
+    test "applies default transformation", %{fixtures: fixtures, context: context} do
       binding = %{
-        source: %{"resource" => "User", "field" => "nickname"},
+        source: %{"resource" => "User", "field" => "nickname", "id" => fixtures.user.id},
         target: "input-nickname",
         binding_type: :value,
         transform: %{"function" => "default", "args" => ["Anonymous"]}
       }
 
-      # When field is nil or empty, should return default
-      assert {:ok, _value} = BindingEvaluator.evaluate(binding, context)
+      assert {:ok, "Anonymous"} = BindingEvaluator.evaluate(binding, context)
     end
 
-    test "applies format transformation", %{context: context} do
+    test "applies format transformation", %{fixtures: fixtures, context: context} do
       binding = %{
-        source: %{"resource" => "User", "field" => "created_at"},
+        source: %{"resource" => "User", "field" => "created_at", "id" => fixtures.user.id},
         target: "span-date",
         binding_type: :value,
         transform: %{"function" => "format"}
       }
 
-      assert {:ok, _value} = BindingEvaluator.evaluate(binding, context)
+      assert {:ok, formatted} = BindingEvaluator.evaluate(binding, context)
+      assert is_binary(formatted)
+      assert String.contains?(formatted, "T")
     end
   end
 
   describe "evaluate_batch/3" do
     test "evaluates multiple bindings" do
-      context = %{user_id: "user-123", params: %{}, assigns: %{}}
+      fixtures = RuntimeFixtures.seed!()
+      context = RuntimeFixtures.context(fixtures)
 
       bindings = [
         %{
           id: "binding-1",
-          source: %{"resource" => "User", "field" => "name"},
+          source: %{"resource" => "User", "field" => "name", "id" => fixtures.user.id},
           target: "name",
           binding_type: :value
         },
         %{
           id: "binding-2",
-          source: %{"resource" => "User", "field" => "email"},
+          source: %{"resource" => "User", "field" => "email", "id" => fixtures.user.id},
           target: "email",
           binding_type: :value
         }
@@ -70,26 +71,31 @@ defmodule AshUI.Runtime.BindingEvaluatorTest do
 
       results = BindingEvaluator.evaluate_batch(bindings, context)
 
-      assert Map.has_key?(results, "binding-1")
-      assert Map.has_key?(results, "binding-2")
+      assert results["binding-1"] == {:ok, "Pascal"}
+      assert results["binding-2"] == {:ok, "pascal@example.com"}
     end
   end
 
   describe "source path resolution" do
-    test "resolves simple field path" do
-      source = %{"resource" => "User", "field" => "name"}
-      binding = %{source: source, target: "test", binding_type: :value}
-      context = %{user_id: "user-123", params: %{}, assigns: %{}}
+    setup do
+      fixtures = RuntimeFixtures.seed!()
+      context = RuntimeFixtures.context(fixtures)
 
-      assert {:ok, _value} = BindingEvaluator.evaluate(binding, context)
+      %{fixtures: fixtures, context: context}
     end
 
-    test "resolves relationship path" do
-      source = %{"resource" => "User", "relationship" => "profile.name"}
+    test "resolves simple field path", %{fixtures: fixtures, context: context} do
+      source = %{"resource" => "User", "field" => "name", "id" => fixtures.user.id}
       binding = %{source: source, target: "test", binding_type: :value}
-      context = %{user_id: "user-123", params: %{}, assigns: %{}}
 
-      assert {:ok, _value} = BindingEvaluator.evaluate(binding, context)
+      assert {:ok, "Pascal"} = BindingEvaluator.evaluate(binding, context)
+    end
+
+    test "resolves relationship path", %{fixtures: fixtures, context: context} do
+      source = %{"resource" => "User", "relationship" => "profile.name", "id" => fixtures.user.id}
+      binding = %{source: source, target: "test", binding_type: :value}
+
+      assert {:ok, "Primary Profile"} = BindingEvaluator.evaluate(binding, context)
     end
   end
 end
