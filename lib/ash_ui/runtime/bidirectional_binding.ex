@@ -7,6 +7,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
   """
 
   alias AshUI.Runtime.BindingEvaluator
+  alias AshUI.Runtime.ResourceAccess
   alias AshUI.Resources.Binding
   alias AshUI.Telemetry
 
@@ -87,7 +88,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
     * `{:ok, socket}` - Subscribed, socket with tracking info
   """
   @spec subscribe_binding(Binding.t() | map(), socket(), context()) :: {:ok, socket()}
-  def subscribe_binding(binding, socket, context) do
+  def subscribe_binding(binding, socket, _context) do
     # Track subscription for this binding
     subscription_id = subscription_id(binding)
 
@@ -103,8 +104,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
         subscribed_at: System.system_time(:millisecond)
       })
 
-    updated_socket =
-      put_in(socket.assigns, [:ash_ui, :subscriptions], updated_subscriptions)
+    updated_socket = %{socket | assigns: put_in(socket.assigns, [:ash_ui, :subscriptions], updated_subscriptions)}
 
     {:ok, updated_socket}
   end
@@ -152,7 +152,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
 
   defp apply_validation(_binding, _value, nil), do: :ok
 
-  defp apply_validation(binding, value, validation_rules) when is_list(validation_rules) do
+  defp apply_validation(_binding, value, validation_rules) when is_list(validation_rules) do
     Enum.reduce_while(validation_rules, :ok, fn rule, _acc ->
       case validate_with_rule(rule, value) do
         :ok -> {:cont, :ok}
@@ -202,12 +202,13 @@ defmodule AshUI.Runtime.BidirectionalBinding do
   end
 
   defp apply_sanitization(value, rules) do
-    Enum.reduce_while(rules, {:ok, value}, fn rule, {:ok, acc} ->
-      case sanitize_with_rule(rule, acc) do
-        {:ok, sanitized} -> {:cont, {:ok, sanitized}}
-        {:error, _} = error -> {:halt, error}
-      end
-    end)
+    sanitized =
+      Enum.reduce(rules, value, fn rule, acc ->
+        {:ok, next_value} = sanitize_with_rule(rule, acc)
+        next_value
+      end)
+
+    {:ok, sanitized}
   end
 
   defp sanitize_with_rule(%{"type" => "trim"}, value) when is_binary(value) do
@@ -224,21 +225,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
   # Update Ash resource with new value
   defp update_resource(binding, value, context) do
     source = Map.get(binding, :source) || Map.get(binding, "source") || %{}
-    resource = Map.get(source, "resource")
-    field = Map.get(source, "field")
-    id = get_resource_id(source, context)
-
-    # In production, this would call Ash.Domain.update/3
-    # For now, return a mock result
-    mock_update_result(resource, id, field, value)
-  end
-
-  defp get_resource_id(source, context) do
-    Map.get(source, "id") || Map.get(context, :resource_id)
-  end
-
-  defp mock_update_result(_resource, _id, _field, value) do
-    {:ok, %{"status" => "updated", "value" => value}}
+    ResourceAccess.write_field(source, value, context)
   end
 
   # Helper functions for socket management
@@ -303,7 +290,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
     }
 
     case result do
-      {:ok, updated_socket, update_result} = success ->
+      {:ok, updated_socket, update_result} ->
         Telemetry.emit(
           :binding,
           :update,
@@ -313,7 +300,7 @@ defmodule AshUI.Runtime.BidirectionalBinding do
 
         {:ok, updated_socket, update_result}
 
-      {:error, reason, error_socket} = error ->
+      {:error, reason, error_socket} ->
         error_metadata = Map.merge(metadata, %{status: :error, error: inspect(reason)})
 
         Telemetry.emit(:binding, :update, %{count: 1, duration: duration}, error_metadata)

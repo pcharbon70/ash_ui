@@ -2,7 +2,7 @@ ExUnit.start()
 ExUnit.configure(exclude: [skip: true])
 
 # Start the application for tests
-Application.put_env(:ash_ui, :ash_domains, [AshUI.Domain])
+Application.put_env(:ash_ui, :ash_domains, [AshUI.Domain, AshUI.Test.RuntimeDomain])
 
 # Ecto migrations are handled by AshPostgres
 # Ensure the Repo is started for tests

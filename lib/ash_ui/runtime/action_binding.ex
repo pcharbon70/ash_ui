@@ -7,6 +7,7 @@ defmodule AshUI.Runtime.ActionBinding do
   """
 
   alias AshUI.Resources.Binding
+  alias AshUI.Runtime.ResourceAccess
 
   @type context :: %{
           user_id: String.t() | nil,
@@ -47,12 +48,10 @@ defmodule AshUI.Runtime.ActionBinding do
           {:ok, action_result()} | {:error, term()}
   def execute_action(binding, event_data, context, opts \\ []) do
     source = Map.get(binding, :source) || Map.get(binding, "source") || %{}
-    resource = Map.get(source, "resource")
-    action_name = Map.get(source, "action")
 
     with {:ok, :authorized} <- check_authorization(binding, context),
          {:ok, params} <- prepare_params(binding, event_data, context),
-         {:ok, result} <- call_ash_action(resource, action_name, params, context, opts) do
+         {:ok, result} <- call_ash_action(source, params, context, opts) do
       {:ok,
        %{
          status: :ok,
@@ -88,7 +87,7 @@ defmodule AshUI.Runtime.ActionBinding do
       {:noreply, updated_socket}
   """
   @spec event_handler(Binding.t() | map(), String.t()) :: function()
-  def event_handler(binding, element_id) do
+  def event_handler(binding, _element_id) do
     fn socket, event_data, _event_opts ->
       context = build_context(socket)
 
@@ -113,7 +112,7 @@ defmodule AshUI.Runtime.ActionBinding do
     * Map of event_name to handler function
   """
   @spec wire_handlers([Binding.t() | map()], map()) :: %{String.t() => function()}
-  def wire_handlers(bindings, socket) do
+  def wire_handlers(bindings, _socket) do
     action_bindings =
       Enum.filter(bindings, fn b ->
         type = b.binding_type || Map.get(b, "binding_type")
@@ -131,14 +130,8 @@ defmodule AshUI.Runtime.ActionBinding do
   end
 
   # Check authorization before executing action
-  defp check_authorization(binding, context) do
-    _resource = get_in(binding, [:source, "resource"])
-    _action = get_in(binding, [:source, "action"])
-    user_id = Map.get(context, :user_id)
-
-    # In production, this would call Ash.can?/3
-    # For now, allow if user_id is present
-    if user_id do
+  defp check_authorization(_binding, context) do
+    if ResourceAccess.actor(context) do
       {:ok, :authorized}
     else
       {:error, :unauthorized}
@@ -181,24 +174,8 @@ defmodule AshUI.Runtime.ActionBinding do
   defp get_param_value(_source, _event_data, _context), do: nil
 
   # Call Ash action
-  defp call_ash_action(resource, action_name, params, _context, _opts) do
-    # In production, this would call the actual Ash action
-    # Ash.run(Ash.Domain, resource, action_name, params)
-    mock_action_result(resource, action_name, params)
-  end
-
-  defp mock_action_result(resource, action_name, params) do
-    # Mock action result
-    {
-      :ok,
-      %{
-        "resource" => resource,
-        "action" => action_name,
-        "params" => params,
-        "result" => %{"id" => UUID.uuid4()}
-      }
-    }
-  end
+  defp call_ash_action(source, params, context, opts),
+    do: ResourceAccess.execute_action(source, params, context, opts)
 
   # Handle successful action
   defp handle_action_success(socket, binding, result) do
@@ -248,11 +225,13 @@ defmodule AshUI.Runtime.ActionBinding do
 
   # Build context from socket
   defp build_context(socket) do
-    user_id = get_in(socket.assigns, [:current_user_id])
+    user = Map.get(socket.assigns, :current_user)
+    user_id = get_in(socket.assigns, [:current_user_id]) || Map.get(user || %{}, :id)
     params = Map.get(socket.assigns, :params, %{})
 
     %{
       user_id: user_id,
+      user: user,
       params: params,
       assigns: socket.assigns
     }
@@ -262,9 +241,6 @@ defmodule AshUI.Runtime.ActionBinding do
   defp format_action_error(reason) when is_binary(reason), do: [%{"message" => reason}]
   defp format_action_error(:unauthorized), do: [%{"message" => "Unauthorized"}]
   defp format_action_error(reason), do: [%{"message" => inspect(reason)}]
-
-  defp get_binding_id(%Binding{id: id}), do: id
-  defp get_binding_id(binding), do: Map.get(binding, :id) || Map.get(binding, "id")
 
   defp get_binding_element_id(binding) do
     Map.get(binding, :element_id) || Map.get(binding, "element_id")

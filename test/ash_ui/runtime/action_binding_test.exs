@@ -2,58 +2,85 @@ defmodule AshUI.Runtime.ActionBindingTest do
   use ExUnit.Case, async: true
 
   alias AshUI.Runtime.ActionBinding
+  alias AshUI.Test.RuntimeDomain
+  alias AshUI.Test.RuntimeFixtures
+  alias AshUI.Test.User
 
   describe "execute_action/4" do
     setup do
-      context = %{
-        user_id: "user-1",
-        params: %{},
-        assigns: %{}
-      }
+      fixtures = RuntimeFixtures.seed!()
 
       binding = %{
         id: "action-binding-test",
         source: %{"resource" => "User", "action" => "create"},
         target: "submit-button",
-        binding_type: :action
+        binding_type: :action,
+        transform: %{
+          "params" => %{
+            "name" => {"event", "name"},
+            "email" => {"event", "email"},
+            "nickname" => {"static", "Created"}
+          }
+        }
       }
 
-      %{binding: binding, context: context}
+      %{binding: binding, context: RuntimeFixtures.context(fixtures)}
     end
 
-    test "executes action with event data" do
+    test "executes an Ash create action with mapped event data", %{
+      binding: binding,
+      context: context
+    } do
       event_data = %{"name" => "John", "email" => "john@example.com"}
 
-      assert {:ok, result} = ActionBinding.execute_action(@binding, event_data, @context)
+      assert {:ok, result} = ActionBinding.execute_action(binding, event_data, context)
       assert result.status == :ok
-      assert result.data != nil
+      assert %User{} = result.data
+      assert result.data.name == "John"
+      assert result.data.nickname == "Created"
     end
 
-    test "returns error for unauthorized action" do
-      unauthorized_context = %{user_id: nil, params: %{}, assigns: %{}}
+    test "returns a formatted error for unauthorized actions", %{binding: binding} do
+      unauthorized_context = %{user_id: nil, params: %{}, assigns: %{}, ash_domains: [RuntimeDomain]}
 
-      assert {:error, _reason} = ActionBinding.execute_action(@binding, %{}, unauthorized_context)
+      assert {:error, error} = ActionBinding.execute_action(binding, %{}, unauthorized_context)
+      assert error.status == :error
+      assert error.errors == [%{"message" => "Unauthorized"}]
     end
   end
 
   describe "event_handler/2" do
-    test "generates LiveView event handler" do
+    test "executes the bound action from a LiveView-style handler" do
+      fixtures = RuntimeFixtures.seed!()
+
       binding = %{
         id: "handler-test",
-        source: %{"resource" => "User", "action" => "delete"},
-        target: "delete-button",
-        binding_type: :action
+        source: %{"resource" => "User", "action" => "create"},
+        target: "create-user",
+        binding_type: :action,
+        metadata: %{"success_message" => "Created"},
+        transform: %{
+          "params" => %{
+            "name" => {"event", "name"},
+            "email" => {"event", "email"}
+          }
+        }
       }
 
       handler = ActionBinding.event_handler(binding, "button-1")
+      socket = RuntimeFixtures.socket(current_user: fixtures.actor)
 
-      assert is_function(handler)
+      assert {:noreply, updated_socket} =
+               handler.(socket, %{"name" => "Handler User", "email" => "handler@example.com"}, %{})
+
+      assert get_in(updated_socket.assigns, [:ash_ui, :actions, "create-user", "result", :status]) == :ok
+      assert get_in(updated_socket.assigns, [:flash, :info]) == ["Created"]
     end
   end
 
   describe "wire_handlers/2" do
     test "creates handler map from action bindings" do
-      socket = %{assigns: %{}}
+      socket = RuntimeFixtures.socket()
 
       bindings = [
         %{
@@ -62,13 +89,6 @@ defmodule AshUI.Runtime.ActionBindingTest do
           target: "create-btn",
           binding_type: :action
         },
-        %{
-          id: "action-2",
-          source: %{"resource" => "Post", "action" => "delete"},
-          target: "delete-btn",
-          binding_type: :action
-        },
-        # Non-action binding should be excluded
         %{
           id: "value-1",
           source: %{"resource" => "User", "field" => "name"},
@@ -79,8 +99,8 @@ defmodule AshUI.Runtime.ActionBindingTest do
 
       handlers = ActionBinding.wire_handlers(bindings, socket)
 
-      assert map_size(handlers) == 2
-      assert Enum.all?(handlers, fn {_, handler} -> is_function(handler) end)
+      assert Map.keys(handlers) == ["ash_ui_action_create-btn"]
+      assert is_function(handlers["ash_ui_action_create-btn"])
     end
   end
 end
