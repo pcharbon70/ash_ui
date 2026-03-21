@@ -33,7 +33,14 @@ defmodule AshUI.Authorization.ElementPolicy do
     ]
   end
 
+  @doc """
+  Checks whether the actor can read an element.
+  """
   def can_read?(user, element), do: visible?(user, element)
+
+  @doc """
+  Checks whether the actor can create, update, or delete an element.
+  """
   def can_manage?(user, element), do: editable?(user, element)
 
   @doc """

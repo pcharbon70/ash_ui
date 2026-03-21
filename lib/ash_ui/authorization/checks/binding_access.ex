@@ -1,5 +1,7 @@
 defmodule AshUI.Authorization.Checks.BindingAccess do
-  @moduledoc false
+  @moduledoc """
+  Ash policy check that routes binding authorization through `BindingPolicy`.
+  """
 
   use Ash.Policy.SimpleCheck
 
@@ -7,9 +9,15 @@ defmodule AshUI.Authorization.Checks.BindingAccess do
   alias AshUI.Authorization.Subject
 
   @impl true
+  @doc """
+  Describes the binding access mode being evaluated.
+  """
   def describe(opts), do: "binding #{Keyword.get(opts, :mode, :read)} access"
 
   @impl true
+  @doc """
+  Evaluates binding access for the supplied actor and policy subject.
+  """
   def match?(actor, %{subject: subject}, opts) do
     binding = Subject.to_data(subject)
 

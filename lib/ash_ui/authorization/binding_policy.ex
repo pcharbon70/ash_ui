@@ -33,8 +33,14 @@ defmodule AshUI.Authorization.BindingPolicy do
     ]
   end
 
+  @doc """
+  Checks whether the actor can read a binding.
+  """
   def can_read?(user, binding), do: can_evaluate?(user, binding)
 
+  @doc """
+  Checks whether the actor can create, update, or delete a binding.
+  """
   def can_manage?(user, binding) do
     cond do
       Policies.runtime_authorization_bypass?() -> true

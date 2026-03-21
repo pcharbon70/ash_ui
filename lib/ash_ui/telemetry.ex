@@ -117,6 +117,12 @@ defmodule AshUI.Telemetry do
       metadata: @common_metadata ++ [:renderer]
     },
     %{
+      event_name: [:ash_ui, :render, :fallback],
+      description: "Renderer fallback selected",
+      measurements: [:count, :system_time],
+      metadata: @common_metadata ++ [:renderer, :requested_renderer, :selected_renderer]
+    },
+    %{
       event_name: [:ash_ui, :render, :error],
       description: "Rendering failed",
       measurements: [:count, :duration, :system_time],

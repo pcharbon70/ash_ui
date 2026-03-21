@@ -26,6 +26,8 @@ config :ash_ui, :rendering,
   default_renderer: :liveview,
   # Enable automatic renderer detection based on context
   auto_detect: true,
+  # Allow adapter fallback when external renderer packages are not installed
+  allow_adapter_fallback: true,
   # Fallback renderer if primary is unavailable
   fallback_renderer: nil,
   # Renderer-specific options

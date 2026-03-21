@@ -1,7 +1,12 @@
 defmodule AshUI.Authorization.Subject do
-  @moduledoc false
+  @moduledoc """
+  Normalizes Ash policy subjects into plain maps for policy checks.
+  """
 
   @spec to_data(term()) :: map()
+  @doc """
+  Converts a policy subject into a plain data map for authorization checks.
+  """
   def to_data(%Ash.Changeset{} = changeset) do
     changeset
     |> base_data()

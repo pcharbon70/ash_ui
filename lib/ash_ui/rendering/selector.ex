@@ -2,106 +2,107 @@ defmodule AshUI.Rendering.Selector do
   @moduledoc """
   Runtime renderer selection based on request context and configuration.
 
-  This module provides automatic renderer selection based on:
-  - Request type (LiveView request → live_ui, HTTP request → web_ui)
-  - Explicit renderer override
-  - Fallback configuration
-  - Per-environment configuration
-
-  ## Examples
-
-      # Auto-select renderer based on request
-      {:ok, renderer} = Selector.select_for_request(conn)
-
-      # Override renderer explicitly
-      {:ok, renderer} = Selector.select_for_request(conn, renderer: :html)
-
-      # Select with fallback
-      {:ok, renderer, from_cache} = Selector.select_with_fallback(conn)
+  This selector understands the difference between:
+  - a real external renderer package being installed
+  - Ash UI using its in-repo adapter fallback for that renderer type
   """
+
+  require Logger
 
   alias AshUI.Rendering.Registry
+  alias AshUI.Telemetry
+
+  @renderer_types [:liveview, :html, :desktop]
 
   @doc """
-  Selects appropriate renderer based on request context.
-
-  ## Parameters
-    * `conn` - Phoenix connection or request context
-    * `opts` - Options
+  Selects an appropriate renderer based on request context.
 
   ## Options
-    * `:renderer` - Explicit renderer override (:liveview, :html, :desktop)
-    * `:ignore_headers` - Ignore X-Renderer header (default: false)
-
-  ## Returns
-    * `{:ok, renderer_type, module}` - Selected renderer and module
-    * `{:error, reason}` - Selection failed
+    * `:renderer` - explicit renderer override
+    * `:ignore_headers` - ignore `x-renderer`
+    * `:allow_adapter_fallback` - allow adapter fallback for the selected type
   """
   @spec select_for_request(Plug.Conn.t() | map(), keyword()) ::
-    {:ok, atom(), module()} | {:error, term()}
+          {:ok, atom(), module()} | {:error, term()}
   def select_for_request(conn_or_map, opts \\ []) do
-    cond do
-      # Explicit renderer override takes precedence
-      Keyword.has_key?(opts, :renderer) ->
-        renderer = Keyword.get(opts, :renderer)
-        get_renderer_with_validation(renderer)
-
-      # Check for X-Renderer header (if not ignored)
-      not Keyword.get(opts, :ignore_headers, false) ->
-        case get_renderer_from_header(conn_or_map) do
-          {:ok, renderer} -> get_renderer_with_validation(renderer)
-          _error -> select_from_context(conn_or_map, opts)
-        end
-
-      # Auto-detect from context
-      true ->
-        select_from_context(conn_or_map, opts)
+    with {:ok, renderer_type} <- select_renderer_type(conn_or_map, opts) do
+      get_renderer_with_validation(renderer_type, opts)
     end
   end
 
   @doc """
-  Selects renderer with fallback support.
+  Selects a renderer with fallback support.
 
-  ## Parameters
-    * `conn` - Phoenix connection or request context
-    * `opts` - Options
-
-  ## Returns
-    * `{:ok, renderer_type, module, from_cache}` - Renderer and cache status
-    * `{:error, reason}` - All renderers unavailable
+  The fourth tuple value indicates whether a fallback path was used. That is
+  true when either:
+  - an adapter fallback handled the selected renderer type
+  - selection switched to a different fallback renderer type
   """
   @spec select_with_fallback(Plug.Conn.t() | map(), keyword()) ::
-    {:ok, atom(), module(), boolean()} | {:error, term()}
+          {:ok, atom(), module(), boolean()} | {:error, term()}
   def select_with_fallback(conn_or_map, opts \\ []) do
-    case select_for_request(conn_or_map, opts) do
-      {:ok, renderer_type, module} ->
-        {:ok, renderer_type, module, false}
+    with {:ok, requested_type} <- select_renderer_type(conn_or_map, opts) do
+      case Registry.resolve_renderer(requested_type, opts) do
+        {:ok, info} ->
+          fallback_used = info.mode == :adapter_fallback
 
-      {:error, _reason} ->
-        # Try fallback renderer
-        case get_fallback_renderer() do
-          {:ok, renderer_type, module} ->
-            {:ok, renderer_type, module, true}
+          maybe_record_fallback(
+            requested_type,
+            requested_type,
+            info,
+            :adapter_fallback,
+            fallback_used
+          )
 
-          error ->
-            error
+          {:ok, requested_type, info.module, fallback_used}
+
+        {:error, :not_available} ->
+          case resolve_fallback_renderer(Keyword.put(opts, :exclude, requested_type)) do
+            {:ok, fallback_type, fallback_info} ->
+              record_fallback(requested_type, fallback_type, fallback_info, :alternative_renderer)
+              {:ok, fallback_type, fallback_info.module, true}
+
+            {:error, :no_fallback} ->
+              {:error, {:renderer_not_available, requested_type}}
+
+            error ->
+              error
+          end
+
+        {:error, :not_found} ->
+          {:error, {:renderer_not_found, requested_type}}
+      end
+    else
+      {:error, {:unknown_renderer, _unknown} = reason} ->
+        context_opts = Keyword.put(opts, :ignore_headers, true)
+
+        case select_for_request(conn_or_map, context_opts) do
+          {:ok, fallback_type, module} ->
+            {:ok, fallback_info} = Registry.renderer_info(fallback_type, context_opts)
+            record_fallback(:unknown, fallback_type, fallback_info, reason)
+            {:ok, fallback_type, module, true}
+
+          {:error, _context_reason} ->
+            case resolve_fallback_renderer(opts) do
+              {:ok, fallback_type, fallback_info} ->
+                record_fallback(:unknown, fallback_type, fallback_info, reason)
+                {:ok, fallback_type, fallback_info.module, true}
+
+              _ ->
+                {:error, reason}
+            end
         end
+
+      error ->
+        error
     end
   end
 
   @doc """
-  Detects if request is a LiveView request.
-
-  ## Parameters
-    * `conn_or_map` - Phoenix connection or request context
-
-  ## Returns
-    * `true` - Request is LiveView
-    * `false` - Request is not LiveView
+  Detects if a request is a LiveView request.
   """
   @spec liveview_request?(Plug.Conn.t() | map()) :: boolean()
   def liveview_request?(conn_or_map) do
-    # Check for LiveView indicators
     has_live_header = has_header?(conn_or_map, "accepts", ["text/vnd.phoenix.live-view"])
     has_live_param = has_param?(conn_or_map, "_format", ["live", "liveview"])
     has_live_session = has_session_key?(conn_or_map, "__phoenix_flash__")
@@ -110,70 +111,118 @@ defmodule AshUI.Rendering.Selector do
   end
 
   @doc """
-  Detects if request is a standard HTTP request.
-
-  ## Parameters
-    * `conn_or_map` - Phoenix connection or request context
-
-  ## Returns
-    * `true` - Request is standard HTTP
-    * `false` - Request is not standard HTTP
+  Detects if a request is a standard HTTP request.
   """
   @spec http_request?(Plug.Conn.t() | map()) :: boolean()
   def http_request?(conn_or_map) do
-    # If it's not explicitly LiveView and has HTML accept, treat as HTTP
     not liveview_request?(conn_or_map) and
       has_header?(conn_or_map, "accept", ["text/html", "application/xhtml+xml"])
   end
 
   @doc """
-  Gets the fallback renderer from configuration.
-
-  ## Returns
-    * `{:ok, renderer_type, module}` - Fallback renderer
-    * `{:error, :no_fallback}` - No fallback configured
+  Gets the fallback renderer from options or configuration.
   """
-  @spec get_fallback_renderer() :: {:ok, atom(), module()} | {:error, atom()}
-  def get_fallback_renderer do
-    configured = Application.get_env(:ash_ui, :rendering, [])
-    fallback = Keyword.get(configured, :fallback_renderer)
-
-    if fallback do
-      get_renderer_with_validation(fallback)
-    else
-      # Auto-select fallback
-      cond do
-        Registry.renderer_available?(:html) ->
-          get_renderer_with_validation(:html)
-
-        Registry.renderer_available?(:liveview) ->
-          get_renderer_with_validation(:liveview)
-
-        Registry.renderer_available?(:desktop) ->
-          get_renderer_with_validation(:desktop)
-
-        true ->
-          {:error, :no_fallback}
-      end
+  @spec get_fallback_renderer(keyword()) :: {:ok, atom(), module()} | {:error, atom()}
+  def get_fallback_renderer(opts \\ []) do
+    case resolve_fallback_renderer(opts) do
+      {:ok, renderer_type, info} -> {:ok, renderer_type, info.module}
+      error -> error
     end
   end
 
-  # Private Functions
+  @doc """
+  Gets renderer for a specific environment.
+  """
+  @spec select_for_environment(atom(), keyword()) :: {:ok, atom(), module()} | {:error, term()}
+  def select_for_environment(env, opts \\ [])
 
-  defp select_from_context(conn_or_map, opts) do
+  def select_for_environment(env, opts) when env in [:dev, :test, :prod] do
+    configured = Application.get_env(:ash_ui, :rendering, [])
+    env_renderers = Keyword.get(configured, :env_renderers, %{})
+
+    case Map.get(env_renderers, env) do
+      nil ->
+        default = Keyword.get(configured, :default_renderer, :liveview)
+        get_renderer_with_validation(default, opts)
+
+      renderer_type ->
+        get_renderer_with_validation(renderer_type, opts)
+    end
+  end
+
+  def select_for_environment(_env, _opts) do
+    {:error, :invalid_environment}
+  end
+
+  defp select_renderer_type(conn_or_map, opts) do
+    cond do
+      Keyword.has_key?(opts, :renderer) ->
+        {:ok, Keyword.fetch!(opts, :renderer)}
+
+      not Keyword.get(opts, :ignore_headers, false) ->
+        case get_renderer_from_header(conn_or_map) do
+          {:ok, renderer} -> {:ok, renderer}
+          {:error, :no_header} -> select_from_context(conn_or_map)
+          error -> error
+        end
+
+      true ->
+        select_from_context(conn_or_map)
+    end
+  end
+
+  defp select_from_context(conn_or_map) do
     cond do
       liveview_request?(conn_or_map) ->
-        get_renderer_with_validation(:liveview)
+        {:ok, :liveview}
 
       http_request?(conn_or_map) ->
-        get_renderer_with_validation(:html)
+        {:ok, :html}
 
-      # Default to configured default renderer
       true ->
         configured = Application.get_env(:ash_ui, :rendering, [])
-        default = Keyword.get(configured, :default_renderer, :liveview)
-        get_renderer_with_validation(default)
+        {:ok, Keyword.get(configured, :default_renderer, :liveview)}
     end
+  end
+
+  defp resolve_fallback_renderer(opts) do
+    configured = Application.get_env(:ash_ui, :rendering, [])
+
+    requested_fallback =
+      Keyword.get(opts, :fallback_renderer, Keyword.get(configured, :fallback_renderer))
+
+    exclude = excluded_types(opts)
+
+    with {:ok, fallback} <- validate_requested_fallback(requested_fallback, exclude),
+         {:ok, info} <- Registry.resolve_renderer(fallback, fallback_opts(opts)) do
+      {:ok, fallback, info}
+    else
+      {:error, :skip_requested_fallback} ->
+        find_first_fallback(exclude, fallback_opts(opts))
+
+      {:error, :not_available} ->
+        find_first_fallback(exclude, fallback_opts(opts))
+
+      {:error, :no_requested_fallback} ->
+        find_first_fallback(exclude, fallback_opts(opts))
+
+      {:error, :not_found} ->
+        {:error, :no_fallback}
+
+      error ->
+        error
+    end
+  end
+
+  defp find_first_fallback(exclude, opts) do
+    @renderer_types
+    |> Enum.reject(&(&1 in exclude))
+    |> Enum.find_value({:error, :no_fallback}, fn type ->
+      case Registry.resolve_renderer(type, opts) do
+        {:ok, info} -> {:ok, type, info}
+        _ -> false
+      end
+    end)
   end
 
   defp get_renderer_from_header(conn_or_map) do
@@ -189,10 +238,10 @@ defmodule AshUI.Rendering.Selector do
     end
   end
 
-  defp get_renderer_with_validation(renderer_type) do
-    case Registry.get_renderer(renderer_type) do
-      {:ok, module} ->
-        {:ok, renderer_type, module}
+  defp get_renderer_with_validation(renderer_type, opts) do
+    case Registry.resolve_renderer(renderer_type, opts) do
+      {:ok, info} ->
+        {:ok, renderer_type, info.module}
 
       {:error, :not_available} ->
         {:error, {:renderer_not_available, renderer_type}}
@@ -202,30 +251,30 @@ defmodule AshUI.Rendering.Selector do
     end
   end
 
-  defp has_header?(conn_or_map, header_name, values \\ []) do
+  defp has_header?(conn_or_map, header_name, values) do
     header_value = get_request_header(conn_or_map, header_name)
 
     if is_binary(header_value) do
-      if length(values) > 0 do
+      if values == [] do
+        true
+      else
         Enum.any?(values, fn value ->
           String.contains?(String.downcase(header_value), value)
         end)
-      else
-        true
       end
     else
       false
     end
   end
 
-  defp has_param?(conn_or_map, param_name, values \\ []) do
+  defp has_param?(conn_or_map, param_name, values) do
     param_value = get_request_param(conn_or_map, param_name)
 
     if param_value do
-      if length(values) > 0 do
-        param_value in values
-      else
+      if values == [] do
         true
+      else
+        param_value in values
       end
     else
       false
@@ -237,32 +286,23 @@ defmodule AshUI.Rendering.Selector do
     is_map(session) and Map.has_key?(session, key)
   end
 
-  # Generic request header extraction
   defp get_request_header(%Plug.Conn{} = conn, header_name) do
-    # Try to get from various locations in Plug.Conn
     conn
     |> Plug.Conn.get_req_header(header_name)
     |> case do
-      "" -> nil
-      val -> val
+      [value | _] when is_binary(value) and value != "" -> value
+      _ -> nil
     end
   end
 
   defp get_request_header(map, header_name) when is_map(map) do
-    # Try to get from request headers map
     headers = Map.get(map, :headers) || Map.get(map, "headers") || %{}
 
-    # Try both string and atom keys
     Map.get(headers, header_name) ||
-      try do
-        Map.get(headers, String.to_atom(header_name))
-      rescue
-        _ -> nil
-      end ||
+      safe_get_atom_key(headers, header_name) ||
       Map.get(headers, "http-#{String.downcase(header_name)}")
   end
 
-  # Generic request param extraction
   defp get_request_param(%Plug.Conn{} = conn, param_name) do
     params = conn.params || %{}
     Map.get(params, param_name)
@@ -273,7 +313,6 @@ defmodule AshUI.Rendering.Selector do
     Map.get(params, param_name)
   end
 
-  # Generic session extraction
   defp get_request_session(%Plug.Conn{} = conn) do
     Map.get(conn.assigns, :session) || %{}
   end
@@ -282,33 +321,68 @@ defmodule AshUI.Rendering.Selector do
     Map.get(map, :session) || Map.get(map, "session") || %{}
   end
 
-  @doc """
-  Gets renderer for specific environment.
+  defp safe_get_atom_key(map, key) do
+    Map.get(map, String.to_existing_atom(key))
+  rescue
+    ArgumentError -> nil
+  end
 
-  ## Parameters
-    * `env` - Environment atom (:dev, :test, :prod)
+  defp excluded_types(opts) do
+    opts
+    |> Keyword.get(:exclude, [])
+    |> List.wrap()
+  end
 
-  ## Returns
-    * `{:ok, renderer_type, module}` - Environment-specific renderer
-    * `{:error, reason}` - Selection failed
-  """
-  @spec select_for_environment(atom()) :: {:ok, atom(), module()} | {:error, term()}
-  def select_for_environment(env) when env in [:dev, :test, :prod] do
-    configured = Application.get_env(:ash_ui, :rendering, [])
-    env_renderers = Keyword.get(configured, :env_renderers, %{})
+  defp validate_requested_fallback(nil, _exclude), do: {:error, :no_requested_fallback}
 
-    case Map.get(env_renderers, env) do
-      nil ->
-        # Fall back to default renderer
-        default = Keyword.get(configured, :default_renderer, :liveview)
-        get_renderer_with_validation(default)
-
-      renderer_type ->
-        get_renderer_with_validation(renderer_type)
+  defp validate_requested_fallback(fallback, exclude) when fallback in @renderer_types do
+    if fallback in exclude do
+      {:error, :skip_requested_fallback}
+    else
+      {:ok, fallback}
     end
   end
 
-  def select_for_environment(_env) do
-    {:error, :invalid_environment}
+  defp validate_requested_fallback(_fallback, _exclude), do: {:error, :not_found}
+
+  defp fallback_opts(opts) do
+    allow_adapter_fallback =
+      Keyword.get(
+        opts,
+        :fallback_allow_adapter_fallback,
+        Keyword.get(opts, :allow_adapter_fallback, adapter_fallback_enabled?())
+      )
+
+    Keyword.put(opts, :allow_adapter_fallback, allow_adapter_fallback)
+  end
+
+  defp adapter_fallback_enabled? do
+    Application.get_env(:ash_ui, :rendering, [])
+    |> Keyword.get(:allow_adapter_fallback, true)
+  end
+
+  defp maybe_record_fallback(_requested, _selected, _info, _reason, false), do: :ok
+
+  defp maybe_record_fallback(requested, selected, info, reason, true) do
+    record_fallback(requested, selected, info, reason)
+  end
+
+  defp record_fallback(requested, selected, info, reason) do
+    metadata = %{
+      renderer: :fallback,
+      status: :ok,
+      requested_renderer: requested,
+      selected_renderer: selected,
+      resolved_mode: info.mode,
+      fallback_reason: reason
+    }
+
+    Logger.warning(
+      "Renderer fallback engaged: requested=#{inspect(requested)} selected=#{inspect(selected)} " <>
+        "mode=#{inspect(info.mode)} reason=#{inspect(reason)}"
+    )
+
+    Telemetry.execute([:ash_ui, :render, :fallback], %{count: 1}, metadata)
+    :ok
   end
 end

@@ -1,5 +1,7 @@
 defmodule AshUI.Authorization.Checks.ElementAccess do
-  @moduledoc false
+  @moduledoc """
+  Ash policy check that routes element authorization through `ElementPolicy`.
+  """
 
   use Ash.Policy.SimpleCheck
 
@@ -7,9 +9,15 @@ defmodule AshUI.Authorization.Checks.ElementAccess do
   alias AshUI.Authorization.Subject
 
   @impl true
+  @doc """
+  Describes the element access mode being evaluated.
+  """
   def describe(opts), do: "element #{Keyword.get(opts, :mode, :read)} access"
 
   @impl true
+  @doc """
+  Evaluates element access for the supplied actor and policy subject.
+  """
   def match?(actor, %{subject: subject}, opts) do
     element = Subject.to_data(subject)
 

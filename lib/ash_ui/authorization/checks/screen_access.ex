@@ -1,5 +1,7 @@
 defmodule AshUI.Authorization.Checks.ScreenAccess do
-  @moduledoc false
+  @moduledoc """
+  Ash policy check that routes screen authorization through `ScreenPolicy`.
+  """
 
   use Ash.Policy.SimpleCheck
 
@@ -7,9 +9,15 @@ defmodule AshUI.Authorization.Checks.ScreenAccess do
   alias AshUI.Authorization.Subject
 
   @impl true
+  @doc """
+  Describes the screen access mode being evaluated.
+  """
   def describe(opts), do: "screen #{Keyword.get(opts, :mode, :read)} access"
 
   @impl true
+  @doc """
+  Evaluates screen access for the supplied actor and policy subject.
+  """
   def match?(actor, %{subject: subject}, opts) do
     screen = Subject.to_data(subject)
 

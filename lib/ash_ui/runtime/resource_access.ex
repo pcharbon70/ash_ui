@@ -1,5 +1,10 @@
 defmodule AshUI.Runtime.ResourceAccess do
-  @moduledoc false
+  @moduledoc """
+  Real Ash-backed resource access helpers used by runtime bindings.
+
+  This module resolves resource references, performs actor-aware reads and
+  writes, and normalizes action execution for the runtime binding layer.
+  """
 
   require Ash.Query
 
@@ -15,6 +20,9 @@ defmodule AshUI.Runtime.ResourceAccess do
         }
 
   @spec resolve(module() | String.t(), context()) :: {:ok, resolved()} | {:error, term()}
+  @doc """
+  Resolves a resource reference to a concrete resource/domain pair for runtime use.
+  """
   def resolve(resource_ref, context) do
     resource_ref
     |> matching_resources(context)
@@ -22,6 +30,9 @@ defmodule AshUI.Runtime.ResourceAccess do
   end
 
   @spec read_field(map(), String.t(), context(), keyword()) :: {:ok, term()} | {:error, term()}
+  @doc """
+  Reads a single field value from a resource record.
+  """
   def read_field(source, field, context, opts \\ []) do
     with {:ok, resolved} <- resolve(source_resource(source), context),
          {:ok, record} <- optional_record(source, context, Keyword.put(opts, :resolved, resolved)) do
@@ -31,6 +42,9 @@ defmodule AshUI.Runtime.ResourceAccess do
 
   @spec read_relationship(map(), String.t(), context(), keyword()) ::
           {:ok, term()} | {:error, term()}
+  @doc """
+  Reads a relationship path from a resource record.
+  """
   def read_relationship(source, relationship_path, context, opts \\ []) do
     with {:ok, resolved} <- resolve(source_resource(source), context),
          {:ok, record} <- optional_record(source, context, Keyword.put(opts, :resolved, resolved)) do
@@ -45,6 +59,9 @@ defmodule AshUI.Runtime.ResourceAccess do
 
   @spec read_collection(map(), context(), keyword()) ::
           {:ok, %{items: list(), total: non_neg_integer()}} | {:error, term()}
+  @doc """
+  Reads a collection and applies in-memory filtering and pagination.
+  """
   def read_collection(source, context, opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     page_size = Keyword.get(opts, :page_size, 20)
@@ -63,6 +80,9 @@ defmodule AshUI.Runtime.ResourceAccess do
   end
 
   @spec write_field(map(), term(), context(), keyword()) :: {:ok, map()} | {:error, term()}
+  @doc """
+  Writes a field through the resolved Ash resource update action.
+  """
   def write_field(source, value, context, opts \\ []) do
     with {:ok, resolved} <- resolve(source_resource(source), context),
          {:ok, record} <- required_record(source, context, Keyword.put(opts, :resolved, resolved)),
@@ -78,6 +98,9 @@ defmodule AshUI.Runtime.ResourceAccess do
   end
 
   @spec execute_action(map(), map(), context(), keyword()) :: {:ok, term()} | {:error, term()}
+  @doc """
+  Executes an Ash action for the resolved resource and source binding.
+  """
   def execute_action(source, params, context, opts \\ []) do
     with {:ok, resolved} <- resolve(source_resource(source), context),
          {:ok, action} <- resolve_action(resolved.resource, source_action(source)) do
@@ -111,6 +134,9 @@ defmodule AshUI.Runtime.ResourceAccess do
     end
   end
 
+  @doc """
+  Extracts the effective actor from runtime context.
+  """
   def actor(context) do
     cond do
       Map.has_key?(context, :actor) and not is_nil(context.actor) ->
