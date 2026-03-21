@@ -14,34 +14,34 @@ Back to index: [README](./README.md)
 - Unauthorized access returns user-friendly errors
 - Policy failures emit telemetry events
 
-[ ] 5 Phase 5 - Authorization and Policy Enforcement
+[X] 5 Phase 5 - Authorization and Policy Enforcement
   Implement Ash policy integration for UI resource access control and action authorization.
 
-  Status note: runtime authorization helpers, policy helper modules, and tests exist. This phase remains open because the resource-level `Ash.Policy.Authorizer` path described here is not fully wired into the persisted Screen, Element, and Binding resources yet.
+  Status note: persisted Screen, Element, and Binding resources now use `Ash.Policy.Authorizer`, reusable policy checks, and runtime authorization helpers with integration coverage.
 
-  [ ] 5.1 Section - Policy Definitions
+  [X] 5.1 Section - Policy Definitions
     Define Ash policies for UI resources.
 
-    [ ] 5.1.1 Task - Define UI.Screen policies
+    [X] 5.1.1 Task - Define UI.Screen policies
     Add policies to screen resource for access control.
 
-      [ ] 5.1.1.1 Subtask - Add `policies` block to `AshUI.Screen` resource
+      [X] 5.1.1.1 Subtask - Add `policies` block to `AshUI.Screen` resource
       [X] 5.1.1.2 Subtask - Define `:read` policy for screen viewing
       [X] 5.1.1.3 Subtask - Define `:mount` policy for screen mounting
       [X] 5.1.1.4 Subtask - Define `:create`, `:update`, `:destroy` policies
 
-    [ ] 5.1.2 Task - Define UI.Element policies
+    [X] 5.1.2 Task - Define UI.Element policies
     Add policies to element resource for access control.
 
-      [ ] 5.1.2.1 Subtask - Add `policies` block to `AshUI.Element` resource
+      [X] 5.1.2.1 Subtask - Add `policies` block to `AshUI.Element` resource
       [X] 5.1.2.2 Subtask - Define element visibility policies
       [X] 5.1.2.3 Subtask - Define element modification policies
       [X] 5.1.2.4 Subtask - Inherit screen policies where appropriate
 
-    [ ] 5.1.3 Task - Define UI.Binding policies
+    [X] 5.1.3 Task - Define UI.Binding policies
     Add policies to binding resource for access control.
 
-      [ ] 5.1.3.1 Subtask - Add `policies` block to `AshUI.Binding` resource
+      [X] 5.1.3.1 Subtask - Add `policies` block to `AshUI.Binding` resource
       [X] 5.1.3.2 Subtask - Define binding evaluation policies
       [X] 5.1.3.3 Subtask - Define binding modification policies
       [X] 5.1.3.4 Subtask - Check data source access in binding policies

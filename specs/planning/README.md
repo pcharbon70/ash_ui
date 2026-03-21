@@ -40,4 +40,4 @@ The plan aligns to:
 
 ## Status Note
 
-The phase files are historical planning documents, not a guarantee that every checked item is production-backed today. After the RFC-0002 re-baseline, some earlier phases have been reopened to reflect remaining gaps around resource-level authorization, real Ash-backed binding execution, and external renderer integration.
+The phase files are historical planning documents, not a guarantee that every checked item is production-backed today. After the RFC-0002 re-baseline, the remaining open implementation gaps are concentrated in the legacy resource DSL work from Phase 1 and the optional external renderer packages tracked in Phase 7.

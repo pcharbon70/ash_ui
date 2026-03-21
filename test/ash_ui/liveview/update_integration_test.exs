@@ -1,7 +1,10 @@
 defmodule AshUI.LiveView.UpdateIntegrationTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias AshUI.LiveView.UpdateIntegration
+  alias AshUI.Test.RuntimeDomain
+  alias AshUI.Test.RuntimeFixtures
+  alias AshUI.Test.User, as: RuntimeUser
 
   # Mock socket for testing
   defp build_socket(assigns \\ %{}) do
@@ -18,6 +21,14 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
   # Mock screen
   defp build_screen(id \\ "screen-1") do
     %{id: id, name: "Test Screen"}
+  end
+
+  defp flush_mailbox do
+    receive do
+      _message -> flush_mailbox()
+    after
+      0 -> :ok
+    end
   end
 
   describe "subscribe/3" do
@@ -53,6 +64,19 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
       assert {:ok, _subscription} = UpdateIntegration.subscribe(socket, User.Profile)
       # In actual implementation, socket would be updated with subscription
     end
+
+    test "subscribes to real Ash resource notifications" do
+      fixtures = RuntimeFixtures.seed!()
+      flush_mailbox()
+      socket = RuntimeFixtures.socket()
+
+      assert {:ok, _subscription} = UpdateIntegration.subscribe(socket, RuntimeUser)
+
+      assert {:ok, _updated_user} =
+               Ash.update(fixtures.user, %{name: "Subscribed"}, domain: RuntimeDomain)
+
+      assert_receive %Ash.Notifier.Notification{resource: RuntimeUser, action: %{type: :update}}
+    end
   end
 
   describe "unsubscribe/2" do
@@ -61,6 +85,20 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
 
       assert {:ok, subscription} = UpdateIntegration.subscribe(socket, User.Profile)
       assert :ok = UpdateIntegration.unsubscribe(socket, subscription)
+    end
+
+    test "stops delivering real Ash resource notifications" do
+      fixtures = RuntimeFixtures.seed!()
+      flush_mailbox()
+      socket = RuntimeFixtures.socket()
+
+      assert {:ok, subscription} = UpdateIntegration.subscribe(socket, RuntimeUser)
+      assert :ok = UpdateIntegration.unsubscribe(socket, subscription)
+
+      assert {:ok, _updated_user} =
+               Ash.update(fixtures.user, %{name: "Unsubscribed"}, domain: RuntimeDomain)
+
+      refute_receive %Ash.Notifier.Notification{resource: RuntimeUser}, 100
     end
   end
 
@@ -169,6 +207,41 @@ defmodule AshUI.LiveView.UpdateIntegrationTest do
 
       assert {:noreply, _updated_socket} =
                UpdateIntegration.handle_notification({:unknown, :data}, socket)
+    end
+
+    test "handles Ash.Notifier notifications directly" do
+      fixtures = RuntimeFixtures.seed!()
+      flush_mailbox()
+
+      socket =
+        build_socket(
+          ash_ui_screen: build_screen(),
+          ash_ui_user: fixtures.actor,
+          ash_ui_params: %{},
+          ash_ui_bindings: %{
+            "binding1" => %{
+              id: "binding1",
+              target: "input-1",
+              source: %{"resource" => "User", "field" => "name", "id" => fixtures.user.id},
+              binding_type: :value,
+              value: fixtures.user.name
+            }
+          },
+          ash_ui_domains: [RuntimeDomain]
+        )
+
+      assert {:ok, _subscription} = UpdateIntegration.subscribe(socket, RuntimeUser)
+
+      assert {:ok, _updated_user} =
+               Ash.update(fixtures.user, %{name: "Notifier Update"}, domain: RuntimeDomain)
+
+      assert_receive %Ash.Notifier.Notification{} = notification
+
+      assert {:noreply, updated_socket} =
+               UpdateIntegration.handle_notification(notification, socket)
+
+      assert updated_socket.assigns[:ash_ui_bindings]["binding1"].value == "Notifier Update"
+      assert get_in(updated_socket.assigns, [:ash_ui, :bindings, "input-1", "value"]) == "Notifier Update"
     end
   end
 

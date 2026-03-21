@@ -146,7 +146,7 @@ context = %{user_id: "user-1", params: %{}, assigns: %{}}
   AshUI.Runtime.BidirectionalBinding.write_binding(binding, "Updated Name", socket, context)
 ```
 
-The current implementation returns mock update results, but the call shape is the one LiveView integration already uses.
+Successful writes now return the real Ash update result metadata, including the updated record and resolved field value.
 
 ## Event Handling in LiveView
 
@@ -190,7 +190,7 @@ Your `source` is not a map in the expected shape.
 
 ### Empty or placeholder values
 
-The runtime currently resolves resource data through placeholder loaders in some paths. Verify the binding shape first before assuming the renderer is broken.
+The runtime now resolves binding data through real Ash reads. If you see empty values, check authorization, record identifiers, and transformation defaults before assuming the renderer is broken.
 
 ### Writes fail with forbidden errors
 

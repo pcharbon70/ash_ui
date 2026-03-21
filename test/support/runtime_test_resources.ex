@@ -14,12 +14,24 @@ end
 defmodule AshUI.Test.Profile do
   @moduledoc false
 
+  @resource_topic_prefix "ash_ui:resource:AshUI:Test:Profile"
+
   use Ash.Resource,
     domain: AshUI.Test.RuntimeDomain,
+    notifiers: [Ash.Notifier.PubSub],
     data_layer: Ash.DataLayer.Ets
 
   ets do
     private? true
+  end
+
+  pub_sub do
+    module AshUI.Notifications
+    prefix @resource_topic_prefix
+
+    publish :create, "changes"
+    publish :update, "changes"
+    publish :destroy, "changes"
   end
 
   attributes do
@@ -45,12 +57,24 @@ end
 defmodule AshUI.Test.User do
   @moduledoc false
 
+  @resource_topic_prefix "ash_ui:resource:AshUI:Test:User"
+
   use Ash.Resource,
     domain: AshUI.Test.RuntimeDomain,
+    notifiers: [Ash.Notifier.PubSub],
     data_layer: Ash.DataLayer.Ets
 
   ets do
     private? true
+  end
+
+  pub_sub do
+    module AshUI.Notifications
+    prefix @resource_topic_prefix
+
+    publish :create, "changes"
+    publish :update, "changes"
+    publish :destroy, "changes"
   end
 
   attributes do
@@ -87,12 +111,24 @@ end
 defmodule AshUI.Test.Post do
   @moduledoc false
 
+  @resource_topic_prefix "ash_ui:resource:AshUI:Test:Post"
+
   use Ash.Resource,
     domain: AshUI.Test.RuntimeDomain,
+    notifiers: [Ash.Notifier.PubSub],
     data_layer: Ash.DataLayer.Ets
 
   ets do
     private? true
+  end
+
+  pub_sub do
+    module AshUI.Notifications
+    prefix @resource_topic_prefix
+
+    publish :create, "changes"
+    publish :update, "changes"
+    publish :destroy, "changes"
   end
 
   attributes do
@@ -124,12 +160,24 @@ end
 defmodule AshUI.Test.Comment do
   @moduledoc false
 
+  @resource_topic_prefix "ash_ui:resource:AshUI:Test:Comment"
+
   use Ash.Resource,
     domain: AshUI.Test.RuntimeDomain,
+    notifiers: [Ash.Notifier.PubSub],
     data_layer: Ash.DataLayer.Ets
 
   ets do
     private? true
+  end
+
+  pub_sub do
+    module AshUI.Notifications
+    prefix @resource_topic_prefix
+
+    publish :create, "changes"
+    publish :update, "changes"
+    publish :destroy, "changes"
   end
 
   attributes do

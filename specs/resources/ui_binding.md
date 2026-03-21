@@ -43,5 +43,5 @@ Defines persisted runtime bindings for value reads, list reads, and action execu
 
 ## Current Gaps
 
-- several runtime paths still use placeholder data loaders or mock action/update results
+- runtime binding paths resolve reads, writes, list loading, and actions through real Ash-backed helpers
 - structured source maps are the implemented baseline; older string path examples are obsolete

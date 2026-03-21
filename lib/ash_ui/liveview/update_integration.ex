@@ -9,6 +9,7 @@ defmodule AshUI.LiveView.UpdateIntegration do
   require Logger
 
   alias AshUI.LiveView.Integration
+  alias AshUI.Notifications
   alias AshUI.Runtime.BindingEvaluator
   alias AshUI.Runtime.ResourceAccess
 
@@ -105,7 +106,8 @@ defmodule AshUI.LiveView.UpdateIntegration do
 
   This should be called from LiveView's `handle_info/2` callback.
   """
-  @spec handle_resource_change(map(), Phoenix.LiveView.Socket.t()) :: update_result()
+  @spec handle_resource_change(map() | Ash.Notifier.Notification.t(), Phoenix.LiveView.Socket.t()) ::
+          update_result()
   def handle_resource_change(notification, socket) do
     bindings = socket.assigns[:ash_ui_bindings] || %{}
 
@@ -136,7 +138,11 @@ defmodule AshUI.LiveView.UpdateIntegration do
   @doc """
   Handles subscription messages from Ash.Notifier.
   """
-  @spec handle_notification(tuple(), Phoenix.LiveView.Socket.t()) :: update_result()
+  @spec handle_notification(term(), Phoenix.LiveView.Socket.t()) :: update_result()
+  def handle_notification(%Ash.Notifier.Notification{} = notification, socket) do
+    handle_resource_change(notification, socket)
+  end
+
   def handle_notification({:created, resource}, socket) do
     handle_resource_change(%{type: :created, resource: resource, timestamp: DateTime.utc_now()}, socket)
   end
@@ -220,13 +226,9 @@ defmodule AshUI.LiveView.UpdateIntegration do
     "#{inspect(resource)}_#{action}_#{:erlang.phash2(filter)}"
   end
 
-  defp subscribe_to_resource(_resource, _subscription) do
-    # Ash.Notifier integration is still an external dependency.
-    # We track subscriptions per LiveView session so the reactivity pipeline
-    # behaves correctly once real notifications are delivered.
-    :ok
-  end
+  defp subscribe_to_resource(resource, _subscription), do: Notifications.subscribe(resource)
 
+  defp unsubscribe_from_resource(%{resource: resource}), do: Notifications.unsubscribe(resource)
   defp unsubscribe_from_resource(_subscription), do: :ok
 
   defp binding_resources(bindings, socket) do
@@ -449,6 +451,7 @@ defmodule AshUI.LiveView.UpdateIntegration do
     end)
   end
 
+  defp get_notification_resource(%Ash.Notifier.Notification{resource: resource}), do: resource
   defp get_notification_resource(%{resource: %{__struct__: resource}}), do: resource
   defp get_notification_resource(%{resource: resource}) when is_atom(resource), do: resource
   defp get_notification_resource(_), do: nil

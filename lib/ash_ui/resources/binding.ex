@@ -5,14 +5,26 @@ defmodule AshUI.Resources.Binding do
   Bindings connect UI elements to Ash resource data.
   """
 
+  @resource_topic_prefix "ash_ui:resource:AshUI:Resources:Binding"
+
   use Ash.Resource,
     domain: AshUI.Domain,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Ash.Notifier.PubSub],
     data_layer: AshPostgres.DataLayer
 
   postgres do
     table "ui_bindings"
     repo AshUI.Repo
+  end
+
+  pub_sub do
+    module AshUI.Notifications
+    prefix @resource_topic_prefix
+
+    publish :create, "changes"
+    publish :update, "changes"
+    publish :destroy, "changes"
   end
 
   attributes do
