@@ -891,7 +891,7 @@ defmodule AshUI.Rendering.LiveUIAdapter do
     meta = escaped_text_prop(props, "meta")
 
     """
-    <article class="#{css_classes(["ash-artifact-row", prop_class(iur)])}" data-row-id="#{html_attr(prop(props, "row_identity"))}"#{style_attr(prop_style(iur))}>
+    <article class="#{css_classes(["ash-artifact-row", prop_class(iur)])}" data-row-id="#{html_attr(prop(props, "row_identity"))}"#{style_attr(prop_style(iur))}#{passthrough_attrs(props)}>
       <div class="ash-artifact-row-main">
         <p class="ash-artifact-row-title">#{title}</p>
         #{if meta, do: "<p class=\"ash-artifact-row-meta\">#{meta}</p>", else: ""}
@@ -3086,8 +3086,10 @@ defmodule AshUI.Rendering.LiveUIAdapter do
   end
 
   defp generate_heex(iur, opts) do
+    props = iur["props"] || %{}
+
     """
-    <div class="#{css_classes(["ash-widget", "ash-widget-#{iur["type"]}", prop_class(iur)])}"#{style_attr(prop_style(iur))} data-widget-id="#{iur["id"]}">
+    <div class="#{css_classes(["ash-widget", "ash-widget-#{iur["type"]}", prop_class(iur)])}"#{style_attr(prop_style(iur))} data-widget-id="#{iur["id"]}"#{passthrough_attrs(props)}>
       #{generate_children(iur["children"], opts)}
     </div>
     """
@@ -3956,6 +3958,70 @@ defmodule AshUI.Rendering.LiveUIAdapter do
   defp attr(_name, nil), do: ""
   defp attr(_name, ""), do: ""
   defp attr(name, value), do: " #{name}=\"#{value}\""
+
+  # Additive, opt-in passthrough of declared interaction + identity attributes.
+  #
+  # A node may declare, via its props:
+  #
+  #   * `"on_click"` => `%{"event" => "select_doc", "values" => %{"doc_id" => "d1"}}`
+  #     (or a bare event string `"select_doc"`) -> emits
+  #     `phx-click="select_doc"` plus a `phx-value-<key>="<val>"` pair per value.
+  #   * `"data"` => `%{"block_id" => "b1"}` -> emits `data-<key>="<val>"` per pair.
+  #
+  # When neither prop is present this returns "" so a node WITHOUT the props
+  # renders byte-identically to before. Values are HTML-escaped via `html_attr/1`;
+  # keys are restricted to safe attribute-name characters so a hostile key cannot
+  # inject additional attributes. Pairs are emitted in sorted key order so output
+  # is deterministic.
+  defp passthrough_attrs(props) when is_map(props) do
+    on_click_attrs(prop(props, "on_click")) <> data_attrs(prop(props, "data"))
+  end
+
+  defp passthrough_attrs(_props), do: ""
+
+  defp on_click_attrs(nil), do: ""
+
+  defp on_click_attrs(event) when is_binary(event) do
+    on_click_attrs(%{"event" => event})
+  end
+
+  defp on_click_attrs(on_click) when is_map(on_click) do
+    case prop(on_click, "event") do
+      event when is_binary(event) and event != "" ->
+        attr("phx-click", html_attr(event)) <>
+          value_attrs("phx-value-", prop(on_click, "values"))
+
+      _ ->
+        ""
+    end
+  end
+
+  defp on_click_attrs(_), do: ""
+
+  defp data_attrs(data) when is_map(data) and map_size(data) > 0 do
+    value_attrs("data-", data)
+  end
+
+  defp data_attrs(_), do: ""
+
+  defp value_attrs(prefix, values) when is_map(values) do
+    values
+    |> Enum.map(fn {key, value} -> {to_string(key), value} end)
+    |> Enum.filter(fn {key, _value} -> safe_attr_key?(key) end)
+    |> Enum.sort_by(fn {key, _value} -> key end)
+    |> Enum.map_join(fn {key, value} -> attr(prefix <> key, html_attr(value)) end)
+  end
+
+  defp value_attrs(_prefix, _values), do: ""
+
+  # Attribute-name segments may contain letters, digits, hyphen, and underscore.
+  # Anything else (whitespace, quotes, `=`, `>`...) is rejected so a key can never
+  # break out of the attribute it names.
+  defp safe_attr_key?(key) when is_binary(key) do
+    key != "" and Regex.match?(~r/\A[A-Za-z0-9_-]+\z/, key)
+  end
+
+  defp safe_attr_key?(_key), do: false
 
   defp merge_style(defaults, extra) do
     defaults
