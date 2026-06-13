@@ -1605,4 +1605,204 @@ defmodule AshUI.Rendering.LiveUIAdapterTest do
       assert heex =~ "data-live-ui-intent=\"expanded_recent\""
     end
   end
+
+  describe "declared phx-click + data-* attribute passthrough" do
+    test "artifact_row with on_click emits phx-click + phx-value-* pairs" do
+      iur = %{
+        "type" => "artifact_row",
+        "id" => "artifact-onclick",
+        "props" => %{
+          "title" => "ADR 0001",
+          "on_click" => %{
+            "event" => "select_doc",
+            "values" => %{"doc_id" => "doc-42", "lane" => "specs"}
+          }
+        },
+        "children" => [],
+        "metadata" => %{}
+      }
+
+      {:ok, heex} = LiveUIAdapter.render(iur, force_fallback: true)
+
+      assert heex =~ ~s(phx-click="select_doc")
+      assert heex =~ ~s(phx-value-doc_id="doc-42")
+      assert heex =~ ~s(phx-value-lane="specs")
+      assert heex =~ "ash-artifact-row"
+      assert heex =~ "ADR 0001"
+    end
+
+    test "artifact_row accepts a bare on_click event string (no values)" do
+      iur = %{
+        "type" => "artifact_row",
+        "id" => "artifact-onclick-bare",
+        "props" => %{
+          "title" => "ADR 0002",
+          "on_click" => "select_doc"
+        },
+        "children" => [],
+        "metadata" => %{}
+      }
+
+      {:ok, heex} = LiveUIAdapter.render(iur, force_fallback: true)
+
+      assert heex =~ ~s(phx-click="select_doc")
+      refute heex =~ "phx-value-"
+    end
+
+    test "artifact_row with data props emits data-* attributes" do
+      iur = %{
+        "type" => "artifact_row",
+        "id" => "artifact-data",
+        "props" => %{
+          "title" => "Block",
+          "data" => %{"block_id" => "b-7", "conversation_id" => "c-9"}
+        },
+        "children" => [],
+        "metadata" => %{}
+      }
+
+      {:ok, heex} = LiveUIAdapter.render(iur, force_fallback: true)
+
+      assert heex =~ ~s(data-block_id="b-7")
+      assert heex =~ ~s(data-conversation_id="c-9")
+    end
+
+    test "generic widget fallback emits on_click + data passthrough attributes" do
+      iur = %{
+        "type" => "custom:operator_tile",
+        "id" => "tile-1",
+        "props" => %{
+          "on_click" => %{
+            "event" => "open_tile",
+            "values" => %{"tile_id" => "t-1"}
+          },
+          "data" => %{"block_id" => "blk-1"}
+        },
+        "children" => [],
+        "metadata" => %{}
+      }
+
+      {:ok, heex} = LiveUIAdapter.render(iur, force_fallback: true)
+
+      assert heex =~ "ash-widget-custom:operator_tile"
+      assert heex =~ ~s(data-widget-id="tile-1")
+      assert heex =~ ~s(phx-click="open_tile")
+      assert heex =~ ~s(phx-value-tile_id="t-1")
+      assert heex =~ ~s(data-block_id="blk-1")
+    end
+
+    test "node WITHOUT the passthrough props renders byte-identically" do
+      base = fn props ->
+        %{
+          "type" => "artifact_row",
+          "id" => "artifact-baseline",
+          "props" => props,
+          "children" => [],
+          "metadata" => %{}
+        }
+      end
+
+      {:ok, without} = LiveUIAdapter.render(base.(%{"title" => "Same"}), force_fallback: true)
+
+      # This test asserts that a no-passthrough node carries NONE of the new
+      # phx-click/phx-value-/data-* attributes — i.e. passthrough_attrs/1 adds
+      # nothing when "on_click"/"data" are absent.  Drift from main (regression
+      # against the pre-passthrough render shape) is caught by the full suite
+      # (1085 tests, 0 failures) — this test does not replay the full HTML shape.
+      refute without =~ "phx-click"
+      refute without =~ "phx-value-"
+      refute without =~ "data-block_id"
+
+      {:ok, generic} =
+        LiveUIAdapter.render(
+          %{
+            "type" => "custom:operator_tile",
+            "id" => "tile-baseline",
+            "props" => %{},
+            "children" => [],
+            "metadata" => %{}
+          },
+          force_fallback: true
+        )
+
+      refute generic =~ "phx-click"
+      refute generic =~ "phx-value-"
+      # Only the pre-existing data-widget-id attribute is present.
+      assert generic =~ ~s(data-widget-id="tile-baseline")
+    end
+
+    test "passthrough values are HTML-escaped" do
+      iur = %{
+        "type" => "artifact_row",
+        "id" => "artifact-escape",
+        "props" => %{
+          "title" => "Escape",
+          "on_click" => %{
+            "event" => "select_doc",
+            "values" => %{"doc_id" => ~s(a"><script>x)}
+          },
+          "data" => %{"note" => ~s(b"&<c)}
+        },
+        "children" => [],
+        "metadata" => %{}
+      }
+
+      {:ok, heex} = LiveUIAdapter.render(iur, force_fallback: true)
+
+      assert heex =~ ~s(phx-value-doc_id="a&quot;&gt;&lt;script&gt;x")
+      assert heex =~ ~s(data-note="b&quot;&amp;&lt;c")
+      refute heex =~ ~s(<script>x)
+      refute heex =~ ~s(doc_id="a"><script>)
+    end
+
+    test "hostile passthrough keys cannot inject extra attributes" do
+      iur = %{
+        "type" => "artifact_row",
+        "id" => "artifact-hostile-key",
+        "props" => %{
+          "title" => "Hostile",
+          "data" => %{~s|x" onmouseover="alert(1)| => "v"}
+        },
+        "children" => [],
+        "metadata" => %{}
+      }
+
+      {:ok, heex} = LiveUIAdapter.render(iur, force_fallback: true)
+
+      refute heex =~ "onmouseover"
+      refute heex =~ ~s(data-x")
+    end
+
+    # Regression: on_click.event NAME is passed through html_attr/1 just like
+    # values, so a hostile event string cannot inject extra HTML attributes.
+    # Codex P3: this vector (event name, not just values) had no explicit test.
+    test "on_click event NAME is HTML-escaped (no attribute injection)" do
+      hostile_event = ~S[x" onmouseover="evil()]
+
+      iur = %{
+        "type" => "artifact_row",
+        "id" => "artifact-event-escape",
+        "props" => %{
+          "title" => "Event escape",
+          "on_click" => %{
+            "event" => hostile_event,
+            "values" => %{"k" => "v"}
+          }
+        },
+        "children" => [],
+        "metadata" => %{}
+      }
+
+      {:ok, heex} = LiveUIAdapter.render(iur, force_fallback: true)
+
+      # The escaped form must appear inside the phx-click attribute value.
+      assert heex =~ "&quot;"
+      assert heex =~ ~S[phx-click="x&quot; onmouseover=&quot;evil()"]
+
+      # No literal (unescaped) onmouseover injection must appear as a live attribute.
+      # The escaped form &quot;onmouseover=&quot; is fine inside the phx-click value;
+      # the raw form would be a successful attribute injection.
+      refute heex =~ ~S[ onmouseover="evil()]
+    end
+  end
 end
