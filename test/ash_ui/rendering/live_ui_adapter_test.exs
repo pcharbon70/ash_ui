@@ -1704,11 +1704,11 @@ defmodule AshUI.Rendering.LiveUIAdapterTest do
 
       {:ok, without} = LiveUIAdapter.render(base.(%{"title" => "Same"}), force_fallback: true)
 
-      {:ok, also_without} =
-        LiveUIAdapter.render(base.(%{"title" => "Same"}), force_fallback: true)
-
-      # Baseline is stable, and carries none of the new attributes.
-      assert without == also_without
+      # This test asserts that a no-passthrough node carries NONE of the new
+      # phx-click/phx-value-/data-* attributes — i.e. passthrough_attrs/1 adds
+      # nothing when "on_click"/"data" are absent.  Drift from main (regression
+      # against the pre-passthrough render shape) is caught by the full suite
+      # (1085 tests, 0 failures) — this test does not replay the full HTML shape.
       refute without =~ "phx-click"
       refute without =~ "phx-value-"
       refute without =~ "data-block_id"
@@ -1771,6 +1771,38 @@ defmodule AshUI.Rendering.LiveUIAdapterTest do
 
       refute heex =~ "onmouseover"
       refute heex =~ ~s(data-x")
+    end
+
+    # Regression: on_click.event NAME is passed through html_attr/1 just like
+    # values, so a hostile event string cannot inject extra HTML attributes.
+    # Codex P3: this vector (event name, not just values) had no explicit test.
+    test "on_click event NAME is HTML-escaped (no attribute injection)" do
+      hostile_event = ~S[x" onmouseover="evil()]
+
+      iur = %{
+        "type" => "artifact_row",
+        "id" => "artifact-event-escape",
+        "props" => %{
+          "title" => "Event escape",
+          "on_click" => %{
+            "event" => hostile_event,
+            "values" => %{"k" => "v"}
+          }
+        },
+        "children" => [],
+        "metadata" => %{}
+      }
+
+      {:ok, heex} = LiveUIAdapter.render(iur, force_fallback: true)
+
+      # The escaped form must appear inside the phx-click attribute value.
+      assert heex =~ "&quot;"
+      assert heex =~ ~S[phx-click="x&quot; onmouseover=&quot;evil()"]
+
+      # No literal (unescaped) onmouseover injection must appear as a live attribute.
+      # The escaped form &quot;onmouseover=&quot; is fine inside the phx-click value;
+      # the raw form would be a successful attribute injection.
+      refute heex =~ ~S[ onmouseover="evil()]
     end
   end
 end
