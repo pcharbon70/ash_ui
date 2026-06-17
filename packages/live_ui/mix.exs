@@ -25,6 +25,8 @@ defmodule LiveUi.MixProject do
 
   defp deps do
     [
+      {:earmark, "~> 1.4"},
+      {:html_sanitize_ex, "~> 1.4"},
       {:jido_signal, "~> 2.0"},
       {:phoenix, "~> 1.8"},
       {:phoenix_live_view, "~> 1.1"},
