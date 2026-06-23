@@ -52,7 +52,8 @@ Non-obvious dirs: `packages/` (vendored unified_ui sibling packages — own gram
 - **No route/path/renderer-specific fields on resources.** Navigation transport goes through `AshUI.Navigation.Intent`, `AshUI.Rendering.CanonicalIUR`, `AshUI.Runtime.Navigation`.
 - **Storage boundaries stay configurable** through `AshUI.Config` — do not hard-code the default domain, resources, repo, or runtime domain into shared logic.
 - **Runtime is actor-aware.** Binding evaluation, LiveView events, screen mounts, and resource access pass through authorization/policy surfaces; return structured errors rather than crashing sessions.
-- **Co-maintained repo.** This is jointly maintained with Pascal (jallum) as architect. Breaking-change discipline, release notes, and issue-triage obligations apply; respect existing `.spec/` and README conventions.
+- **Co-maintained repo.** This is jointly maintained with Pascal (pcharbon70) as architect. Breaking-change discipline, release notes, and issue-triage obligations apply; respect existing `.spec/` and README conventions.
+- **Renderer selection: package availability != fallback renderability.** The registry distinguishes external package availability from adapter-fallback renderability and exposes the resolved module + mode per renderer type — preserve that distinction (`AshUI.Rendering.{Selector,Registry}`).
 
 ## Conventions
 
