@@ -1,104 +1,70 @@
-# Ash UI Agent Guide
+# ash_ui
 
-Use this guide for repository-wide work. The package-local Spec Led Development
-workspace in `.spec/` is the current-truth source for intent, requirements, and
-verification targets.
+> Resource-backed UI framework on Ash: Screen/Element/Binding Ash resources (via `AshUI.Resource.DSL.*`) are the authoritative authoring units, compiled to a canonical IUR that renders across LiveView / Elm / desktop. Co-maintained with Pascal (jallum). Plan/spec: [`.spec/specs/package.spec.md`](.spec/specs/package.spec.md).
 
-## First Read
+<!-- Reviewed 2026-06-22. No phase numbers / PR ranges / status - link live sources. -->
 
-1. Read `.spec/README.md`.
-2. Read `.spec/AGENTS.md` before editing `.spec/`.
-3. Read the subject specs under `.spec/specs/` that match the files you are
-   changing.
-4. Read `README.md` for the public package shape.
-5. For example-suite work, also read `examples/README.md`,
-   `examples/scaffold_contract.md`, and `examples/ash_hq_theme_baseline.md`.
+## Stack
 
-## Project Shape
+Elixir 1.19.5-otp-28 / Erlang 28.3.1 (`.tool-versions`). Ash `~> 3.0`, AshPostgres `~> 2.0`, Phoenix LiveView `~> 1.0`, telemetry. Vendored path-dep packages: `packages/{unified_ui,unified_iur,live_ui,elm_ui,desktop_ui}`.
 
-- Ash UI is resource-first. Screen and element Ash resources using
-  `AshUI.Resource.DSL.Screen` and `AshUI.Resource.DSL.Element` are the
-  authoritative authoring units.
-- `AshUI.Resource.Authority` derives and persists the `Screen.unified_dsl`
-  snapshot from the resource graph. Do not ask applications to hand-author
-  runtime snapshots when resource authority can produce them.
-- Relationships define UI composition. Preserve relationship order, kind, slot,
-  placement, inline fragments, and screen-scoped bindings.
-- `AshUI.Compiler` compiles persisted screens and resource-authority payloads to
-  `AshUI.Compilation.IUR`; `AshUI.Rendering.IURAdapter` converts internal IUR to
-  `%UnifiedIUR.Element{}` canonical renderer-facing IUR.
-- Navigation intent is semantic and host-independent. Resource-authored
-  `navigation` declarations may use symbolic screens, destinations, modals,
-  params, metadata, payload mappings, and binding refs, but must not include
-  route/path/URL/helper/module/runtime stack fields.
-- Styling intent is semantic. Resources may declare class hooks, variants,
-  renderer-read props, and dynamic inline style values; host apps own concrete
-  theme tokens, CSS, shell treatment, and responsive layout.
-- Runtime work is actor-aware. Binding evaluation, LiveView events, screen
-  mounts, actions, and resource access must pass through the authorization and
-  policy surfaces when applicable.
-- Legacy builder/document support is migration-only. Do not reopen builder-first
-  or document-first payloads as supported runtime compiler inputs.
+## Setup
 
-## Spec Led Workflow
+```bash
+mix deps.get        # resolves vendored packages/ path-deps
+mix compile
+```
 
-- At session start, try `mix spec.prime --base HEAD`.
-- After code, docs, or tests change, try `mix spec.next`; use
-  `mix spec.next --bugfix` for bug fixes.
-- If `mix spec.next` reports subject updates, update the named
-  `.spec/specs/*.spec.md` file before finishing.
-- When the spec loop says ready, run `mix spec.check --base HEAD` or the base
-  requested by the task.
-- In this checkout, the `spec.*` Mix tasks may not be wired into `mix.exs`. If a
-  spec task is unavailable, record that fact in your handoff and run the
-  closest targeted verification from the relevant spec instead.
-- Keep `.spec` files as current-state documents. Use Git history and PRs for the
-  change log.
+## Build / test / lint
 
-## Implementation Rules
+```bash
+mix compile
+mix test                                   # full suite
+mix test test/foo_test.exs                 # single file
+mix test test/foo_test.exs:42              # single test by line
+mix format --check-formatted
+mix credo --strict
+mix dialyzer                               # uses .dialyzer_ignore.exs
 
-- Prefer existing `AshUI.Resource.DSL.*`, `AshUI.Resource.Info`,
-  `AshUI.Resource.Authority`, `AshUI.Config`, runtime, compiler, rendering, and
-  telemetry modules over new parallel abstractions.
-- Keep storage boundaries configurable through `AshUI.Config`; do not hard-code
-  the default domain, resources, repo, or runtime domain into shared logic.
-- Keep bindings typed as value, list, or action flows with structured source
-  maps and explicit targets. Preserve transform, bidirectional write, list
-  paging/update, and action execution semantics.
-- Preserve renderer selection semantics: registry availability is not the same
-  as adapter fallback renderability.
-- Preserve canonical navigation transport. Use `AshUI.Navigation.Intent`,
-  `AshUI.Rendering.CanonicalIUR`, and `AshUI.Runtime.Navigation` instead of
-  adding route-specific or renderer-specific navigation fields to resources.
-- Emit or preserve canonical `ash_ui` telemetry events for authoring, screen,
-  binding, compilation, rendering, authorization, and migration flows when those
-  paths change.
-- Return structured errors for authorization, compilation, binding, rendering,
-  and LiveView runtime failures rather than crashing sessions.
+# Done = run this gate:
+mix format --check-formatted && mix credo --strict && mix dialyzer && mix test
+```
 
-## Example Suite Rules
+Example suite: `mix ash_ui.examples.{list,validate,report}`, `mix ash_ui.examples.preview <dir>`, `mix ash_ui.examples.start <dir> --dry-run`. Governance: `bash ./scripts/validate_specs_governance.sh`. Coverage threshold 90%.
 
-- Every checked-in example under `examples/<directory>/` is a standalone Mix
-  project.
-- Preserve sibling `unified_ui/examples` directory names as stable review
-  handles, even when Ash UI normalizes the canonical subject type.
-- Author examples as one screen resource plus related element resources, with
-  app-local UI storage resources and persistence through
-  `AshUI.Resource.Authority.create/2`.
-- Keep the shared Ash HQ baseline in sync across `examples/ash_hq_theme_*` and
-  app-local shell hooks.
-- Every example must expose a reviewer-visible Meaningful Interaction Story and
-  Canonical Signal Preview.
+## Layout
 
-## Verification
+- `lib/ash_ui/{resource,compiler,rendering,navigation,authorization,runtime,telemetry}` — core pipeline.
+- `lib/ash_ui/authoring/` — legacy builder/document, migration-only.
+- `packages/` — vendored unified_ui sibling packages (renderer + widget grammar).
+- `examples/<dir>/` — standalone Mix apps; names mirror `unified_ui/examples`.
+- `.spec/` — current-truth spec workspace; read `.spec/AGENTS.md` before editing it.
 
-- Use the exact targeted `mix test ...` commands listed in the relevant
-  `.spec/specs/*.spec.md` verification block when behavior changes.
-- Useful root commands include `mix test`, `mix format --check-formatted`,
-  `mix ash_ui.examples.validate`, `mix ash_ui.examples.report`, and
-  `bash ./scripts/validate_specs_governance.sh`.
-- For example review workflows, use `mix ash_ui.examples.list`,
-  `mix ash_ui.examples.preview <directory>`, and
-  `mix ash_ui.examples.start <directory> --dry-run`.
-- Treat generated `_build/`, `deps/`, tutorial dependency, and report artifacts
-  as unrelated unless the task explicitly targets them.
+## Dependencies & boundaries (MANDATORY)
+
+- **Upstream:** Ash / AshPostgres / Phoenix LiveView + its own vendored `packages/` path-deps. No Metagraph-engine dependency.
+- **Downstream:** `ariston-ui` path-deps `:ash_ui` (renderer packages come transitively). Contract = the `AshUI.Resource.DSL.*` authoring API + canonical `%UnifiedIUR.Element{}` IUR.
+- **Renderer seam:** internal `AshUI.Compilation.IUR` is private; public contract is canonical `%UnifiedIUR.Element{}` via `AshUI.Rendering.IURAdapter`.
+- **Navigation = semantic only:** symbolic screens/destinations/modals/params/payload-maps/binding-refs. NEVER route/path/URL/helper/module/runtime-stack fields — host owns routes.
+- **Styling = semantic only:** class hooks, variants, renderer-read props, dynamic inline values. Host owns theme tokens/CSS/shell/layout.
+
+## Conventions / boundaries
+
+- Resource-first authoring is authoritative; do NOT hand-author runtime `unified_dsl` snapshots when `AshUI.Resource.Authority` can derive them.
+- Legacy builder/document payloads are migration-only — do NOT reopen as runtime compiler inputs.
+- Keep storage boundaries configurable via `AshUI.Config`; do NOT hard-code default domain/resources/repo.
+- Return structured errors (auth/compilation/binding/rendering/LiveView); do NOT crash sessions.
+- Spec-led: update the matching `.spec/specs/*.spec.md` when behavior changes; `.spec` is current-state, not a changelog.
+- Branch `codex/<topic>`; commit body = WHY; trailer `Co-Authored-By: Codex`. One reviewable arc per PR.
+
+## Codex
+
+- Review/self-check with `codex exec --profile deep-review`; sandbox + approval per `~/.codex/config.toml`.
+- Never touch or echo secrets.
+- `spec.*` tasks (from `spec_led_ex`) may not be wired in every checkout (only `format` is in `mix.exs` aliases). If unavailable, note it and run the targeted `mix test ...` from the relevant spec's verification block.
+
+## Pointers
+
+- Spec/ADRs: `.spec/specs/package.spec.md`, `.spec/decisions/`; public shape: `README.md`; examples: `examples/README.md`.
+- Open work: `gh pr list --repo The-Metagraph/ash_ui`.
+- Workspace core: `~/.codex/AGENTS.md`.
